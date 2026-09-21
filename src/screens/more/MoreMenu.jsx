@@ -14,7 +14,7 @@ import news from '../../data/mock/news.json';
 import styles from './MoreMenu.module.css';
 
 const ITEMS = [
-  { to: '/ai', label: 'SMFG AI', sub: 'Hand over · AI interviews & reports', icon: IoSparkles, tone: '#7c3aed' },
+  { to: '/ai', label: 'SAARTHI AI', sub: 'Hand over · AI interviews & reports', icon: IoSparkles, tone: '#7c3aed' },
   { to: '/incentive', label: 'Incentives', sub: 'Slab progress & earnings', icon: FiTrendingUp, tone: '#16a34a' },
   { to: '/files', label: 'Loan Files', sub: 'Track every file status', icon: FiFolder, tone: '#4c1d95' },
   { to: '/documents', label: 'Documents', sub: 'Checklists & reminders', icon: FiCheckSquare, tone: '#7c3aed' },

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { IoSparkles } from 'react-icons/io5';
-import { FiPhone, FiMail, FiCalendar, FiMapPin, FiMic, FiUsers, FiFileText, FiChevronRight, FiPercent, FiMessageSquare } from 'react-icons/fi';
+import { FiPhone, FiCalendar, FiMapPin, FiMic, FiUsers, FiFileText, FiChevronRight, FiPercent, FiMessageSquare } from 'react-icons/fi';
 import { IoLogoWhatsapp } from 'react-icons/io5';
 import Page from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
@@ -18,9 +18,9 @@ import { useToast } from '../../hooks/useToast';
 import { formatINR, formatDate } from '../../utils/formatters';
 import { fmtTime } from '../home/Dashboard';
 import { RecordingCard } from '../recorder/MeetingRecorder';
-import Button from '../../components/ui/Button';
 import BottomSheet from '../../components/ui/BottomSheet';
 import QuestionList, { useMeetingQuestions } from '../../components/ui/MeetingPrep';
+import { TOPICS } from '../../utils/meetingPrep';
 import styles from './dsa.module.css';
 
 const TABS = ['Overview', 'Business', 'Files', 'Meetings', 'Notes'];
@@ -35,7 +35,9 @@ export default function DSADetail() {
   const [tab, setTab] = useState(TABS.includes(params.get('tab')) ? params.get('tab') : 'Overview');
   const [allEng, setAllEng] = useState(false);
   const [qSheet, setQSheet] = useState(false);
-  // Every meeting anyone from SMFG has had with this DSA (BO, Branch Head, Regional Head, CEO…)
+  const [qTopic, setQTopic] = useState(null); // topic filter for the questions sheet (from a chip)
+  const openQuestions = (topic = null) => { setQTopic(topic); setQSheet(true); };
+  // Every meeting anyone from the company has had with this DSA (BO, Branch Head, Regional Head, CEO…)
   const eng = useMemo(() => engagements.filter((e) => e.dsaId === id), [engagements, id]);
   const senior = eng.filter((e) => e.lead !== 'bo');
   const roleCounts = useMemo(() => {
@@ -69,14 +71,15 @@ export default function DSADetail() {
         <span className="label">{dsa.firm} · {dsa.location}</span>
         <QualityBadge quality={dsa.quality} size="md" />
         <StarRating value={dsa.rating} onChange={(n) => { rateDsa(dsa.id, n); toast(`Rated ${n}★`, 'success', 1500); }} size={22} />
-        <div className={styles.contactRow}>
-          <button className={styles.contactBtn} onClick={() => toast(`Calling ${dsa.phone}`)}><FiPhone size={16} /> Call</button>
-          <button className={styles.contactBtn} style={{ color: '#16a34a' }} onClick={() => toast('Opening WhatsApp…')}><IoLogoWhatsapp size={18} /> WhatsApp</button>
-          <button className={styles.contactBtn} onClick={() => toast(`Mail to ${dsa.email}`)}><FiMail size={16} /> Email</button>
+        {/* Actions: reach the DSA, then run the meeting. Equal-width cells so nothing wraps or overflows. */}
+        <div className={styles.actions}>
+          <button className={styles.actBtn} onClick={() => { toast(`Calling ${dsa.phone}`, 'info', 1200); navigate(`/prompter?dsa=${dsa.id}&mode=call`); }}><FiPhone size={16} /> Call</button>
+          <button className={styles.actBtn} style={{ color: '#16a34a' }} onClick={() => toast('Opening WhatsApp…')}><IoLogoWhatsapp size={18} /> WhatsApp</button>
+          <button className={`${styles.actBtn} ${styles.actRecord}`} onClick={() => navigate(`/prompter?dsa=${dsa.id}&mode=record`)}><FiMic size={16} /> Record</button>
         </div>
-        <div className="row" style={{ gap: 10, marginTop: 6 }}>
-          <Button variant="danger" size="sm" icon={<FiMic size={16} />} onClick={() => navigate(`/record?dsa=${dsa.id}`)}>Record meeting</Button>
-          <Button variant="secondary" size="sm" icon={<FiCalendar size={16} />} onClick={() => navigate(`/scheduler?dsa=${dsa.id}`)}>Schedule</Button>
+        <div className={styles.actions} style={{ marginTop: 8 }}>
+          <button className={`${styles.actBtn} ${styles.actAi}`} onClick={() => navigate(`/ai/session?kind=dsa&id=${dsa.id}`)}><IoSparkles size={16} /> SAARTHI AI</button>
+          <button className={styles.actBtn} style={{ color: 'var(--primary)' }} onClick={() => navigate(`/scheduler?dsa=${dsa.id}`)}><FiCalendar size={16} /> Schedule meeting</button>
         </div>
       </div>
 
@@ -93,19 +96,18 @@ export default function DSADetail() {
         <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
           {tab === 'Overview' && (
             <div className="stack">
-              {/* Dynamic meeting prep — questions built from this DSA's numbers */}
-              <Card className="tint-primary" noChevron>
-                <div className="row-between" style={{ marginBottom: 10 }}>
-                  <div className="hint" style={{ color: 'var(--primary)', fontWeight: 700 }}><FiMessageSquare size={13} style={{ verticalAlign: '-2px' }} /> Ask in your next meeting</div>
-                  <span className="hint">{mustAsk} must-ask · {questions.length} total</span>
+              {/* Meeting brief — the top 3 things to raise, as one-liners. Full questions live in the sheet. */}
+              <Card className="tint-primary" noChevron padding={12} onClick={() => openQuestions()}>
+                <div className="row-between">
+                  <div className="hint" style={{ color: 'var(--primary)', fontWeight: 700 }}><FiMessageSquare size={13} style={{ verticalAlign: '-2px' }} /> Meeting brief <span style={{ fontWeight: 500, color: 'var(--text-3)' }}>· {mustAsk} must-ask</span></div>
+                  <span className={styles.briefMore}>All {questions.length} <FiChevronRight size={14} /></span>
                 </div>
-                <p className={styles.nextQ}>{questions[0]?.q}</p>
-                <div className="row" style={{ gap: 8 }}>
-                  <Button style={{ flex: 1 }} icon={<FiMic size={16} />} onClick={() => navigate(`/record?dsa=${dsa.id}`)}>Start meeting</Button>
-                  <button className={styles.aiBtn} onClick={() => navigate(`/ai/session?kind=dsa&id=${dsa.id}`)}><IoSparkles size={16} /> SMFG AI</button>
-                </div>
-                <div className={styles.quietLinks}>
-                  <button onClick={() => setQSheet(true)}>All {questions.length} questions</button>
+                <div className={styles.briefChips}>
+                  {questions.slice(0, 3).map((x) => (
+                    <button key={x.id} className={styles.briefChip} style={{ '--tile': TOPICS[x.topic].color }} onClick={(e) => { e.stopPropagation(); openQuestions(x.topic); }}>
+                      <span className={styles.briefDot} style={{ background: TOPICS[x.topic].color }} />{x.tag ?? x.nudge ?? x.q}
+                    </button>
+                  ))}
                 </div>
               </Card>
               <div className={styles.metricGrid}>
@@ -116,7 +118,7 @@ export default function DSADetail() {
               </div>
               <Card className="tint-primary" onClick={() => setTab('Meetings')} noChevron>
                 <div className="row-between">
-                  <div className="hint" style={{ color: 'var(--primary)', fontWeight: 600 }}><FiUsers size={13} style={{ verticalAlign: '-2px' }} /> Relationship with SMFG</div>
+                  <div className="hint" style={{ color: 'var(--primary)', fontWeight: 600 }}><FiUsers size={13} style={{ verticalAlign: '-2px' }} /> Relationship with us</div>
                   <FiChevronRight size={18} color="var(--primary)" />
                 </div>
                 <div className="row" style={{ gap: 20, marginTop: 10 }}>
@@ -245,7 +247,7 @@ export default function DSADetail() {
             <div className="stack">
               {/* ---- Company-wide meeting history ---- */}
               <div className={styles.engStrip}>
-                <div><div className="big-number">{eng.length}</div><div className="hint">Total with SMFG</div></div>
+                <div><div className="big-number">{eng.length}</div><div className="hint">Total with us</div></div>
                 <div><div className="big-number" style={{ color: 'var(--primary)' }}>{senior.length}</div><div className="hint">Leadership</div></div>
                 <div><div className="big-number">{eng[0] ? formatDate(eng[0].date) : '—'}</div><div className="hint">Last contact</div></div>
               </div>
@@ -263,7 +265,7 @@ export default function DSADetail() {
                         <div className="hint">{formatDate(e.date, { day: 'numeric', month: 'short', year: 'numeric' })} · {e.type}</div>
                         <div style={{ fontWeight: 600, marginTop: 2 }}>{e.agenda}</div>
                       </div>
-                      {e.hasTranscript ? <span className={styles.trChip}><FiFileText size={12} /> Transcript</span> : <span className={styles.trChip} style={{ opacity: 0.55 }}>No transcript</span>}
+                      {e.hasTranscript ? <span className={styles.trChip}><FiFileText size={12} /> Key points</span> : <span className={styles.trChip} style={{ opacity: 0.55 }}>No notes</span>}
                     </div>
                     <div className={styles.attendees}>
                       <div className={styles.avStack}>{e.attendees.map((a) => <Avatar key={a.name} name={a.name} size={28} />)}</div>
@@ -330,9 +332,10 @@ export default function DSADetail() {
       </AnimatePresence>
 
 
-      <BottomSheet open={qSheet} onClose={() => setQSheet(false)} title={`Questions for ${dsa.name.split(' ')[0]}`}>
+      <BottomSheet open={qSheet} onClose={() => setQSheet(false)} title={qTopic ? `${TOPICS[qTopic].label} · ${dsa.name.split(' ')[0]}` : `Questions for ${dsa.name.split(' ')[0]}`}>
         <p className="hint" style={{ marginBottom: 12 }}>Built from {dsa.name.split(' ')[0]}'s approval rate, product mix, pending files, visit gap and open commitments. Tap a question to see why it matters.</p>
-        <QuestionList questions={questions} />
+        {qTopic && <button className="link" style={{ marginBottom: 10, fontSize: 13, fontWeight: 600, color: 'var(--primary)' }} onClick={() => setQTopic(null)}>Show all {questions.length} questions</button>}
+        <QuestionList questions={qTopic ? questions.filter((x) => x.topic === qTopic) : questions} />
       </BottomSheet>
     </Page>
   );

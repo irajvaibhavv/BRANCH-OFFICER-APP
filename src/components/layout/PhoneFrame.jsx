@@ -36,7 +36,7 @@ export default function PhoneFrame({ children }) {
   return (
     <div className={styles.stage}>
       <aside className={styles.aside}>
-        <div className={styles.brand}>SMFG · BO Connect</div>
+        <div className={styles.brand}>Branch Officer App</div>
         <p className={styles.tagline}>Branch Officer field app · prototype</p>
         <ul className={styles.hints}>
           <li>Demo OTP is <b>1234</b></li>

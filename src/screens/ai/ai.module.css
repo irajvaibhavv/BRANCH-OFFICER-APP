@@ -70,10 +70,11 @@
 @keyframes ring { 0% { transform: scale(0.8); opacity: 0.6; } 100% { transform: scale(1.35); opacity: 0; } }
 
 /* ---- Interview (immersive) ---- */
-.ivPage { --iv-fg: #fff; --iv-dim: rgba(255,255,255,0.62); background: radial-gradient(120% 70% at 50% 0%, #3b1a86 0%, #1c1040 45%, #0f0a22 100%); color: var(--iv-fg); display: flex; flex-direction: column; min-height: 100%; padding-bottom: 0 !important; }
-.ivHead { display: flex; align-items: center; gap: 10px; padding: 12px 0 10px; }
-.ivTitle { font-weight: 700; font-size: 15px; color: var(--iv-fg); }
-.ivSub { font-size: 12px; color: var(--iv-dim); }
+/* Full-bleed stage like the teleprompter: absolutely fills the app shell so the dark backdrop covers the whole screen */
+.ivPage { --iv-fg: #fff; --iv-dim: rgba(255,255,255,0.62); position: absolute; inset: 0; z-index: 30; overflow-y: auto; background: radial-gradient(120% 70% at 50% 0%, #3b1a86 0%, #1c1040 45%, #0f0a22 100%); color: var(--iv-fg); display: flex; flex-direction: column; min-height: 100%; padding-bottom: 0 !important; }
+.ivHead { display: flex; align-items: center; gap: 8px; padding: 12px 0 10px; }
+.ivTitle { font-weight: 700; font-size: 15px; color: var(--iv-fg); white-space: nowrap; }
+.ivSub { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--iv-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ivIcon { width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,0.08); color: var(--iv-dim); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .ivIconOn { color: #fff; background: rgba(255,255,255,0.16); }
 .ivLock { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #e9d5ff; background: rgba(167,139,250,0.22); border-radius: 999px; padding: 4px 9px; flex-shrink: 0; }

@@ -12,12 +12,13 @@ import styles from './TopBar.module.css';
  */
 export default function TopBar({ title, subtitle, back = false, onBack, right, hideBell = false, transparent = false }) {
   const navigate = useNavigate();
-  const { unreadCount } = useAppState();
+  const { unreadCount, attention } = useAppState();
+  const badgeCount = unreadCount + attention.length;
 
   const bell = !hideBell && (
     <motion.button whileTap={{ scale: 0.9 }} className={styles.iconBtn} onClick={() => navigate('/notifications')} aria-label="Notifications">
       <FiBell size={20} />
-      {unreadCount > 0 && <span className={styles.badge}>{unreadCount}</span>}
+      {badgeCount > 0 && <span className={styles.badge}>{badgeCount}</span>}
     </motion.button>
   );
 
@@ -27,7 +28,7 @@ export default function TopBar({ title, subtitle, back = false, onBack, right, h
     return (
       <header className={`${styles.bar} ${transparent ? styles.transparent : ''}`}>
         <div className={styles.brandRow}>
-          <div className={styles.brand}>SMFG<span>·</span>BO</div>
+          <div className={styles.brand}>Branch<span>·</span>Officer</div>
           <div className={styles.right}>{right}{bell}</div>
         </div>
         <div className={styles.titles}>

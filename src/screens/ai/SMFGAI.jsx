@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FiMic, FiMicOff, FiVolume2, FiVolumeX, FiSend, FiUser, FiUsers, FiChevronRight, FiCheck, FiAlertTriangle, FiInfo, FiAlertCircle, FiFileText, FiSearch, FiRefreshCw, FiShield, FiMapPin, FiType, FiList } from 'react-icons/fi';
+import { FiMic, FiMicOff, FiVolume2, FiVolumeX, FiSend, FiUser, FiUsers, FiChevronRight, FiChevronLeft, FiCheck, FiAlertTriangle, FiInfo, FiAlertCircle, FiFileText, FiSearch, FiRefreshCw, FiShield, FiMapPin, FiType, FiList } from 'react-icons/fi';
 import { IoSparkles } from 'react-icons/io5';
 import Page, { listContainer, listItem } from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
@@ -22,7 +22,7 @@ import { speak as tts, stopSpeaking, listen, canSpeak, canListen } from '../../u
 import styles from './ai.module.css';
 
 /*
-  SMFG AI — handover interviews. The officer picks who is in front of them, hands the phone over,
+  SAARTHI AI — handover interviews. The officer picks who is in front of them, hands the phone over,
   the AI runs the conversation, and a report comes back to the officer. Three screens:
   AIHome (/ai) · AISession (/ai/session?kind=&id=) · AIReport (/ai/reports/:id)
 */
@@ -40,14 +40,14 @@ export default function AIHome() {
 
   return (
     <Page mode="slide">
-      <TopBar back title={<span className={styles.brand}><IoSparkles size={18} /> SMFG AI</span>} subtitle="Hand the phone over — AI interviews, you get the report" hideBell />
+      <TopBar back title={<span className={styles.brand}><IoSparkles size={18} /> SAARTHI AI</span>} subtitle="Hand the phone over — AI interviews, you get the report" hideBell />
 
       <Card className={styles.heroCard} noChevron padding={16}>
         <div className="row" style={{ gap: 12, alignItems: 'flex-start' }}>
           <span className={styles.orb}><IoSparkles size={20} /></span>
           <div className="grow">
             <div style={{ fontWeight: 700, fontSize: 16 }}>Not sure what to ask?</div>
-            <div className="hint" style={{ marginTop: 2 }}>SMFG AI asks the right questions for a loan or a DSA review, follows up on what it hears, and writes you a report with flags and next steps.</div>
+            <div className="hint" style={{ marginTop: 2 }}>SAARTHI AI asks the right questions for a loan or a DSA review, follows up on what it hears, and writes you a report with flags and next steps.</div>
           </div>
         </div>
       </Card>
@@ -207,7 +207,7 @@ export function AISession() {
   if (phase === 'handover') {
     return (
       <Page mode="slide">
-        <TopBar back title={<span className={styles.brand}><IoSparkles size={18} /> SMFG AI</span>} subtitle={kind === 'customer' ? 'Customer interview' : 'DSA review'} hideBell />
+        <TopBar back title={<span className={styles.brand}><IoSparkles size={18} /> SAARTHI AI</span>} subtitle={kind === 'customer' ? 'Customer interview' : 'DSA review'} hideBell />
         <div className={styles.handover}>
           <span className={styles.orbLg}><IoSparkles size={34} /></span>
           <h2 style={{ marginTop: 16 }}>Hand the phone to {party ? party.name.split(' ')[0] : kind === 'customer' ? 'the customer' : 'the DSA'}</h2>
@@ -225,7 +225,7 @@ export function AISession() {
             <span><FiRefreshCw size={13} /> ~3 min</span>
             <span><FiShield size={13} /> App locked</span>
           </div>
-          <Button full size="lg" icon={<IoSparkles size={18} />} onClick={begin} style={{ marginTop: 20 }}>Start SMFG AI</Button>
+          <Button full size="lg" icon={<IoSparkles size={18} />} onClick={begin} style={{ marginTop: 20 }}>Start SAARTHI AI</Button>
         </div>
       </Page>
     );
@@ -257,11 +257,13 @@ export function AISession() {
   return (
     <Page mode="fade" className={styles.ivPage} noTab>
       <div className={styles.ivHead}>
-        <span className={styles.orbSm}><IoSparkles size={14} /></span>
-        <div className="grow" style={{ minWidth: 0 }}><div className={styles.ivTitle}>SMFG AI</div><div className={styles.ivSub}>{kind === 'customer' ? 'Loan interview' : 'DSA review'} · {who}</div></div>
+        <button className={styles.ivIcon} onClick={() => { stopSpeaking(); navigate(-1); }} aria-label="Back"><FiChevronLeft size={18} /></button>
+        <div className="grow" style={{ minWidth: 0 }}>
+          <div className={styles.ivTitle}>SAARTHI AI</div>
+          <div className={styles.ivSub}><FiShield size={10} /> Handover · {kind === 'customer' ? 'Loan interview' : 'DSA review'} · {who}</div>
+        </div>
         {canSpeak && <button className={`${styles.ivIcon} ${voiceOn ? styles.ivIconOn : ''}`} onClick={() => { setVoiceOn((v) => !v); stopSpeaking(); setSpeaking(false); }} aria-label={voiceOn ? 'Mute voice' : 'Unmute voice'}>{voiceOn ? <FiVolume2 size={16} /> : <FiVolumeX size={16} />}</button>}
         <button className={styles.ivIcon} onClick={() => setTranscript(true)} aria-label="Transcript"><FiList size={16} /></button>
-        <span className={styles.ivLock}><FiShield size={11} /> Handover</span>
       </div>
       <div className={styles.ivProgress}><motion.div className={styles.ivBar} animate={{ width: `${pct}%` }} transition={{ duration: 0.5 }} /></div>
 
@@ -336,7 +338,7 @@ export function AIReport() {
 
   return (
     <Page mode="slide">
-      <TopBar back title={<span className={styles.brand}><IoSparkles size={18} /> SMFG AI report</span>} subtitle={`${r.partyName} · ${timeAgo(r.createdAt)}`} hideBell />
+      <TopBar back title={<span className={styles.brand}><IoSparkles size={18} /> SAARTHI AI report</span>} subtitle={`${r.partyName} · ${timeAgo(r.createdAt)}`} hideBell />
 
       <Card padding={16} noChevron className={styles.heroCard}>
         <div className="row" style={{ gap: 14 }}>

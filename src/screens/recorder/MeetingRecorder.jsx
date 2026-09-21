@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FiMic, FiSquare, FiPause, FiPlay, FiCheck, FiCpu, FiShield, FiWifiOff, FiFileText, FiShare2, FiCopy, FiCalendar, FiMapPin, FiChevronRight, FiClock, FiUser, FiBriefcase } from 'react-icons/fi';
 import { IoLogoWhatsapp } from 'react-icons/io5';
@@ -39,14 +39,17 @@ export default function MeetingRecorder() {
 
   const [dsaId, setDsaId] = useState(params.get('dsa') ?? '');
   const dsa = getDsa(dsaId);
-  const [phase, setPhase] = useState('ready'); // ready | recording | processing | result
+  const { state: navState } = useLocation();
+  // Arriving from the teleprompter (?stop=1&secs=N): the meeting already happened, go straight to processing.
+  const handoff = params.get('stop') === '1';
+  const [phase, setPhase] = useState(handoff ? 'processing' : 'ready'); // ready | recording | processing | result
   const [paused, setPaused] = useState(false);
-  const [secs, setSecs] = useState(0);
+  const [secs, setSecs] = useState(handoff ? Number(params.get('secs')) || 0 : 0);
   const [procStep, setProcStep] = useState(0);
   const [saved, setSaved] = useState(null);
   const savedRef = useRef(false);
   const questions = useMeetingQuestions(dsa);
-  const [covered, setCovered] = useState([]);
+  const [covered, setCovered] = useState(() => navState?.covered ?? []);
   const [showQ, setShowQ] = useState(true);
   const toggleCovered = (qid) => setCovered((c) => (c.includes(qid) ? c.filter((x) => x !== qid) : [...c, qid]));
 
@@ -260,7 +263,7 @@ export function EngagementDetail() {
     <Page mode="slide">
       <TopBar back title={m.agenda} subtitle={`${dsa.name} · ${formatDate(m.date, { day: 'numeric', month: 'short', year: 'numeric' })}`} hideBell />
       <Card padding={16} style={{ marginBottom: 12 }}>
-        <div className="hint" style={{ fontWeight: 600, marginBottom: 8 }}>Attendees from SMFG</div>
+        <div className="hint" style={{ fontWeight: 600, marginBottom: 8 }}>Attendees from our side</div>
         <div className="stack" style={{ gap: 8 }}>
           {m.attendees.map((a) => (
             <div key={a.name} className="row" style={{ gap: 10 }}>
@@ -272,7 +275,7 @@ export function EngagementDetail() {
         <div className="hint" style={{ marginTop: 10 }}>{m.type} · {fmtClock(m.durationSecs)} · Outcome: {m.outcome}</div>
       </Card>
       {m.hasTranscript ? <RecordingResult rec={rec} dsa={dsa} readOnly /> : (
-        <EmptyState compact emoji="📝" title="No transcript for this meeting" subtitle="This meeting was logged without a recording. Only the attendees and outcome are available." />
+        <EmptyState compact emoji="📝" title="No key points for this meeting" subtitle="This meeting was logged without a recording. Only the attendees and outcome are available." />
       )}
     </Page>
   );
@@ -443,7 +446,7 @@ function RecordingResult({ rec, dsa, fresh = false, readOnly = false }) {
   );
 }
 
-/** Action items grouped into "Your to-dos" (BO / SMFG side) and "DSA's to-dos", with tick-off. */
+/** Action items grouped into "Your to-dos" (BO / company side) and "DSA's to-dos", with tick-off. */
 function TodoSection({ rec, dsa }) {
   const [doneMap, setDoneMap] = useLocalStorage('bo_todo_done', {});
   const done = doneMap[rec.id] ?? [];
@@ -471,7 +474,7 @@ function TodoSection({ rec, dsa }) {
     <>
       <Card>
         <div className="row-between" style={{ marginBottom: 10 }}>
-          <h3 className="row" style={{ gap: 8 }}><span className={`${styles.todoIcon} ${styles.todoIconYou}`}><FiUser size={14} /></span> {otherOwners ? 'SMFG to-dos' : 'Your to-dos'}</h3>
+          <h3 className="row" style={{ gap: 8 }}><span className={`${styles.todoIcon} ${styles.todoIconYou}`}><FiUser size={14} /></span> {otherOwners ? 'Our to-dos' : 'Your to-dos'}</h3>
           <span className="hint">{mine.filter((a) => done.includes(a.i)).length}/{mine.length} done</span>
         </div>
         {mine.length ? <List list={mine} /> : <span className="hint">Nothing for you from this meeting.</span>}

@@ -37,12 +37,14 @@ export default function QuestionList({ questions, checkable = false, covered = [
                 <span className={styles.topic} style={{ '--tile': t.color }}>{t.label}</span>
                 {x.priority === 'high' && <span className={styles.prio}>Must ask</span>}
               </div>
+              {/* Crisp line by default (the officer frames the question); the full wording is one tap away. */}
               <button className={styles.q} onClick={() => setOpen(expanded ? null : x.id)}>
-                <span>{x.q}</span>
+                <span>{x.nudge ?? x.q}</span>
                 {!compact && <FiChevronDown size={16} className={`${styles.chev} ${expanded ? styles.chevOn : ''}`} />}
               </button>
               {expanded && !compact && (
                 <div className={styles.why}>
+                  {x.nudge && <div className={styles.fullQ}>“{x.q}”</div>}
                   <div><FiHelpCircle size={12} /> <b>Why ask:</b> {x.why}</div>
                   {x.followUp && <div style={{ marginTop: 4 }}><b>Then:</b> {x.followUp}</div>}
                 </div>

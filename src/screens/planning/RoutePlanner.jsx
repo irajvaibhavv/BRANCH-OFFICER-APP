@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiCheck, FiPlus, FiClock, FiNavigation, FiZap } from 'react-icons/fi';
+import { FiCheck, FiPlus, FiClock, FiNavigation, FiZap, FiEdit2 } from 'react-icons/fi';
 import Page, { listContainer, listItem } from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import Card from '../../components/ui/Card';
@@ -12,12 +12,15 @@ import EmptyState from '../../components/ui/EmptyState';
 import { StatusBadge } from '../../components/ui/Badge';
 import { useAppState } from '../../context/AppStateContext';
 import { fmtTime } from '../home/Dashboard';
+import RouteMap from '../../components/charts/RouteMap';
+import { useLivePosition } from '../../hooks/useGeolocation';
 import PlanChooser from './PlanChooser';
 import styles from './route.module.css';
 
 export default function RoutePlanner() {
   const navigate = useNavigate();
-  const { dsas, todayVisits, getDsa } = useAppState();
+  const { dsas, todayVisits, getDsa, dayPlan } = useAppState();
+  const planned = dayPlan && todayVisits.some((v) => v.date === dayPlan.date && v.planned);
   const [sheet, setSheet] = useState(false);
   const [chooser, setChooser] = useState(false);
 
@@ -25,6 +28,7 @@ export default function RoutePlanner() {
   const initial = useMemo(() => todayVisits.filter((v) => v.status !== 'completed').map((v) => v.dsaId), [todayVisits]);
   const [selected, setSelected] = useState(initial);
   const [extra, setExtra] = useState([]);
+  const here = useLivePosition();
 
   const toggle = (id) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   const addExtra = (id) => { setExtra((e) => [...e, id]); setSelected((s) => [...s, id]); setSheet(false); };
@@ -34,20 +38,36 @@ export default function RoutePlanner() {
     ...extra.map((id) => ({ key: `x-${id}`, dsaId: id, time: null, status: 'added' })),
   ];
   const available = dsas.filter((d) => !cards.some((c) => c.dsaId === d.id));
+  // Map follows the tick boxes: only selected, not-yet-done stops, in list order
+  const mapStops = cards.filter((c) => selected.includes(c.dsaId) && c.status !== 'completed').map((c) => getDsa(c.dsaId)).filter(Boolean);
 
   return (
     <Page>
       <TopBar title="Route" subtitle={`${selected.length} stops selected`} />
 
-      <Card padding={14} onClick={() => setChooser(true)} style={{ marginBottom: 12 }}>
-        <div className="row" style={{ gap: 12 }}>
-          <span className="icon-tile" style={{ '--tile': '#f59e0b', width: 40, height: 40, borderRadius: 12 }}><FiZap size={18} /></span>
-          <div className="grow">
-            <div style={{ fontWeight: 600 }}>Plan my day</div>
-            <div className="hint">DSAs · customers · branch — with route</div>
+      {planned ? (
+        <Card padding={14} onClick={() => navigate('/plan?edit=1')} style={{ marginBottom: 12 }}>
+          <div className="row" style={{ gap: 12 }}>
+            <span className="icon-tile" style={{ '--tile': '#4c1d95', width: 40, height: 40, borderRadius: 12 }}><FiEdit2 size={18} /></span>
+            <div className="grow">
+              <div style={{ fontWeight: 600 }}>Edit today&rsquo;s plan</div>
+              <div className="hint">Remove stops or add DSAs / customers</div>
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      ) : (
+        <Card padding={14} onClick={() => setChooser(true)} style={{ marginBottom: 12 }}>
+          <div className="row" style={{ gap: 12 }}>
+            <span className="icon-tile" style={{ '--tile': '#f59e0b', width: 40, height: 40, borderRadius: 12 }}><FiZap size={18} /></span>
+            <div className="grow">
+              <div style={{ fontWeight: 600 }}>Plan my day</div>
+              <div className="hint">DSAs · customers · branch — with route</div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {cards.length > 0 && <RouteMap stops={mapStops} origin={here} height={180} className={styles.mapGap} label="Live · Pune" empty="Tick stops to draw the route" />}
 
       {cards.length === 0 ? (
         <EmptyState emoji="📋" title="No visits planned today" subtitle="Add DSAs to build today's route." actionLabel="Add DSAs" actionIcon={<FiPlus />} onAction={() => setSheet(true)} />

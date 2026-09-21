@@ -117,7 +117,7 @@ export default function ProfileSettings() {
       <div style={{ marginTop: 32 }} className="stack">
         <Button variant="danger-outline" full icon={<FiLogOut />} onClick={() => setLogoutSheet(true)}>Log out</Button>
         <button className={styles.link} onClick={() => { toast('Logged out from all devices', 'success'); doLogout(); }}>Log out from all devices</button>
-        <p className="hint" style={{ textAlign: 'center', marginTop: 8 }}>BO Connect v1.0.0 (POC build)</p>
+        <p className="hint" style={{ textAlign: 'center', marginTop: 8 }}>Branch Officer App v1.0.0 (POC build)</p>
       </div>
 
       <BottomSheet open={pinSheet} onClose={() => setPinSheet(false)} title={hasPin ? 'Change PIN' : 'Set PIN'}>

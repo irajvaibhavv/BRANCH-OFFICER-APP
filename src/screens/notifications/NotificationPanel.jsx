@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useMotionValue, useTransform } from 'framer-motion';
-import { FiBell, FiAlertTriangle, FiTrendingUp, FiInfo, FiCheck } from 'react-icons/fi';
+import { FiBell, FiAlertTriangle, FiTrendingUp, FiInfo, FiCheck, FiAlertCircle } from 'react-icons/fi';
 import Page from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import EmptyState from '../../components/ui/EmptyState';
+import Card from '../../components/ui/Card';
 import { useAppState } from '../../context/AppStateContext';
 import { timeAgo, toISODate } from '../../utils/formatters';
 import styles from './notifications.module.css';
@@ -18,7 +19,7 @@ const TYPES = {
 
 export default function NotificationPanel() {
   const navigate = useNavigate();
-  const { notifications, markRead, markAllRead, unreadCount } = useAppState();
+  const { notifications, markRead, markAllRead, unreadCount, attention } = useAppState();
 
   const groups = useMemo(() => {
     const today = toISODate();
@@ -34,10 +35,26 @@ export default function NotificationPanel() {
 
   return (
     <Page mode="slide">
-      <TopBar back title="Notifications" subtitle={unreadCount ? `${unreadCount} unread` : 'All caught up'} hideBell right={
+      <TopBar back title="Notifications" subtitle={[attention.length && `${attention.length} need attention`, unreadCount && `${unreadCount} unread`].filter(Boolean).join(' · ') || 'All caught up'} hideBell right={
         unreadCount > 0 && <button className="link" style={{ color: 'var(--primary)', fontWeight: 600, fontSize: 14, padding: '0 8px', minHeight: 48 }} onClick={markAllRead}>Mark all read</button>
       } />
-      {groups.length === 0 ? <EmptyState emoji="🔔" title="No notifications" subtitle="You're all caught up." /> : groups.map(([label, items]) => (
+      {/* Needs attention — live action items; they clear when the work is done, not by marking read */}
+      {attention.length > 0 && (
+        <div>
+          <div className={styles.groupHead}>Needs attention</div>
+          <div className="stack" style={{ gap: 8 }}>
+            {attention.map((a) => (
+              <Card key={a.key} padding={14} status="warning" onClick={() => navigate(a.to)}>
+                <div className="row" style={{ gap: 10 }}>
+                  <FiAlertCircle size={18} color="var(--warning)" style={{ flexShrink: 0 }} />
+                  <span className="grow" style={{ fontSize: 15 }}>{a.text}</span>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+      {groups.length === 0 ? (attention.length === 0 && <EmptyState emoji="🔔" title="No notifications" subtitle="You're all caught up." />) : groups.map(([label, items]) => (
         <div key={label}>
           <div className={styles.groupHead}>{label}</div>
           <div className="stack" style={{ gap: 8 }}>

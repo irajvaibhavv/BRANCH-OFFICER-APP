@@ -71,6 +71,7 @@
 /* compact rows for DSAs / customers outside the matched set */
 .miniRow { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--hairline); }
 .miniRow:last-child { border-bottom: 0; }
+.via { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 11px; font-weight: 600; color: #0f766e; }
 .miniOn { background: color-mix(in srgb, var(--primary) 4%, var(--card)); }
 .miniName { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -113,3 +114,5 @@
 .aiRow { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 8px; padding: 9px 12px; border-radius: 12px; background: var(--card); border: 1px dashed color-mix(in srgb, var(--primary) 45%, var(--hairline)); font-size: 13px; color: var(--text-2); text-align: left; }
 .aiRow svg { color: var(--primary); flex-shrink: 0; }
 .aiRow b { color: var(--primary); }
+
+.mapGap { margin: 12px 0; }

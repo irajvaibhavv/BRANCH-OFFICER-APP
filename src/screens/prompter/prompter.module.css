@@ -1,0 +1,46 @@
+/* Full-bleed dark stage so the question is the only thing on screen */
+.screen {
+  position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column;
+  padding: max(12px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: radial-gradient(120% 80% at 50% 0%, #2a1d52 0%, #14102a 60%, #0d0b1c 100%);
+  color: #f5f3ff; --accent: #16a34a;
+}
+.rec { --accent: #ef4444; }
+.call { --accent: #22c55e; }
+
+.top { display: flex; align-items: center; gap: 10px; }
+.iconBtn { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; background: rgba(255, 255, 255, 0.08); flex-shrink: 0; }
+.who { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.name { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: rgba(245, 243, 255, 0.7); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: prompter-pulse 1s ease-in-out infinite; }
+.count { font-size: 13px; font-weight: 700; color: rgba(245, 243, 255, 0.7); flex-shrink: 0; }
+@keyframes prompter-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+.dots { display: flex; gap: 5px; margin: 14px 0 0; }
+.dotBtn { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.16); transition: background 0.15s ease; }
+.dotOn { background: #fff; }
+.dotDone { background: var(--accent); }
+
+.stage { flex: 1; display: flex; align-items: center; min-height: 0; }
+.card { width: 100%; touch-action: pan-y; }
+.meta { display: flex; gap: 6px; align-items: center; margin-bottom: 14px; }
+.topic { font-size: 12px; font-weight: 700; color: #fff; background: var(--tile); border-radius: 999px; padding: 3px 10px; }
+.prio { font-size: 12px; font-weight: 700; color: #fecaca; background: rgba(239, 68, 68, 0.25); border-radius: 999px; padding: 3px 10px; }
+.done { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; color: #bbf7d0; background: rgba(34, 197, 94, 0.22); border-radius: 999px; padding: 3px 10px; }
+.headline { font-size: 28px; line-height: 1.2; font-weight: 800; letter-spacing: -0.02em; color: #fff; }
+.full { margin-top: 14px; font-size: 17px; line-height: 1.5; color: rgba(245, 243, 255, 0.85); }
+.why { display: flex; gap: 6px; margin-top: 18px; font-size: 13px; line-height: 1.45; color: rgba(245, 243, 255, 0.6); }
+.why svg { flex-shrink: 0; margin-top: 3px; }
+.why b { color: rgba(245, 243, 255, 0.85); font-weight: 600; }
+
+.controls { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.navBtn { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; color: #fff; background: rgba(255, 255, 255, 0.1); flex-shrink: 0; }
+.navBtn:disabled { opacity: 0.3; }
+.tickBtn { flex: 1; height: 52px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; font-weight: 700; color: #fff; background: rgba(255, 255, 255, 0.14); border: 1.5px solid rgba(255, 255, 255, 0.2); }
+.tickOn { background: var(--accent); border-color: var(--accent); }
+.endBtn {
+  margin-top: 10px; height: 48px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: 15px; font-weight: 700; color: #fff; background: var(--accent);
+}
+.endHint { font-size: 12px; font-weight: 600; opacity: 0.8; margin-left: 4px; }

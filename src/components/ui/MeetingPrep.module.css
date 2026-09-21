@@ -12,5 +12,6 @@
 .chev { flex-shrink: 0; color: var(--text-3); margin-top: 3px; transition: transform 0.15s ease; }
 .chevOn { transform: rotate(180deg); }
 .why { margin-top: 6px; font-size: 13px; color: var(--text-2); line-height: 1.45; background: var(--bg); border-radius: 10px; padding: 8px 10px; }
+.fullQ { font-size: 14px; line-height: 1.45; color: var(--text-1); font-style: italic; margin-bottom: 6px; }
 .why b { color: var(--text-1); font-weight: 600; }
 .why svg { vertical-align: -2px; }

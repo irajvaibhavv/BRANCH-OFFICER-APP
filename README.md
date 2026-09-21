@@ -15,7 +15,7 @@ On a desktop browser the app renders inside a phone frame. On a real phone (or D
 
 ## Demo walkthrough
 
-1. **Login** — any 10-digit number starting 6–9 → OTP `1234` → set a 4-digit PIN → onboarding.
+1. **Login** — any 10-digit number starting 6–9 → OTP `1234` → set a 4-digit PIN → home.
 2. Next reload opens the **PIN screen** (fingerprint icon = instant login; "Login with OTP instead" resets).
 3. **Home** — target ring, quick stats, today's schedule, incentive nudge, FAB → Log Visit / Add DSA / Record Meeting / Report.
 4. **DSAs** — search, filter chips, tap stars to rate, long-press to select 2–3 and **Compare**, `+` to add a DSA (4-step form + confetti).
@@ -33,13 +33,12 @@ src/
     router.jsx             Route table + auth guards (RequireAuth, GuestOnly) + persistent tab bar
   screens/                 One folder per feature. Each has its screen(s) + a *.module.css
     auth/                  Login (OTP), PIN set/unlock
-    onboarding/            First-run tutorial
     home/                  Dashboard (Plan your day, Up next, stats, alerts)
     planning/              Plan my day: DSA route (PlanDay), customers (CustomerPlan), branch (BranchPlan), RoutePlanner/RouteResult
     dsa/                   DSA directory, profile, compare, add
     visits/                Visit history, log a visit
     recorder/              AI meeting recorder + summaries
-    ai/                    SMFG AI — handover voice interviews + reports
+    ai/                    SAARTHI AI — handover voice interviews + reports
     scheduler/ calendar/   Meetings and calendar
     documents/             Loan file tracker, document checklist
     incentive/ leaderboard/ reports/ notifications/ help/ profile/ more/

@@ -1,5 +1,5 @@
 /*
-  Voice I/O for SMFG AI — browser Web Speech API. Text-to-speech for the AI's bubbles and
+  Voice I/O for SAARTHI AI — browser Web Speech API. Text-to-speech for the AI's bubbles and
   speech-to-text for the customer's / DSA's replies. Everything still appears as text, so it
   works (typed) where the browser has no speech support.
 */

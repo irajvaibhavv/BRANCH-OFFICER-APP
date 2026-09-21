@@ -1,18 +1,19 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Reorder, motion } from 'framer-motion';
+import { Reorder } from 'framer-motion';
 import { FiNavigation, FiMove, FiMapPin, FiClock } from 'react-icons/fi';
 import Page from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Avatar from '../../components/ui/Avatar';
+import RouteMap, { START } from '../../components/charts/RouteMap';
 import { useAppState } from '../../context/AppStateContext';
 import { useToast } from '../../hooks/useToast';
 import styles from './route.module.css';
 
 // Branch (start point)
-export const START = { lat: 18.5308, lng: 73.8475 };
+export { START };
 export const km = (a, b) => {
   const R = 6371, dLat = ((b.lat - a.lat) * Math.PI) / 180, dLng = ((b.lng - a.lng) * Math.PI) / 180;
   const x = Math.sin(dLat / 2) ** 2 + Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
@@ -20,9 +21,9 @@ export const km = (a, b) => {
 };
 
 // Greedy nearest-neighbour — good enough for a demo; production would call a Directions API.
-export function optimise(stops) {
+export function optimise(stops, from = START) {
   const out = [];
-  let cur = START;
+  let cur = from;
   const pool = [...stops];
   while (pool.length) {
     pool.sort((a, b) => km(cur, a) - km(cur, b));
@@ -57,43 +58,11 @@ export default function RouteResult() {
   });
   const totalMins = Math.round((total / 22) * 60) + order.length * 40;
 
-  // Map placeholder: project lat/lng to a 100x100 box
-  const all = [START, ...order];
-  const lats = all.map((p) => p.lat), lngs = all.map((p) => p.lng);
-  const proj = (p) => ({
-    x: 10 + ((p.lng - Math.min(...lngs)) / (Math.max(...lngs) - Math.min(...lngs) || 1)) * 80,
-    y: 90 - ((p.lat - Math.min(...lats)) / (Math.max(...lats) - Math.min(...lats) || 1)) * 80,
-  });
-  const pts = all.map(proj);
-
   return (
     <Page mode="slide" style={{ paddingBottom: 'calc(var(--tabbar-safe) + 104px)' }}>
       <TopBar back title="Your route" subtitle="Optimised for shortest distance" hideBell />
 
-      <div className={styles.map}>
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className={styles.mapSvg}>
-          <defs>
-            <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-              <path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" strokeWidth="0.3" opacity="0.25" />
-            </pattern>
-          </defs>
-          <rect width="100" height="100" fill="url(#grid)" />
-          <motion.polyline
-            points={pts.map((p) => `${p.x},${p.y}`).join(' ')}
-            fill="none" stroke="var(--primary)" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" strokeDasharray="2 1.5"
-            initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.2, ease: 'easeOut' }}
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-        {pts.map((p, i) => (
-          <div key={i} className={styles.pinWrap} style={{ left: `${p.x}%`, top: `${p.y}%` }}>
-            <motion.div className={`${styles.pin} ${i === 0 ? styles.pinStart : ''}`} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2 + i * 0.15, type: 'spring' }}>
-              {i === 0 ? '🏢' : i}
-            </motion.div>
-          </div>
-        ))}
-        <div className={styles.mapLabel}>Map preview · Pune</div>
-      </div>
+      <RouteMap stops={order} height={220} className={styles.mapGap} />
 
       <Card padding={16} className={styles.summary}>
         <div><div className="big-number">{order.length}</div><div className="hint">stops</div></div>

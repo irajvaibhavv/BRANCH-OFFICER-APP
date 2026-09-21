@@ -223,7 +223,7 @@ export function CustomerDetail() {
           <Button style={{ flex: 1 }} variant="secondary" icon={<FiMapPin size={18} />} onClick={() => navigate(`/visits/new?dsa=${c.id}`)}>Log visit</Button>
         </div>
         <button className={styles.aiRow} onClick={() => navigate(`/ai/session?kind=customer&id=${c.id}`)}>
-          <IoSparkles size={15} /> <span className="grow">Let <b>SMFG AI</b> interview {c.name.split(' ')[0]} and write the report</span> <FiChevronRight size={15} />
+          <IoSparkles size={15} /> <span className="grow">Let <b>SAARTHI AI</b> interview {c.name.split(' ')[0]} and write the report</span> <FiChevronRight size={15} />
         </button>
       </div>
     </Page>

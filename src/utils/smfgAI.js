@@ -1,5 +1,5 @@
 /*
-  SMFG AI — the handover interviewer. The officer passes the phone to a customer or DSA; the AI
+  SAARTHI AI — the handover interviewer. The officer passes the phone to a customer or DSA; the AI
   runs the conversation (asks, reflects, follows up on what it heard) and then writes a report for
   the officer. In production this is an LLM with a system prompt per audience; here the flow is a
   deterministic script with branching + light keyword "understanding" so the demo is repeatable.
@@ -39,7 +39,7 @@ export function classifyConcern(text) {
 /* ------------------------------------------------------------------ CUSTOMER FLOW */
 const CUSTOMER_FLOW = {
   start: {
-    say: ({ party }) => [`Namaste${party ? ` ${first(party.name)}` : ''}! I'm SMFG AI. ${party?.name ? 'Rajesh' : 'The officer'} has handed me over so I can understand what you need and find the right loan for you.`, 'This takes about 3 minutes. Shall we begin?'],
+    say: ({ party }) => [`Namaste${party ? ` ${first(party.name)}` : ''}! I'm SAARTHI AI. ${party?.name ? 'Rajesh' : 'The officer'} has handed me over so I can understand what you need and find the right loan for you.`, 'This takes about 3 minutes. Shall we begin?'],
     options: ['Yes, let\'s start', 'Ask in short'],
     next: () => 'purpose',
   },
@@ -127,7 +127,7 @@ const CUSTOMER_FLOW = {
   compare: {
     key: 'compare',
     say: () => ['Have you spoken to any other bank or NBFC about this? What did they offer?'],
-    input: 'text', options: ['No, SMFG is the first', 'Yes — better rate elsewhere', 'Yes — they rejected me', 'Yes — still deciding'],
+    input: 'text', options: ['No, you are the first', 'Yes — better rate elsewhere', 'Yes — they rejected me', 'Yes — still deciding'],
     next: (ans) => (has(ans, 'reject') ? 'rejectedWhy' : 'concern'),
   },
   rejectedWhy: {
@@ -151,13 +151,13 @@ const CUSTOMER_FLOW = {
 /* ------------------------------------------------------------------ DSA FLOW */
 const DSA_FLOW = {
   start: {
-    say: ({ party }) => [`Hello ${first(party?.name) ?? ''}, I'm SMFG AI. Rajesh has asked me to hear you out properly — anything you tell me goes straight into a note for him and the branch head.`, 'Ready?'],
+    say: ({ party }) => [`Hello ${first(party?.name) ?? ''}, I'm SAARTHI AI. Rajesh has asked me to hear you out properly — anything you tell me goes straight into a note for him and the branch head.`, 'Ready?'],
     options: ['Yes, go ahead'],
     next: () => 'topic',
   },
   topic: {
     key: 'topic',
-    say: () => ['What is the one thing you most want SMFG to fix or improve right now? Say it in your own words.'],
+    say: () => ['What is the one thing you most want us to fix or improve right now? Say it in your own words.'],
     input: 'text', options: ['Payout / commission', 'Files take too long', 'Portal issues', 'Competitor offering more', 'Need training for my agents', 'Too many rejections'],
     next: (ans) => ({ payout: 'payoutDetail', delays: 'delayDetail', portal: 'portalDetail', competition: 'compDetail', training: 'trainDetail', rejections: 'rejectDetail' }[classifyConcern(ans)] ?? 'otherDetail'),
   },
@@ -211,7 +211,7 @@ const DSA_FLOW = {
   },
   satisfaction: {
     key: 'satisfaction',
-    say: () => ['On a scale of 1 to 5, how happy are you working with SMFG right now?'],
+    say: () => ['On a scale of 1 to 5, how happy are you working with us right now?'],
     options: ['1', '2', '3', '4', '5'],
     next: (ans) => (num(ans) <= 2 ? 'unhappyWhy' : 'pipeline'),
   },
@@ -223,7 +223,7 @@ const DSA_FLOW = {
   },
   pipeline: {
     key: 'pipeline',
-    say: () => ['Looking at next month — how many files do you realistically see coming to SMFG?'],
+    say: () => ['Looking at next month — how many files do you realistically see coming to us?'],
     options: ['Under 5', '5–10', '10–20', '20+'],
     next: () => 'support',
   },
@@ -336,7 +336,7 @@ export function buildReport(kind, party, a) {
       { owner: 'BO', text: { payout: 'Check slab eligibility and current payout vs. competitor; revert within 2 days', delays: 'Pull the DSA\'s pending files and chase credit for a TAT commitment', portal: 'Raise a ticket with IT and share the ticket number', competition: 'Bring a retention offer (slab review / faster processing) to the next meeting', training: 'Schedule a 30-min agent session this week', rejections: 'Review last 5 declines with the DSA and share a pre-check list', other: 'Follow up on the concern raised' }[topic] },
       escalate ? { owner: 'Branch Head', text: `Escalation: ${topicLabel.toLowerCase()} — ${sat ? `satisfaction ${sat}/5` : 'see report'}` } : null,
       a.support ? { owner: 'BO', text: `Arrange: ${a.support}` } : null,
-      { owner: party?.name ?? 'DSA', text: `Route ${a.pipeline ?? 'planned'} files to SMFG next month` },
+      { owner: party?.name ?? 'DSA', text: `Route ${a.pipeline ?? 'planned'} files to us next month` },
     ].filter(Boolean),
     answers: fields,
   };

@@ -66,7 +66,7 @@ const seedRecordings = (() => {
 */
 const AppStateContext = createContext(null);
 
-const DAILY_TARGET = 5;
+const DAILY_TARGET = 5; // fallback for days without a plan (calendar history, before planning)
 
 export function AppStateProvider({ children }) {
   const { isOnline, enqueue } = useOffline();
@@ -178,7 +178,7 @@ export function AppStateProvider({ children }) {
       const today = toISODate();
       setVisits((v) => [
         ...v.filter((x) => !(x.date === today && x.status === 'upcoming')),
-        ...stops.map((s, i) => ({ id: `plan${Date.now()}${i}`, dsaId: s.dsaId, date: today, time: s.time, status: 'upcoming', type: mode === 'customer' ? 'Customer Meeting' : 'Scheduled Visit', location: s.location, planned: true })),
+        ...stops.map((s, i) => ({ id: `plan${Date.now()}${i}`, dsaId: s.dsaId, date: today, time: s.time, status: 'upcoming', type: mode === 'customer' || String(s.dsaId).startsWith('cust') ? 'Customer Meeting' : 'Scheduled Visit', location: s.location, planned: true })),
       ]);
       setDayPlan({ date: today, mode, criteria, stops: stops.map((s) => s.dsaId) });
       track('PLAN_DAY', { mode, criteria, stops: stops.length });
@@ -222,6 +222,21 @@ export function AppStateProvider({ children }) {
   const todayDone = todayVisits.filter((v) => v.status === 'completed').length;
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  // Needs attention — live action items (not dismissable; they clear when the underlying work is done).
+  // Shown at the top of Notifications and counted in the bell badge.
+  const attention = useMemo(() => {
+    const pendingDocs = loanFiles.reduce((n, f) => n + f.docs.filter(([, s]) => s !== 'done').length, 0);
+    const filesNeedingDocs = loanFiles.filter((f) => f.docs.some(([, s]) => s !== 'done')).length;
+    const quietDsa = dsas.find((d) => d.quality === 'low' && d.lastVisit && (Date.now() - new Date(d.lastVisit)) / 86400000 > 14);
+    return [
+      pendingDocs > 0 && { key: 'docs', text: `${pendingDocs} documents pending across ${filesNeedingDocs} files`, to: '/documents' },
+      quietDsa && { key: 'quiet', text: `${quietDsa.name} hasn't submitted in ${Math.floor((Date.now() - new Date(quietDsa.lastVisit)) / 86400000)} days`, to: `/dsas/${quietDsa.id}` },
+    ].filter(Boolean);
+  }, [loanFiles, dsas]);
+
+  // Today's target = what the officer planned (plus any visits added since), not a fixed number.
+  const dailyTarget = dayPlan?.date === today && todayVisits.length > 0 ? todayVisits.length : DAILY_TARGET;
+
   const stats = useMemo(() => {
     const disbursedTotal = loanFiles.filter((f) => f.status === 'disbursed').reduce((s, f) => s + f.amount, 0);
     return {
@@ -229,10 +244,10 @@ export function AppStateProvider({ children }) {
       disbursed: disbursedTotal,
       incentiveEarned: 8500,
       quarterDisbursed: 15500000, // ₹1.55Cr — 45K short of Silver in incentive terms
-      dailyTarget: DAILY_TARGET,
+      dailyTarget,
       todayDone,
     };
-  }, [loanFiles, todayDone]);
+  }, [loanFiles, todayDone, dailyTarget]);
 
   const value = {
     dsas, getDsa, addDsa, rateDsa,
@@ -243,7 +258,7 @@ export function AppStateProvider({ children }) {
     engagements,
     dayPlan, planDay,
     customers, getCustomer,
-    notifications, unreadCount, markRead, markAllRead,
+    notifications, unreadCount, markRead, markAllRead, attention,
     stats, resetDemo,
   };
 

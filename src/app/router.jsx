@@ -12,7 +12,6 @@ import BottomTabBar from '../components/layout/BottomTabBar';
 import LoginScreen from '../screens/auth/LoginScreen';
 import OTPScreen from '../screens/auth/OTPScreen';
 import PINScreen, { PINSetupScreen } from '../screens/auth/PINScreen';
-import OnboardingTutorial from '../screens/onboarding/OnboardingTutorial';
 // Tabs
 import Dashboard from '../screens/home/Dashboard';
 import DSADirectory from '../screens/dsa/DSADirectory';
@@ -39,14 +38,16 @@ import MeetingScheduler from '../screens/scheduler/MeetingScheduler';
 import NotificationPanel from '../screens/notifications/NotificationPanel';
 import HelpFAQ from '../screens/help/HelpFAQ';
 import ProfileSettings from '../screens/profile/ProfileSettings';
+import Prompter from '../screens/prompter/Prompter';
 import MeetingRecorder, { RecordingDetail, RecordingsList, EngagementDetail } from '../screens/recorder/MeetingRecorder';
 
-/** Persistent tab bar — on every screen after login (hidden only during auth/onboarding). */
+/** Persistent tab bar — on every screen after login (hidden only during auth). */
 export function PersistentTabBar() {
   const { pathname } = useLocation();
   const { isAuthed } = useAuth();
-  // Also hidden in SMFG AI handover mode — the customer/DSA holding the phone must not wander into the officer's app.
-  if (!isAuthed || pathname.startsWith('/login') || pathname === '/onboarding' || pathname === '/ai/session') return null;
+  // Also hidden in SAARTHI AI handover mode (the customer/DSA holding the phone must not wander into the officer's app)
+  // and in the teleprompter, which is a full-screen stage.
+  if (!isAuthed || pathname.startsWith('/login') || pathname === '/ai/session' || pathname === '/prompter') return null;
   return <BottomTabBar />;
 }
 
@@ -54,16 +55,14 @@ export function PersistentTabBar() {
  * Auth gate:
  *  - no session            → /login (OTP)
  *  - session + PIN, locked → /login/pin (quick login)
- *  - authed, not onboarded → /onboarding
  */
 function RequireAuth() {
-  const { isAuthed, session, hasPin, onboarded } = useAuth();
+  const { isAuthed, session, hasPin } = useAuth();
   const location = useLocation();
   if (!isAuthed) {
     if (session?.otpVerified && hasPin) return <Navigate to="/login/pin" replace />;
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
-  if (!onboarded && location.pathname !== '/onboarding') return <Navigate to="/onboarding" replace />;
   return <Outlet />;
 }
 
@@ -95,7 +94,6 @@ export function AnimatedRoutes() {
         <Route path="/login/pin-setup" element={<PINSetupScreen />} />
 
         <Route element={<RequireAuth />}>
-          <Route path="/onboarding" element={<OnboardingTutorial />} />
 
           <Route path="/" element={<Dashboard />} />
           <Route path="/dsas" element={<DSADirectory />} />
@@ -115,6 +113,7 @@ export function AnimatedRoutes() {
           <Route path="/ai/session" element={<AISession />} />
           <Route path="/ai/reports/:id" element={<AIReport />} />
           <Route path="/visits/new" element={<VisitLogger />} />
+          <Route path="/prompter" element={<Prompter />} />
           <Route path="/record" element={<MeetingRecorder />} />
           <Route path="/recordings" element={<RecordingsList />} />
           <Route path="/recordings/:id" element={<RecordingDetail />} />

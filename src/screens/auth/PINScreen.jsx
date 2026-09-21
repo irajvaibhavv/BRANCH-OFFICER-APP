@@ -41,7 +41,7 @@ function PinPad({ value, onChange, error, extra }) {
 /** Step 1 (after first OTP login): set a 4-digit PIN, then confirm it. */
 export function PINSetupScreen() {
   const navigate = useNavigate();
-  const { setPin, onboarded, session } = useAuth();
+  const { setPin, session } = useAuth();
   const { toast } = useToast();
   const [stage, setStage] = useState('set'); // set | confirm
   const [first, setFirst] = useState('');
@@ -60,7 +60,7 @@ export function PINSetupScreen() {
     } else if (val === first) {
       setPin(val);
       toast('PIN set. Use it for quick login next time.', 'success');
-      navigate(onboarded ? '/' : '/onboarding', { replace: true });
+      navigate('/', { replace: true });
     } else {
       setError(true);
       setTimeout(() => { setVal(''); setError(false); setStage('set'); setFirst(''); }, 600);
@@ -82,7 +82,7 @@ export function PINSetupScreen() {
         <PinPad value={val} onChange={setVal} error={error} />
         {error && <p style={{ color: 'var(--danger)', textAlign: 'center', marginTop: 16, fontWeight: 500 }}>PINs don't match. Start again.</p>}
         <div className={styles.spacer} />
-        <button className={styles.link} style={{ alignSelf: 'center' }} onClick={() => navigate(onboarded ? '/' : '/onboarding', { replace: true })}>
+        <button className={styles.link} style={{ alignSelf: 'center' }} onClick={() => navigate('/', { replace: true })}>
           Skip for now
         </button>
       </div>

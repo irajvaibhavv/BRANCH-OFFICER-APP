@@ -18,7 +18,6 @@ export function AuthProvider({ children }) {
   // session: { phone, role, loggedInAt, otpVerified }
   const [session, setSession] = useLocalStorage('bo_session', null);
   const [pin, setPin] = useLocalStorage('bo_pin', null);
-  const [onboarded, setOnboarded] = useLocalStorage('bo_onboarded', false);
 
   // Like UPI apps: every fresh app open with a PIN set starts locked → PIN screen.
   useEffect(() => {
@@ -43,7 +42,7 @@ export function AuthProvider({ children }) {
   // Drop the session but keep the PIN (used by "Login with OTP instead")
   const clearSession = useCallback(() => setSession(null), [setSession]);
 
-  // Logout = fresh demo: wipe every persisted "bo_*" key (session, PIN, onboarding, visits,
+  // Logout = fresh demo: wipe every persisted "bo_*" key (session, PIN, visits,
   // plans, recordings, toggles…) and reload so all state re-seeds from the dummy data.
   const logout = useCallback(() => {
     setSession(null);
@@ -61,8 +60,6 @@ export function AuthProvider({ children }) {
     hasPin: !!pin,
     pin,
     setPin,
-    onboarded,
-    setOnboarded,
     loginWithOTP,
     selectRole,
     quickLogin,

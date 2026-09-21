@@ -12,7 +12,7 @@ export function AuthHeader({ title, subtitle }) {
   return (
     <motion.div className={styles.header} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
       <div className={styles.logo}>S</div>
-      <div style={{ marginTop: 12, fontSize: 24, fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.02em' }}>SMFG<span style={{ color: 'var(--text-3)', fontWeight: 500, margin: '0 4px' }}>·</span>BO Connect</div>
+      <div style={{ marginTop: 12, fontSize: 24, fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.02em' }}>Branch Officer App</div>
       <h1 style={{ marginTop: 16 }}>{title}</h1>
       <p>{subtitle}</p>
     </motion.div>

@@ -1,0 +1,122 @@
+.iconBtn {
+  width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; color: var(--primary);
+  background: var(--primary-soft);
+}
+.iconBtn:active { background: #ddd4f5; }
+
+.sticky {
+  background: var(--bg);
+  margin: 0 calc(-1 * var(--screen-pad)); padding: 4px var(--screen-pad) 8px;
+}
+.search {
+  display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 16px;
+  border-radius: 14px; background: var(--card); border: 1.5px solid var(--border);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.search:focus-within { border-color: var(--primary); box-shadow: var(--focus-ring); }
+.search input { flex: 1; border: none; outline: none; background: transparent; font-size: 16px; min-width: 0; }
+.search button { color: var(--text-3); display: flex; padding: 6px; }
+
+.chip {
+  flex-shrink: 0; height: 38px; padding: 0 14px; border-radius: 999px;
+  background: var(--card); border: 1.5px solid var(--border); color: var(--text-2);
+  font-weight: 500; font-size: 14px; transition: all 0.15s ease;
+}
+.chipOn { background: var(--primary); border-color: transparent; color: #fff; }
+
+.quick { display: flex; flex-direction: column; gap: 4px; }
+.quick button { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary); background: var(--primary-soft); transition: transform 0.15s var(--ease-spring); }
+.quick button:active { transform: scale(0.9); }
+.quick .wa { color: #16a34a; background: var(--success-soft); }
+
+.metrics { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+.selCard { outline: 2px solid var(--primary); background: var(--accent); }
+.check { width: 48px; height: 48px; border-radius: 14px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; }
+.checkOn { background: var(--primary); border-color: var(--primary); }
+
+.compareBar {
+  position: fixed; left: 0; right: 0; bottom: var(--tabbar-safe); margin: 0 auto; max-width: var(--max-w);
+  padding: 12px 20px; background: var(--bg); border-top: 1px solid var(--border); z-index: 55;
+}
+
+/* ---- Detail ---- */
+.detailHead {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px;
+  padding: 8px 0 20px;
+}
+.contactRow { display: flex; gap: 10px; margin-top: 8px; }
+.contactBtn {
+  height: 44px; padding: 0 16px; border-radius: 14px; display: inline-flex; align-items: center; gap: 8px;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  background: var(--card); border: var(--card-border); box-shadow: var(--card-shadow); font-weight: 600; font-size: 14px; color: var(--text-1);
+}
+.tabs { display: flex; gap: 4px; background: var(--card); padding: 4px; border-radius: 14px; border: var(--card-border); box-shadow: var(--card-shadow); margin-bottom: 16px; position: relative; }
+.tab { flex: 1; height: 40px; border-radius: 10px; font-weight: 600; font-size: 13px; color: var(--text-2); position: relative; z-index: 1; padding: 0 2px; white-space: nowrap; }
+.tabOn { color: var(--primary); }
+.tabPill { position: absolute; inset: 0; background: var(--primary-soft); border-radius: 10px; }
+.metricGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.note { border-left: 3px solid var(--primary); padding-left: 12px; }
+
+/* Product mix */
+.mixBar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; gap: 2px; background: var(--border); }
+.mixBar > span { display: block; height: 100%; min-width: 4px; }
+.mixList { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+.mixRow { display: flex; gap: 10px; align-items: flex-start; }
+.mixDot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; margin-top: 6px; }
+.mixTrack { height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; margin-top: 6px; }
+.mixTrack > span { display: block; height: 100%; border-radius: 2px; }
+
+/* Commission card */
+.payGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 8px; }
+.rateList { display: flex; flex-direction: column; gap: 8px; }
+.rateRow { display: grid; grid-template-columns: 110px 1fr 48px; align-items: center; gap: 10px; font-size: 14px; }
+.rateRow b { text-align: right; font-weight: 700; }
+.rateBar { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; display: block; }
+.rateBar > span { display: block; height: 100%; background: var(--primary-grad); border-radius: 3px; }
+
+/* Company engagement history */
+.roleRow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.roleChip { font-size: 12px; font-weight: 500; color: var(--text-2); background: var(--card); border: 1px solid var(--hairline); border-radius: 999px; padding: 4px 10px; }
+.roleChip b { color: var(--text-1); font-weight: 700; }
+.engStrip { display: flex; gap: 8px; padding: 14px 16px; border-radius: 16px; background: var(--card); border: var(--card-border); box-shadow: var(--card-shadow); }
+.engStrip > div { flex: 1; min-width: 0; }
+.engStrip :global(.big-number) { font-size: 20px; white-space: nowrap; }
+.attendees { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+.avStack { display: flex; flex-shrink: 0; }
+.avStack > * { margin-left: -8px; box-shadow: 0 0 0 2px var(--card) !important; }
+.avStack > *:first-child { margin-left: 0; }
+.trChip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--primary); background: var(--primary-soft); border-radius: 999px; padding: 4px 8px; flex-shrink: 0; white-space: nowrap; }
+
+/* ---- Compare ---- */
+.cmpTable { display: flex; flex-direction: column; gap: 8px; }
+.cmpRow { display: grid; align-items: center; gap: 8px; background: var(--card); border-radius: 12px; padding: 12px; border: var(--card-border); box-shadow: var(--card-shadow); }
+.cmpLabel { font-size: 13px; color: var(--text-2); font-weight: 500; }
+.cmpVal { text-align: center; font-weight: 700; font-size: 16px; padding: 6px 4px; border-radius: 8px; }
+.cmpWin { background: var(--success-soft); color: var(--success); }
+
+/* ---- Add DSA ---- */
+.steps { display: flex; gap: 6px; margin: 8px 0 24px; }
+.step { flex: 1; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+.stepFill { height: 100%; background: var(--primary); border-radius: 3px; }
+.review { display: flex; flex-direction: column; gap: 12px; }
+.reviewRow { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.reviewRow:last-child { border-bottom: none; }
+.upload {
+  border: 2px dashed var(--border); border-radius: 16px; padding: 24px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--text-2); cursor: pointer;
+  background: var(--card);
+}
+.uploadDone { border-color: var(--success); border-style: solid; }
+.footer { position: sticky; bottom: var(--tabbar-safe); background: var(--bg); padding: 12px 0 8px; display: flex; gap: 12px; margin-top: 24px; }
+
+.aiRow { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 10px; padding: 9px 12px; border-radius: 12px; background: var(--card); border: 1px dashed color-mix(in srgb, var(--primary) 45%, var(--hairline)); font-size: 13px; color: var(--text-2); text-align: left; }
+.aiRow svg { color: var(--primary); flex-shrink: 0; }
+.aiRow b { color: var(--primary); }
+
+.nextQ { font-size: 15px; line-height: 1.45; margin: 8px 0 12px; color: var(--text-1); }
+.quietLinks { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px; font-size: 13px; color: var(--text-3); }
+.quietLinks button { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--primary); }
+
+.aiBtn { flex: 1; height: 44px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 15px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #7c3aed, #4c1d95); box-shadow: 0 6px 16px rgba(76, 29, 149, 0.3); }
+.aiBtn:active { transform: scale(0.98); }

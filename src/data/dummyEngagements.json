@@ -1,0 +1,1416 @@
+[
+ {
+  "id": "eng69",
+  "dsaId": "dsa8",
+  "date": "2026-09-11",
+  "time": "10:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Rejected files review",
+  "outcome": "Positive",
+  "durationSecs": 3060,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng70",
+  "dsaId": "dsa8",
+  "date": "2026-08-26",
+  "time": "15:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Phone call",
+  "agenda": "Pipeline review & pending files",
+  "outcome": "Action items agreed",
+  "durationSecs": 1980,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng71",
+  "dsaId": "dsa8",
+  "date": "2026-01-07",
+  "time": "11:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "New product briefing – LAP",
+  "outcome": "Follow-up needed",
+  "durationSecs": 1320,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng72",
+  "dsaId": "dsa8",
+  "date": "2025-12-18",
+  "time": "12:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Rejected files review",
+  "outcome": "Neutral",
+  "durationSecs": 1320,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng73",
+  "dsaId": "dsa8",
+  "date": "2025-05-01",
+  "time": "12:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Phone call",
+  "agenda": "Rejected files review",
+  "outcome": "Positive",
+  "durationSecs": 1560,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng61",
+  "dsaId": "dsa7",
+  "date": "2026-09-11",
+  "time": "11:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Phone call",
+  "agenda": "Document quality follow-up",
+  "outcome": "Positive",
+  "durationSecs": 2340,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng62",
+  "dsaId": "dsa7",
+  "date": "2026-08-10",
+  "time": "18:00",
+  "lead": "bh",
+  "attendees": [
+   {
+    "name": "Neha Kulkarni",
+    "role": "Branch Head"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Video call",
+  "agenda": "Payout & incentive slab discussion",
+  "outcome": "Positive",
+  "durationSecs": 1080,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng63",
+  "dsaId": "dsa7",
+  "date": "2026-01-07",
+  "time": "11:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Rejected files review",
+  "outcome": "Positive",
+  "durationSecs": 2580,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng64",
+  "dsaId": "dsa7",
+  "date": "2025-12-19",
+  "time": "18:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Video call",
+  "agenda": "Pipeline review & pending files",
+  "outcome": "Positive",
+  "durationSecs": 3060,
+  "hasTranscript": false
+ },
+ {
+  "id": "eng65",
+  "dsaId": "dsa7",
+  "date": "2025-10-18",
+  "time": "18:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "New product briefing – LAP",
+  "outcome": "Action items agreed",
+  "durationSecs": 2940,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng66",
+  "dsaId": "dsa7",
+  "date": "2025-10-13",
+  "time": "10:00",
+  "lead": "cm",
+  "attendees": [
+   {
+    "name": "Amit Deshpande",
+    "role": "Cluster Manager"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "TAT improvement discussion",
+  "outcome": "Follow-up needed",
+  "durationSecs": 3000,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng67",
+  "dsaId": "dsa7",
+  "date": "2025-09-07",
+  "time": "16:30",
+  "lead": "cm",
+  "attendees": [
+   {
+    "name": "Amit Deshpande",
+    "role": "Cluster Manager"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "TAT improvement discussion",
+  "outcome": "Positive",
+  "durationSecs": 1920,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng68",
+  "dsaId": "dsa7",
+  "date": "2025-06-15",
+  "time": "11:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Phone call",
+  "agenda": "Pipeline review & pending files",
+  "outcome": "Follow-up needed",
+  "durationSecs": 2760,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng49",
+  "dsaId": "dsa6",
+  "date": "2026-08-05",
+  "time": "16:30",
+  "lead": "cm",
+  "attendees": [
+   {
+    "name": "Amit Deshpande",
+    "role": "Cluster Manager"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "TAT improvement discussion",
+  "outcome": "Action items agreed",
+  "durationSecs": 1380,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng50",
+  "dsaId": "dsa6",
+  "date": "2026-06-20",
+  "time": "15:00",
+  "lead": "ph",
+  "attendees": [
+   {
+    "name": "Kavita Menon",
+    "role": "Product Head – Secured Loans"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Credit policy changes briefing",
+  "outcome": "Positive",
+  "durationSecs": 1380,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng51",
+  "dsaId": "dsa6",
+  "date": "2026-05-30",
+  "time": "16:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Video call",
+  "agenda": "Pipeline review & pending files",
+  "outcome": "Action items agreed",
+  "durationSecs": 1500,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng52",
+  "dsaId": "dsa6",
+  "date": "2026-05-05",
+  "time": "15:00",
+  "lead": "bh",
+  "attendees": [
+   {
+    "name": "Neha Kulkarni",
+    "role": "Branch Head"
+   }
+  ],
+  "type": "Phone call",
+  "agenda": "Payout & incentive slab discussion",
+  "outcome": "Positive",
+  "durationSecs": 3060,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng53",
+  "dsaId": "dsa6",
+  "date": "2026-04-15",
+  "time": "11:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Phone call",
+  "agenda": "Pipeline review & pending files",
+  "outcome": "Neutral",
+  "durationSecs": 1800,
+  "hasTranscript": false
+ },
+ {
+  "id": "eng54",
+  "dsaId": "dsa6",
+  "date": "2026-03-13",
+  "time": "12:00",
+  "lead": "rh",
+  "attendees": [
+   {
+    "name": "Sandeep Rao",
+    "role": "Regional Head – West"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Strategic volume commitment",
+  "outcome": "Neutral",
+  "durationSecs": 2100,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng55",
+  "dsaId": "dsa6",
+  "date": "2025-12-24",
+  "time": "12:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Pipeline review & pending files",
+  "outcome": "Positive",
+  "durationSecs": 3000,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng56",
+  "dsaId": "dsa6",
+  "date": "2025-12-17",
+  "time": "16:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Document quality follow-up",
+  "outcome": "Follow-up needed",
+  "durationSecs": 1440,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng57",
+  "dsaId": "dsa6",
+  "date": "2025-12-12",
+  "time": "15:00",
+  "lead": "rh",
+  "attendees": [
+   {
+    "name": "Sandeep Rao",
+    "role": "Regional Head – West"
+   },
+   {
+    "name": "Neha Kulkarni",
+    "role": "Branch Head"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Annual partnership review",
+  "outcome": "Neutral",
+  "durationSecs": 1920,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng58",
+  "dsaId": "dsa6",
+  "date": "2025-12-10",
+  "time": "11:30",
+  "lead": "ceo",
+  "attendees": [
+   {
+    "name": "Arjun Mehta",
+    "role": "CEO"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "CEO connect – partner feedback",
+  "outcome": "Positive",
+  "durationSecs": 1560,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng59",
+  "dsaId": "dsa6",
+  "date": "2025-07-26",
+  "time": "11:30",
+  "lead": "rh",
+  "attendees": [
+   {
+    "name": "Sandeep Rao",
+    "role": "Regional Head – West"
+   },
+   {
+    "name": "Neha Kulkarni",
+    "role": "Branch Head"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Regional partner meet – top DSAs",
+  "outcome": "Follow-up needed",
+  "durationSecs": 3000,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng60",
+  "dsaId": "dsa6",
+  "date": "2025-07-09",
+  "time": "16:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Video call",
+  "agenda": "Monthly target check-in",
+  "outcome": "Positive",
+  "durationSecs": 2820,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng42",
+  "dsaId": "dsa5",
+  "date": "2026-01-04",
+  "time": "16:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Video call",
+  "agenda": "New product briefing – LAP",
+  "outcome": "Neutral",
+  "durationSecs": 2640,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng43",
+  "dsaId": "dsa5",
+  "date": "2025-12-05",
+  "time": "18:00",
+  "lead": "bh",
+  "attendees": [
+   {
+    "name": "Neha Kulkarni",
+    "role": "Branch Head"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Video call",
+  "agenda": "Branch target alignment",
+  "outcome": "Positive",
+  "durationSecs": 1860,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng44",
+  "dsaId": "dsa5",
+  "date": "2025-06-08",
+  "time": "11:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Phone call",
+  "agenda": "Document quality follow-up",
+  "outcome": "Action items agreed",
+  "durationSecs": 1560,
+  "hasTranscript": false
+ },
+ {
+  "id": "eng45",
+  "dsaId": "dsa5",
+  "date": "2025-05-13",
+  "time": "18:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "New product briefing – LAP",
+  "outcome": "Follow-up needed",
+  "durationSecs": 1680,
+  "hasTranscript": false
+ },
+ {
+  "id": "eng46",
+  "dsaId": "dsa5",
+  "date": "2025-04-13",
+  "time": "11:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Rejected files review",
+  "outcome": "Follow-up needed",
+  "durationSecs": 2340,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng47",
+  "dsaId": "dsa5",
+  "date": "2025-04-12",
+  "time": "12:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Monthly target check-in",
+  "outcome": "Positive",
+  "durationSecs": 2340,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng48",
+  "dsaId": "dsa5",
+  "date": "2025-03-28",
+  "time": "15:00",
+  "lead": "bh",
+  "attendees": [
+   {
+    "name": "Neha Kulkarni",
+    "role": "Branch Head"
+   }
+  ],
+  "type": "Phone call",
+  "agenda": "Relationship review & escalations",
+  "outcome": "Positive",
+  "durationSecs": 1320,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng37",
+  "dsaId": "dsa4",
+  "date": "2026-05-04",
+  "time": "16:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "New product briefing – LAP",
+  "outcome": "Neutral",
+  "durationSecs": 1080,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng38",
+  "dsaId": "dsa4",
+  "date": "2026-04-12",
+  "time": "11:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Video call",
+  "agenda": "New product briefing – LAP",
+  "outcome": "Positive",
+  "durationSecs": 1500,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng39",
+  "dsaId": "dsa4",
+  "date": "2025-07-11",
+  "time": "18:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Rejected files review",
+  "outcome": "Positive",
+  "durationSecs": 2880,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng40",
+  "dsaId": "dsa4",
+  "date": "2025-04-19",
+  "time": "16:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Document quality follow-up",
+  "outcome": "Neutral",
+  "durationSecs": 2100,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng41",
+  "dsaId": "dsa4",
+  "date": "2025-04-03",
+  "time": "16:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Rejected files review",
+  "outcome": "Positive",
+  "durationSecs": 1320,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng23",
+  "dsaId": "dsa3",
+  "date": "2026-08-22",
+  "time": "18:00",
+  "lead": "cm",
+  "attendees": [
+   {
+    "name": "Amit Deshpande",
+    "role": "Cluster Manager"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Cluster volume planning",
+  "outcome": "Positive",
+  "durationSecs": 2220,
+  "hasTranscript": false
+ },
+ {
+  "id": "eng24",
+  "dsaId": "dsa3",
+  "date": "2026-06-19",
+  "time": "16:30",
+  "lead": "ceo",
+  "attendees": [
+   {
+    "name": "Arjun Mehta",
+    "role": "CEO"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Phone call",
+  "agenda": "Top-partner recognition dinner",
+  "outcome": "Action items agreed",
+  "durationSecs": 1920,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng25",
+  "dsaId": "dsa3",
+  "date": "2026-06-02",
+  "time": "18:00",
+  "lead": "ph",
+  "attendees": [
+   {
+    "name": "Kavita Menon",
+    "role": "Product Head – Secured Loans"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Video call",
+  "agenda": "LAP product launch walkthrough",
+  "outcome": "Neutral",
+  "durationSecs": 2580,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng26",
+  "dsaId": "dsa3",
+  "date": "2026-04-20",
+  "time": "11:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "New product briefing – LAP",
+  "outcome": "Action items agreed",
+  "durationSecs": 1140,
+  "hasTranscript": false
+ },
+ {
+  "id": "eng27",
+  "dsaId": "dsa3",
+  "date": "2026-04-02",
+  "time": "12:00",
+  "lead": "ph",
+  "attendees": [
+   {
+    "name": "Kavita Menon",
+    "role": "Product Head – Secured Loans"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Video call",
+  "agenda": "Credit policy changes briefing",
+  "outcome": "Follow-up needed",
+  "durationSecs": 2400,
+  "hasTranscript": false
+ },
+ {
+  "id": "eng28",
+  "dsaId": "dsa3",
+  "date": "2026-02-16",
+  "time": "10:00",
+  "lead": "bh",
+  "attendees": [
+   {
+    "name": "Neha Kulkarni",
+    "role": "Branch Head"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Video call",
+  "agenda": "Branch target alignment",
+  "outcome": "Neutral",
+  "durationSecs": 2340,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng29",
+  "dsaId": "dsa3",
+  "date": "2025-12-17",
+  "time": "16:30",
+  "lead": "cm",
+  "attendees": [
+   {
+    "name": "Amit Deshpande",
+    "role": "Cluster Manager"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Competitor offers & retention",
+  "outcome": "Action items agreed",
+  "durationSecs": 1380,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng30",
+  "dsaId": "dsa3",
+  "date": "2025-10-30",
+  "time": "15:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Video call",
+  "agenda": "New product briefing – LAP",
+  "outcome": "Neutral",
+  "durationSecs": 2700,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng31",
+  "dsaId": "dsa3",
+  "date": "2025-09-29",
+  "time": "18:00",
+  "lead": "bh",
+  "attendees": [
+   {
+    "name": "Neha Kulkarni",
+    "role": "Branch Head"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Branch target alignment",
+  "outcome": "Follow-up needed",
+  "durationSecs": 1380,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng32",
+  "dsaId": "dsa3",
+  "date": "2025-05-25",
+  "time": "11:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Document quality follow-up",
+  "outcome": "Positive",
+  "durationSecs": 2820,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng33",
+  "dsaId": "dsa3",
+  "date": "2025-05-12",
+  "time": "16:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "New product briefing – LAP",
+  "outcome": "Action items agreed",
+  "durationSecs": 1620,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng34",
+  "dsaId": "dsa3",
+  "date": "2025-05-11",
+  "time": "10:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Pipeline review & pending files",
+  "outcome": "Positive",
+  "durationSecs": 1560,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng35",
+  "dsaId": "dsa3",
+  "date": "2025-05-07",
+  "time": "10:00",
+  "lead": "ceo",
+  "attendees": [
+   {
+    "name": "Arjun Mehta",
+    "role": "CEO"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Phone call",
+  "agenda": "Top-partner recognition dinner",
+  "outcome": "Action items agreed",
+  "durationSecs": 3000,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng36",
+  "dsaId": "dsa3",
+  "date": "2025-04-04",
+  "time": "16:30",
+  "lead": "cm",
+  "attendees": [
+   {
+    "name": "Amit Deshpande",
+    "role": "Cluster Manager"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Cluster volume planning",
+  "outcome": "Positive",
+  "durationSecs": 2400,
+  "hasTranscript": false
+ },
+ {
+  "id": "eng14",
+  "dsaId": "dsa2",
+  "date": "2026-06-24",
+  "time": "18:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Document quality follow-up",
+  "outcome": "Neutral",
+  "durationSecs": 1380,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng15",
+  "dsaId": "dsa2",
+  "date": "2026-04-27",
+  "time": "18:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Video call",
+  "agenda": "Pipeline review & pending files",
+  "outcome": "Follow-up needed",
+  "durationSecs": 3300,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng16",
+  "dsaId": "dsa2",
+  "date": "2026-03-28",
+  "time": "10:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Video call",
+  "agenda": "New product briefing – LAP",
+  "outcome": "Positive",
+  "durationSecs": 2460,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng17",
+  "dsaId": "dsa2",
+  "date": "2025-12-04",
+  "time": "11:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Rejected files review",
+  "outcome": "Positive",
+  "durationSecs": 2820,
+  "hasTranscript": false
+ },
+ {
+  "id": "eng18",
+  "dsaId": "dsa2",
+  "date": "2025-12-03",
+  "time": "15:00",
+  "lead": "ph",
+  "attendees": [
+   {
+    "name": "Kavita Menon",
+    "role": "Product Head – Secured Loans"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Credit policy changes briefing",
+  "outcome": "Follow-up needed",
+  "durationSecs": 1440,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng19",
+  "dsaId": "dsa2",
+  "date": "2025-07-30",
+  "time": "10:00",
+  "lead": "bh",
+  "attendees": [
+   {
+    "name": "Neha Kulkarni",
+    "role": "Branch Head"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Video call",
+  "agenda": "Branch target alignment",
+  "outcome": "Neutral",
+  "durationSecs": 1500,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng20",
+  "dsaId": "dsa2",
+  "date": "2025-07-16",
+  "time": "10:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Rejected files review",
+  "outcome": "Neutral",
+  "durationSecs": 3120,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng21",
+  "dsaId": "dsa2",
+  "date": "2025-07-01",
+  "time": "16:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Pipeline review & pending files",
+  "outcome": "Neutral",
+  "durationSecs": 2520,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng22",
+  "dsaId": "dsa2",
+  "date": "2025-06-12",
+  "time": "12:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Monthly target check-in",
+  "outcome": "Follow-up needed",
+  "durationSecs": 1500,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng1",
+  "dsaId": "dsa1",
+  "date": "2026-08-07",
+  "time": "11:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Rejected files review",
+  "outcome": "Follow-up needed",
+  "durationSecs": 1260,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng2",
+  "dsaId": "dsa1",
+  "date": "2026-07-27",
+  "time": "11:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Pipeline review & pending files",
+  "outcome": "Positive",
+  "durationSecs": 3300,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng3",
+  "dsaId": "dsa1",
+  "date": "2026-07-17",
+  "time": "10:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Document quality follow-up",
+  "outcome": "Action items agreed",
+  "durationSecs": 2640,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng4",
+  "dsaId": "dsa1",
+  "date": "2026-07-02",
+  "time": "16:30",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Phone call",
+  "agenda": "Rejected files review",
+  "outcome": "Neutral",
+  "durationSecs": 1440,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng5",
+  "dsaId": "dsa1",
+  "date": "2026-06-18",
+  "time": "18:00",
+  "lead": "rh",
+  "attendees": [
+   {
+    "name": "Sandeep Rao",
+    "role": "Regional Head – West"
+   },
+   {
+    "name": "Neha Kulkarni",
+    "role": "Branch Head"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Strategic volume commitment",
+  "outcome": "Positive",
+  "durationSecs": 1860,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng6",
+  "dsaId": "dsa1",
+  "date": "2026-06-10",
+  "time": "12:00",
+  "lead": "cm",
+  "attendees": [
+   {
+    "name": "Amit Deshpande",
+    "role": "Cluster Manager"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "TAT improvement discussion",
+  "outcome": "Follow-up needed",
+  "durationSecs": 2460,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng7",
+  "dsaId": "dsa1",
+  "date": "2026-04-13",
+  "time": "11:30",
+  "lead": "ph",
+  "attendees": [
+   {
+    "name": "Kavita Menon",
+    "role": "Product Head – Secured Loans"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Credit policy changes briefing",
+  "outcome": "Positive",
+  "durationSecs": 2940,
+  "hasTranscript": false
+ },
+ {
+  "id": "eng8",
+  "dsaId": "dsa1",
+  "date": "2026-02-07",
+  "time": "10:00",
+  "lead": "rh",
+  "attendees": [
+   {
+    "name": "Sandeep Rao",
+    "role": "Regional Head – West"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Strategic volume commitment",
+  "outcome": "Follow-up needed",
+  "durationSecs": 1680,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng9",
+  "dsaId": "dsa1",
+  "date": "2025-09-05",
+  "time": "15:00",
+  "lead": "bo",
+  "attendees": [
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Pipeline review & pending files",
+  "outcome": "Positive",
+  "durationSecs": 3180,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng10",
+  "dsaId": "dsa1",
+  "date": "2025-08-06",
+  "time": "16:30",
+  "lead": "ceo",
+  "attendees": [
+   {
+    "name": "Arjun Mehta",
+    "role": "CEO"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "CEO connect – partner feedback",
+  "outcome": "Positive",
+  "durationSecs": 1380,
+  "hasTranscript": false
+ },
+ {
+  "id": "eng11",
+  "dsaId": "dsa1",
+  "date": "2025-07-13",
+  "time": "10:00",
+  "lead": "bh",
+  "attendees": [
+   {
+    "name": "Neha Kulkarni",
+    "role": "Branch Head"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Relationship review & escalations",
+  "outcome": "Positive",
+  "durationSecs": 2760,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng12",
+  "dsaId": "dsa1",
+  "date": "2025-06-27",
+  "time": "12:00",
+  "lead": "bh",
+  "attendees": [
+   {
+    "name": "Neha Kulkarni",
+    "role": "Branch Head"
+   }
+  ],
+  "type": "In-person",
+  "agenda": "Branch target alignment",
+  "outcome": "Action items agreed",
+  "durationSecs": 1680,
+  "hasTranscript": true
+ },
+ {
+  "id": "eng13",
+  "dsaId": "dsa1",
+  "date": "2025-04-13",
+  "time": "12:00",
+  "lead": "bh",
+  "attendees": [
+   {
+    "name": "Neha Kulkarni",
+    "role": "Branch Head"
+   },
+   {
+    "name": "Rajesh Kumar",
+    "role": "Branch Officer"
+   }
+  ],
+  "type": "Video call",
+  "agenda": "Payout & incentive slab discussion",
+  "outcome": "Follow-up needed",
+  "durationSecs": 2580,
+  "hasTranscript": false
+ }
+]

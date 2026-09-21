@@ -1,0 +1,26 @@
+[
+  { "id": "loan", "title": "Loan Products", "emoji": "🏦", "items": [
+    { "q": "What MSME products can DSAs source?", "a": "Working Capital (₹5L-₹50L), Business Loan (₹2L-₹25L), and Loan Against Property (₹10L-₹2Cr). Machinery finance is launching in Q4." },
+    { "q": "What is the typical TAT for a Business Loan?", "a": "7-10 working days from complete document submission. LAP takes 15-20 days due to valuation and legal checks." },
+    { "q": "What is the minimum vintage for a borrower?", "a": "Business should be operational for at least 3 years with 2 years of ITR filings." }
+  ]},
+  { "id": "commission", "title": "Commission Rates", "emoji": "💰", "items": [
+    { "q": "What commission do DSAs earn?", "a": "1% for Business Loans, 1.5% for Working Capital, and 2-3% for LAP depending on monthly disbursement volume." },
+    { "q": "When is DSA payout processed?", "a": "Within 30 days of disbursement, credited on the 7th of every month." },
+    { "q": "How is my officer incentive calculated?", "a": "Based on quarterly disbursed value. Bronze: up to ₹1Cr, Silver: ₹1-2Cr, Gold: ₹2-4Cr, Platinum: ₹4Cr+. Each slab unlocks a higher % payout." }
+  ]},
+  { "id": "docs", "title": "Document Requirements", "emoji": "📄", "items": [
+    { "q": "Standard KYC documents?", "a": "PAN Card, Aadhaar, Udyam Registration, Shop Act License, and 6 months of bank statements." },
+    { "q": "What if GST returns are missing?", "a": "For turnover below ₹40L, a CA-certified turnover declaration can be accepted instead." },
+    { "q": "Can documents be uploaded from this app?", "a": "Yes - from the Document Checklist screen. Photos are compressed and synced when online." }
+  ]},
+  { "id": "app", "title": "App Usage", "emoji": "📱", "items": [
+    { "q": "How do I log a visit?", "a": "Tap the + button on Home, then Log Visit. Capture location, take a photo, add notes, and submit." },
+    { "q": "Does the app work offline?", "a": "Yes. All actions are saved locally and synced automatically when you're back online." },
+    { "q": "How do I change my PIN?", "a": "Go to More, then Profile & Settings, then Change PIN." }
+  ]},
+  { "id": "support", "title": "Contact Support", "emoji": "🎧", "items": [
+    { "q": "IT helpdesk hours?", "a": "Mon-Sat, 9 AM to 7 PM. Call 1800-123-4567 or email helpdesk@smfg.example." },
+    { "q": "Who do I contact for DSA onboarding issues?", "a": "Your Branch Head first, then the regional DSA desk at dsa-desk@smfg.example." }
+  ]}
+]

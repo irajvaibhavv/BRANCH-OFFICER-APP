@@ -1,0 +1,16 @@
+.head { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 8px 0 20px; }
+.infoGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.divider { height: 1px; background: var(--border); }
+.rowItem { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 0; }
+.rowIcon { width: 36px; height: 36px; border-radius: 10px; background: var(--primary-soft); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.menuRow { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 20px; min-height: 56px; border-bottom: 1px solid var(--border); }
+.menuRow:active { background: var(--accent); }
+.seg { display: flex; background: var(--bg); padding: 3px; border-radius: 10px; border: 1px solid var(--border); }
+.segBtn { height: 32px; padding: 0 10px; border-radius: 8px; font-weight: 600; font-size: 13px; color: var(--text-2); }
+.segOn { background: var(--card); color: var(--text-1); box-shadow: var(--card-shadow); }
+.link { color: var(--danger); font-weight: 600; font-size: 14px; min-height: 44px; }
+.pinInput {
+  width: 100%; height: 64px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--bg);
+  text-align: center; font-size: 32px; letter-spacing: 16px; font-weight: 700; outline: none;
+}
+.pinInput:focus { border-color: var(--primary); }

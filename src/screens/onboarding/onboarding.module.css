@@ -1,0 +1,17 @@
+.wrap { min-height: var(--screen-h); display: flex; flex-direction: column; padding: 16px 24px 32px; }
+.top { display: flex; justify-content: space-between; align-items: center; min-height: 48px; }
+.skip { color: var(--text-2); font-weight: 600; min-height: 48px; padding: 0 8px; }
+.stage { flex: 1; display: flex; align-items: center; overflow: hidden; }
+.slide { width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; cursor: grab; }
+.slide h1 { font-size: 28px; margin-top: 16px; }
+.slide p { color: var(--text-2); font-size: 17px; max-width: 300px; line-height: 1.55; }
+.illus {
+  width: 240px; height: 240px; border-radius: 48px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 104px; line-height: 1;
+  box-shadow: 0 24px 60px rgba(76, 29, 149, 0.15);
+}
+[data-theme='dark'] .illus { box-shadow: none; opacity: 0.95; }
+.bottom { display: flex; flex-direction: column; gap: 24px; align-items: center; }
+.dots { display: flex; gap: 6px; align-items: center; }
+.dot { height: 8px; border-radius: 4px; background: var(--primary); }

@@ -1,0 +1,20 @@
+.seg { display: flex; background: var(--card); padding: 4px; border-radius: 14px; border: var(--card-border); box-shadow: var(--card-shadow); }
+.segBtn { flex: 1; height: 40px; border-radius: 10px; font-weight: 600; font-size: 14px; color: var(--text-2); position: relative; }
+.segOn { color: var(--primary); }
+.segPill { position: absolute; inset: 0; background: var(--primary-soft); border-radius: 10px; }
+
+.report { overflow: hidden; display: block; }
+.report > div { display: block; }
+.reportHead { background: linear-gradient(135deg, #5b2aa8, #4c1d95); padding: 20px; color: #fff; }
+.body { padding: 4px 20px 8px; }
+.kpis { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid var(--border); }
+.kpis > div { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.kpis b { font-size: 24px; letter-spacing: -0.02em; }
+.kpis span { font-size: 13px; color: var(--text-2); }
+.of { font-size: 16px; color: var(--text-3); font-weight: 600; }
+.section { padding: 14px 0; border-bottom: 1px solid var(--border); }
+.avatars { display: flex; flex-wrap: wrap; gap: 8px; }
+.avChip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 999px; background: var(--primary-soft); font-size: 13px; font-weight: 600; color: var(--primary); }
+.breakdown { display: flex; flex-wrap: wrap; gap: 12px; font-size: 14px; color: var(--text-2); text-transform: capitalize; }
+.breakdown b { color: var(--text-1); }
+.actions { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }

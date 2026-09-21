@@ -1,0 +1,29 @@
+{
+  "week": [
+    { "id": "o3", "name": "Sneha Iyer", "branch": "Baner", "visits": 24, "files": 14, "disbursed": 6200000, "change": 1 },
+    { "id": "o1", "name": "Rajesh Kumar", "branch": "Shivajinagar", "visits": 22, "files": 12, "disbursed": 4500000, "change": 2, "isMe": true },
+    { "id": "o2", "name": "Amit Verma", "branch": "Hadapsar", "visits": 21, "files": 11, "disbursed": 5100000, "change": -1 },
+    { "id": "o4", "name": "Pooja Nair", "branch": "Kothrud", "visits": 18, "files": 9, "disbursed": 3800000, "change": 0 },
+    { "id": "o5", "name": "Karan Mehta", "branch": "Pimpri", "visits": 16, "files": 8, "disbursed": 2900000, "change": -2 },
+    { "id": "o6", "name": "Deepak Rao", "branch": "Camp", "visits": 14, "files": 7, "disbursed": 2400000, "change": 1 },
+    { "id": "o7", "name": "Neha Joshi", "branch": "Wakad", "visits": 12, "files": 6, "disbursed": 2100000, "change": -1 }
+  ],
+  "month": [
+    { "id": "o2", "name": "Amit Verma", "branch": "Hadapsar", "visits": 88, "files": 42, "disbursed": 19500000, "change": 0 },
+    { "id": "o3", "name": "Sneha Iyer", "branch": "Baner", "visits": 84, "files": 40, "disbursed": 18200000, "change": 1 },
+    { "id": "o1", "name": "Rajesh Kumar", "branch": "Shivajinagar", "visits": 79, "files": 38, "disbursed": 16800000, "change": 1, "isMe": true },
+    { "id": "o4", "name": "Pooja Nair", "branch": "Kothrud", "visits": 70, "files": 33, "disbursed": 14100000, "change": -2 },
+    { "id": "o5", "name": "Karan Mehta", "branch": "Pimpri", "visits": 61, "files": 28, "disbursed": 11000000, "change": 0 },
+    { "id": "o6", "name": "Deepak Rao", "branch": "Camp", "visits": 55, "files": 25, "disbursed": 9600000, "change": 1 },
+    { "id": "o7", "name": "Neha Joshi", "branch": "Wakad", "visits": 48, "files": 21, "disbursed": 8200000, "change": -1 }
+  ],
+  "quarter": [
+    { "id": "o2", "name": "Amit Verma", "branch": "Hadapsar", "visits": 240, "files": 118, "disbursed": 54000000, "change": 0 },
+    { "id": "o1", "name": "Rajesh Kumar", "branch": "Shivajinagar", "visits": 228, "files": 110, "disbursed": 49500000, "change": 2, "isMe": true },
+    { "id": "o3", "name": "Sneha Iyer", "branch": "Baner", "visits": 225, "files": 108, "disbursed": 48000000, "change": -1 },
+    { "id": "o4", "name": "Pooja Nair", "branch": "Kothrud", "visits": 198, "files": 92, "disbursed": 40000000, "change": -1 },
+    { "id": "o5", "name": "Karan Mehta", "branch": "Pimpri", "visits": 170, "files": 80, "disbursed": 32000000, "change": 0 },
+    { "id": "o6", "name": "Deepak Rao", "branch": "Camp", "visits": 160, "files": 72, "disbursed": 28000000, "change": 0 },
+    { "id": "o7", "name": "Neha Joshi", "branch": "Wakad", "visits": 140, "files": 64, "disbursed": 24000000, "change": 0 }
+  ]
+}

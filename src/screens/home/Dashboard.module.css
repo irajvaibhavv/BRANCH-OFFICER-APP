@@ -1,0 +1,72 @@
+.greet { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+.meta { display: inline-flex; align-items: center; gap: 4px; }
+.layoutBtn {
+  width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; color: var(--primary);
+  background: var(--primary-soft);
+}
+.layoutBtn:active { background: #ddd4f5; }
+
+/* Plan-your-day entry */
+.planCard {
+  background: linear-gradient(135deg, #fff7e6 0%, var(--card) 70%) !important;
+  border: 1px solid rgba(245, 158, 11, 0.25) !important;
+}
+[data-theme='dark'] .planCard { background: linear-gradient(135deg, rgba(245, 158, 11, 0.16) 0%, var(--card) 70%) !important; border-color: rgba(245, 158, 11, 0.35) !important; }
+.plannedLine { width: 100%; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); font-weight: 500; min-height: 32px; text-align: left; }
+
+/* Weather — single line */
+.weather {
+  display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-1);
+  padding: 8px 12px; border-radius: 12px; background: var(--card); border: var(--card-border); white-space: nowrap; overflow: hidden;
+}
+.weather b { font-weight: 700; font-size: 14px; }
+.weatherNow { flex-shrink: 0; }
+.weatherSep { width: 1px; height: 14px; background: var(--border); flex-shrink: 0; }
+.weatherNext { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+/* Up-next hero */
+/* Plan your day */
+.planCard { border-color: #f59e0b !important; background: color-mix(in srgb, #f59e0b 6%, var(--card)) !important; }
+.planStrip {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; border-radius: 14px;
+  background: var(--card); border: 1px solid var(--hairline); box-shadow: var(--card-shadow); font-size: 13px; color: var(--text-2);
+}
+.planStrip b { color: var(--text-1); font-weight: 700; }
+.planChange { font-size: 13px; font-weight: 700; color: var(--primary); flex-shrink: 0; }
+
+.next {
+  padding: 16px;
+  background: var(--card) !important;
+  border: 1.5px solid #d9cff0 !important;
+}
+[data-theme='dark'] .next { border-color: #3d3460 !important; }
+.next > div { display: block; }
+.nextLabel { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--primary); }
+.nextName { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.nextActions { display: flex; gap: 8px; margin-top: 12px; }
+.moreLink {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; min-height: 24px;
+  font-size: 13px; font-weight: 500; color: var(--text-2);
+}
+
+.qaIcon { width: 48px; height: 48px; border-radius: 15px; }
+
+/* Stats row */
+.statsRow { display: flex; gap: 10px; }
+.statsRow > * { flex: 1; }
+.statsRow :global(.big-number) { font-size: 20px; }
+
+/* News marquee */
+.marquee {
+  overflow: hidden; border-radius: 12px; background: var(--card); border: var(--card-border);
+  padding: 10px 0; cursor: pointer; -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.marqueeTrack { display: flex; gap: 36px; width: max-content; animation: marquee 32s linear infinite; will-change: transform; }
+.marquee:hover .marqueeTrack { animation-play-state: paused; }
+.marqueeItem { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; white-space: nowrap; color: var(--text-1); }
+.marqueeItem > span { font-size: 16px; }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* Home breathes a little more than list screens */
+.homeStack { gap: 24px; padding-top: 6px; }

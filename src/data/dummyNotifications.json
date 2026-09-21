@@ -1,0 +1,10 @@
+[
+  { "id": "n1", "type": "visit", "title": "Visit reminder", "message": "Anita Deshmukh at 3:00 PM today in Baner", "at": "2026-09-17T13:30:00", "read": false, "link": "/route" },
+  { "id": "n2", "type": "incentive", "title": "Almost there!", "message": "₹45,000 more to Silver slab - about 3 files away", "at": "2026-09-17T09:05:00", "read": false, "link": "/incentive" },
+  { "id": "n3", "type": "inactivity", "title": "DSA going quiet", "message": "Suresh Jadhav hasn't submitted a file in 20 days", "at": "2026-09-17T08:00:00", "read": false, "link": "/dsas/dsa4" },
+  { "id": "n4", "type": "announcement", "title": "Company announcement", "message": "New LAP rate card effective 1 Oct - check Help section", "at": "2026-09-16T17:00:00", "read": true, "link": "/help" },
+  { "id": "n5", "type": "visit", "title": "Visit missed", "message": "Scheduled visit with Suresh Jadhav was not logged", "at": "2026-09-16T18:30:00", "read": true, "link": "/visits/new" },
+  { "id": "n6", "type": "incentive", "title": "File disbursed 🎉", "message": "Kamal Auto Parts ₹35L disbursed - ₹3,500 incentive credited", "at": "2026-09-14T12:10:00", "read": true, "link": "/incentive" },
+  { "id": "n7", "type": "inactivity", "title": "DSA going quiet", "message": "Sunita Gaikwad has had no activity for 28 days", "at": "2026-09-13T08:00:00", "read": true, "link": "/dsas/dsa8" },
+  { "id": "n8", "type": "announcement", "title": "Company announcement", "message": "Q3 Leaderboard winners get a Goa trip! Keep pushing.", "at": "2026-09-12T10:00:00", "read": true, "link": "/leaderboard" }
+]

@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FiSearch, FiChevronDown, FiPhone, FiX, FiAlertOctagon } from 'react-icons/fi';
-import Page from '../../components/navigation/Page';
-import TopBar from '../../components/navigation/TopBar';
-import Card from '../../components/common/Card';
-import Button from '../../components/common/Button';
-import EmptyState from '../../components/common/EmptyState';
+import Page from '../../components/layout/Page';
+import TopBar from '../../components/layout/TopBar';
+import Card from '../../components/ui/Card';
+import Button from '../../components/ui/Button';
+import EmptyState from '../../components/ui/EmptyState';
 import { useToast } from '../../hooks/useToast';
-import faq from '../../data/dummyFAQ.json';
+import faq from '../../data/mock/faq.json';
 import styles from './help.module.css';
 
 export default function HelpFAQ() {

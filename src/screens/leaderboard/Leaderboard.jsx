@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FiArrowUp, FiArrowDown, FiMinus } from 'react-icons/fi';
-import Page, { listContainer, listItem } from '../../components/navigation/Page';
-import TopBar from '../../components/navigation/TopBar';
-import Avatar from '../../components/common/Avatar';
-import data from '../../data/dummyLeaderboard.json';
+import Page, { listContainer, listItem } from '../../components/layout/Page';
+import TopBar from '../../components/layout/TopBar';
+import Avatar from '../../components/ui/Avatar';
+import data from '../../data/mock/leaderboard.json';
 import { formatINR } from '../../utils/formatters';
 import styles from './leaderboard.module.css';
 

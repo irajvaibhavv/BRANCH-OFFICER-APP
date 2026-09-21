@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { FiUsers, FiUser, FiHome, FiChevronRight } from 'react-icons/fi';
-import BottomSheet from '../../components/common/BottomSheet';
+import BottomSheet from '../../components/ui/BottomSheet';
 import styles from './plan.module.css';
 
 /*

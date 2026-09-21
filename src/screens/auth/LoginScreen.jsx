@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiArrowRight } from 'react-icons/fi';
-import Page from '../../components/navigation/Page';
-import Button from '../../components/common/Button';
-import { Input } from '../../components/common/Input';
+import Page from '../../components/layout/Page';
+import Button from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 import { useAuth } from '../../context/AuthContext';
 import styles from './auth.module.css';
 

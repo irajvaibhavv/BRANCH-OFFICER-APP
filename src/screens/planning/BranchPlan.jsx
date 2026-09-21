@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiCheck, FiPhone, FiFileText, FiCalendar, FiUsers, FiChevronRight, FiHome } from 'react-icons/fi';
-import Page from '../../components/navigation/Page';
-import TopBar from '../../components/navigation/TopBar';
-import Card from '../../components/common/Card';
-import Button from '../../components/common/Button';
-import Badge from '../../components/common/Badge';
+import Page from '../../components/layout/Page';
+import TopBar from '../../components/layout/TopBar';
+import Card from '../../components/ui/Card';
+import Button from '../../components/ui/Button';
+import Badge from '../../components/ui/Badge';
 import { useAppState } from '../../context/AppStateContext';
 import { useToast } from '../../hooks/useToast';
 import { useLocalStorage } from '../../hooks/useLocalStorage';

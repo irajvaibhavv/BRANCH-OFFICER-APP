@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import Button from '../../components/common/Button';
+import Button from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import styles from './onboarding.module.css';
 

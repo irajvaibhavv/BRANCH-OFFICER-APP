@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import Page from '../../components/navigation/Page';
-import TopBar from '../../components/navigation/TopBar';
-import Button from '../../components/common/Button';
+import Page from '../../components/layout/Page';
+import TopBar from '../../components/layout/TopBar';
+import Button from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../hooks/useToast';
 import { AuthHeader } from './LoginScreen';

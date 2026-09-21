@@ -1,49 +1,48 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
-import { ThemeProvider } from './context/ThemeContext';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { OfflineProvider } from './context/OfflineContext';
-import { AppStateProvider } from './context/AppStateContext';
-import { ToastProvider } from './components/common/Toast';
-import BottomTabBar from './components/navigation/BottomTabBar';
-import OfflineBanner from './components/navigation/OfflineBanner';
-import PhoneFrame from './components/navigation/PhoneFrame';
+import { useAuth } from '../context/AuthContext';
+import BottomTabBar from '../components/layout/BottomTabBar';
+
+/*
+  Route table + auth guards. Add a screen here and it is reachable; the bottom tab bar
+  lives in components/layout and maps paths to tabs.
+*/
 
 // Auth
-import LoginScreen from './screens/auth/LoginScreen';
-import OTPScreen from './screens/auth/OTPScreen';
-import PINScreen, { PINSetupScreen } from './screens/auth/PINScreen';
-import OnboardingTutorial from './screens/onboarding/OnboardingTutorial';
+import LoginScreen from '../screens/auth/LoginScreen';
+import OTPScreen from '../screens/auth/OTPScreen';
+import PINScreen, { PINSetupScreen } from '../screens/auth/PINScreen';
+import OnboardingTutorial from '../screens/onboarding/OnboardingTutorial';
 // Tabs
-import Dashboard from './screens/home/Dashboard';
-import DSADirectory from './screens/dsa/DSADirectory';
-import RoutePlanner from './screens/route/RoutePlanner';
-import VisitHistory from './screens/visits/VisitHistory';
-import MoreMenu from './screens/more/MoreMenu';
+import Dashboard from '../screens/home/Dashboard';
+import DSADirectory from '../screens/dsa/DSADirectory';
+import RoutePlanner from '../screens/planning/RoutePlanner';
+import VisitHistory from '../screens/visits/VisitHistory';
+import MoreMenu from '../screens/more/MoreMenu';
 // Deeper screens
-import DSADetail from './screens/dsa/DSADetail';
-import DSAComparison from './screens/dsa/DSAComparison';
-import AddDSA from './screens/dsa/AddDSA';
-import RouteResult from './screens/route/RouteResult';
-import PlanDay from './screens/route/PlanDay';
-import CustomerPlan, { CustomerDetail } from './screens/route/CustomerPlan';
-import BranchPlan from './screens/route/BranchPlan';
-import AIHome, { AISession, AIReport } from './screens/ai/SMFGAI';
-import VisitLogger from './screens/visits/VisitLogger';
-import IncentiveTracker from './screens/incentive/IncentiveTracker';
-import DocumentChecklist from './screens/documents/DocumentChecklist';
-import LoanFileTracker from './screens/documents/LoanFileTracker';
-import Leaderboard from './screens/leaderboard/Leaderboard';
-import CalendarView from './screens/calendar/CalendarView';
-import ReportGenerator from './screens/reports/ReportGenerator';
-import MeetingScheduler from './screens/scheduler/MeetingScheduler';
-import NotificationPanel from './screens/notifications/NotificationPanel';
-import HelpFAQ from './screens/help/HelpFAQ';
-import ProfileSettings from './screens/profile/ProfileSettings';
-import MeetingRecorder, { RecordingDetail, RecordingsList, EngagementDetail } from './screens/recorder/MeetingRecorder';
+import DSADetail from '../screens/dsa/DSADetail';
+import DSAComparison from '../screens/dsa/DSAComparison';
+import AddDSA from '../screens/dsa/AddDSA';
+import RouteResult from '../screens/planning/RouteResult';
+import PlanDay from '../screens/planning/PlanDay';
+import CustomerPlan, { CustomerDetail } from '../screens/planning/CustomerPlan';
+import BranchPlan from '../screens/planning/BranchPlan';
+import AIHome, { AISession, AIReport } from '../screens/ai/SMFGAI';
+import VisitLogger from '../screens/visits/VisitLogger';
+import IncentiveTracker from '../screens/incentive/IncentiveTracker';
+import DocumentChecklist from '../screens/documents/DocumentChecklist';
+import LoanFileTracker from '../screens/documents/LoanFileTracker';
+import Leaderboard from '../screens/leaderboard/Leaderboard';
+import CalendarView from '../screens/calendar/CalendarView';
+import ReportGenerator from '../screens/reports/ReportGenerator';
+import MeetingScheduler from '../screens/scheduler/MeetingScheduler';
+import NotificationPanel from '../screens/notifications/NotificationPanel';
+import HelpFAQ from '../screens/help/HelpFAQ';
+import ProfileSettings from '../screens/profile/ProfileSettings';
+import MeetingRecorder, { RecordingDetail, RecordingsList, EngagementDetail } from '../screens/recorder/MeetingRecorder';
 
 /** Persistent tab bar — on every screen after login (hidden only during auth/onboarding). */
-function PersistentTabBar() {
+export function PersistentTabBar() {
   const { pathname } = useLocation();
   const { isAuthed } = useAuth();
   // Also hidden in SMFG AI handover mode — the customer/DSA holding the phone must not wander into the officer's app.
@@ -82,7 +81,7 @@ function LoginEntry() {
   return <LoginScreen />;
 }
 
-function AnimatedRoutes() {
+export function AnimatedRoutes() {
   const location = useLocation();
   return (
     <AnimatePresence mode="wait" initial={false}>
@@ -135,30 +134,5 @@ function AnimatedRoutes() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>
-  );
-}
-
-export default function App() {
-  return (
-    <ThemeProvider>
-      <AuthProvider>
-        <OfflineProvider>
-          <AppStateProvider>
-            <BrowserRouter>
-              <PhoneFrame>
-                {/* ToastProvider sits inside the frame so toasts render within the phone screen */}
-                <ToastProvider>
-                  <div className="app-shell">
-                    <OfflineBanner />
-                    <AnimatedRoutes />
-                    <PersistentTabBar />
-                  </div>
-                </ToastProvider>
-              </PhoneFrame>
-            </BrowserRouter>
-          </AppStateProvider>
-        </OfflineProvider>
-      </AuthProvider>
-    </ThemeProvider>
   );
 }

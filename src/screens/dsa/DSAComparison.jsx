@@ -1,10 +1,10 @@
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import Page from '../../components/navigation/Page';
-import TopBar from '../../components/navigation/TopBar';
-import Avatar from '../../components/common/Avatar';
-import { QualityBadge } from '../../components/common/Badge';
-import EmptyState from '../../components/common/EmptyState';
+import Page from '../../components/layout/Page';
+import TopBar from '../../components/layout/TopBar';
+import Avatar from '../../components/ui/Avatar';
+import { QualityBadge } from '../../components/ui/Badge';
+import EmptyState from '../../components/ui/EmptyState';
 import { useAppState } from '../../context/AppStateContext';
 import { formatINR } from '../../utils/formatters';
 import styles from './dsa.module.css';

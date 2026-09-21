@@ -1,12 +1,12 @@
 import { createContext, useContext, useCallback, useMemo, useEffect } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useOffline } from './OfflineContext';
-import dsasSeed from '../data/dummyDSAs.json';
-import visitsSeed from '../data/dummyVisits.json';
-import loanFilesSeed from '../data/dummyLoanFiles.json';
-import notificationsSeed from '../data/dummyNotifications.json';
-import engagementsSeed from '../data/dummyEngagements.json';
-import customersRaw from '../data/dummyCustomers.json';
+import dsasSeed from '../data/mock/dsas.json';
+import visitsSeed from '../data/mock/visits.json';
+import loanFilesSeed from '../data/mock/loanFiles.json';
+import notificationsSeed from '../data/mock/notifications.json';
+import engagementsSeed from '../data/mock/engagements.json';
+import customersRaw from '../data/mock/customers.json';
 import { toISODate } from '../utils/formatters';
 import { buildTranscript, buildSummary } from '../utils/meetingAI';
 

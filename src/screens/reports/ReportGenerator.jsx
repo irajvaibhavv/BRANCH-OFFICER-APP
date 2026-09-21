@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiShare2, FiDownload } from 'react-icons/fi';
-import Page from '../../components/navigation/Page';
-import TopBar from '../../components/navigation/TopBar';
-import Card from '../../components/common/Card';
-import Button from '../../components/common/Button';
-import Avatar from '../../components/common/Avatar';
-import { Input } from '../../components/common/Input';
+import Page from '../../components/layout/Page';
+import TopBar from '../../components/layout/TopBar';
+import Card from '../../components/ui/Card';
+import Button from '../../components/ui/Button';
+import Avatar from '../../components/ui/Avatar';
+import { Input } from '../../components/ui/Input';
 import { ProgressBar } from '../../components/charts/MiniMetric';
 import { useAppState } from '../../context/AppStateContext';
 import { useAuth } from '../../context/AuthContext';

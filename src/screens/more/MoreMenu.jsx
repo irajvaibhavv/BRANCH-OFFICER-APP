@@ -5,12 +5,12 @@ import {
   FiBarChart2, FiClock, FiHelpCircle, FiUser, FiCheckSquare, FiMic,
 } from 'react-icons/fi';
 import { IoSparkles } from 'react-icons/io5';
-import Page, { listContainer, listItem } from '../../components/navigation/Page';
-import TopBar from '../../components/navigation/TopBar';
-import Avatar from '../../components/common/Avatar';
-import Card from '../../components/common/Card';
+import Page, { listContainer, listItem } from '../../components/layout/Page';
+import TopBar from '../../components/layout/TopBar';
+import Avatar from '../../components/ui/Avatar';
+import Card from '../../components/ui/Card';
 import { useAuth } from '../../context/AuthContext';
-import news from '../../data/dummyNews.json';
+import news from '../../data/mock/news.json';
 import styles from './MoreMenu.module.css';
 
 const ITEMS = [

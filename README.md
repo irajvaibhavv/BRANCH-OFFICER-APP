@@ -1,4 +1,4 @@
-# BO Connect — Branch Officer Mobile App (Prototype)
+# Branch Officer App (Prototype)
 
 React + Vite prototype of a field productivity app for NBFC Branch Officers who manage DSA relationships.
 All data is dummy JSON persisted in `localStorage`; there is no backend.

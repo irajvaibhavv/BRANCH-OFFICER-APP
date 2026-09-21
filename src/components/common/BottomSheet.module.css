@@ -1,0 +1,34 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  z-index: 900;
+}
+.sheet {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  max-width: var(--max-w);
+  max-height: 88%;
+  background: var(--card);
+  border-radius: 28px 28px 0 0;
+  padding: 12px 20px 36px;
+  z-index: 901;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+}
+.handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--text-1);
+  opacity: 0.85;
+  width: 44px; height: 5px;
+  margin: 0 auto 18px;
+}
+.title { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
+.content { overflow-y: auto; flex: 1; min-height: 0; overscroll-behavior: contain; }

@@ -1,0 +1,35 @@
+.card {
+  background: var(--card);
+  border-radius: var(--radius-card);
+  padding: var(--card-pad);
+  box-shadow: var(--card-shadow);
+  border: var(--card-border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.tappable:hover { box-shadow: var(--card-shadow-hover); }
+.tappable:hover .chevron { color: var(--primary); transform: translateX(2px); }
+.body { flex: 1; min-width: 0; }
+.tappable { cursor: pointer; }
+.chevron { color: var(--text-3); flex-shrink: 0; transition: color 0.15s ease, transform 0.15s ease; }
+
+.status_success { border-left: 4px solid var(--success); }
+.status_warning { border-left: 4px solid var(--warning); }
+.status_danger { border-left: 4px solid var(--danger); }
+.status_primary { border-left: 4px solid var(--primary); }
+.status_neutral { border-left: 4px solid var(--text-3); }
+
+.metric { flex: 1; }
+.metric .body { display: flex; flex-direction: column; gap: 4px; }
+.metricIcon {
+  width: 36px; height: 36px; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--primary-soft); color: var(--primary);
+  margin-bottom: 4px;
+}
+.metricIcon[data-tone='success'] { background: var(--success-soft); color: var(--success); }
+.metricIcon[data-tone='warning'] { background: var(--warning-soft); color: var(--warning); }
+.metricIcon[data-tone='danger'] { background: var(--danger-soft); color: var(--danger); }

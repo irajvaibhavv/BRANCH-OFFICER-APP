@@ -1,0 +1,107 @@
+/* ============================================================
+   DESIGN TOKENS — single source of truth for colors, spacing,
+   typography. Dark mode overrides live under [data-theme="dark"].
+   ============================================================ */
+:root {
+  /* Colors — Light */
+  --bg: #f6f4fb;
+  --card: #ffffff;
+  --primary: #4c1d95;
+  --primary-hover: #3b1578;
+  --primary-soft: #ede9fb;
+  --success: #16a34a;
+  --success-soft: #e7f6ee;
+  --warning: #f59e0b;
+  --warning-soft: #fef3c7;
+  --danger: #dc2626;
+  --danger-soft: #fee2e2;
+  --text-1: #1f1a33;
+  --text-2: #5f5482;
+  --text-3: #7a6f99;
+  --border: #e6e1f0;
+  --accent: #f3effb;
+  --skeleton: #e9e5f2;
+  --skeleton-shine: #f4f1f9;
+  --overlay: rgba(31, 26, 51, 0.5);
+  --teal: #0f766e;
+
+  --card-shadow: 0 1px 2px rgba(76, 29, 149, 0.04), 0 2px 8px rgba(76, 29, 149, 0.05);
+  --card-shadow-hover: 0 2px 4px rgba(76, 29, 149, 0.06), 0 8px 20px rgba(76, 29, 149, 0.1);
+  --card-border: 1px solid #e9e4f3;
+  --primary-grad: linear-gradient(180deg, #5b2aa8 0%, #4c1d95 100%);
+  --primary-glow: 0 6px 16px rgba(76, 29, 149, 0.22);
+  --hairline: #e9e4f3;
+  --focus-ring: 0 0 0 3px rgba(76, 29, 149, 0.14);
+
+  /* Spacing — 8px grid */
+  --s-1: 8px;
+  --s-2: 16px;
+  --s-3: 24px;
+  --s-4: 32px;
+  --s-5: 40px;
+  --s-6: 48px;
+  --screen-pad: 20px;
+  --card-pad: 20px;
+  --card-gap: 12px;
+  --radius-card: 16px;
+  --radius-btn: 14px;
+  --radius-pill: 999px;
+
+  /* Layout */
+  --tabbar-h: 64px;
+  --tabbar-safe: 80px;
+  --topbar-h: 56px;
+  --touch-min: 48px;
+  --btn-h: 52px;
+  --input-h: 52px;
+  --max-w: 480px;
+  --screen-h: 100%; /* inside the desktop phone frame */
+  --top-inset: 52px; /* status bar height inside the desktop frame; 0 on a real phone */
+
+  /* Typography */
+  --font: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --fs-body: 16px;
+  --fs-h: 20px;
+  --fs-card: 17px;
+  --fs-label: 14px;
+  --fs-hint: 13px;
+  --fs-meta: 13px;
+  --fs-hero: 40px;
+
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme='dark'] {
+  --bg: #120d24;
+  --card: #1c1533;
+  --primary: #a78bfa;
+  --primary-hover: #8b5cf6;
+  --primary-soft: rgba(167, 139, 250, 0.16);
+  --success: #22c55e;
+  --success-soft: rgba(34, 197, 94, 0.16);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.16);
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.16);
+  --text-1: #f3f0fa;
+  --text-2: #b3abcf;
+  --text-3: #8f86ad;
+  --border: #322a4d;
+  --accent: rgba(167, 139, 250, 0.16);
+  --skeleton: #322a4d;
+  --skeleton-shine: #3d3460;
+  --overlay: rgba(8, 5, 20, 0.7);
+  --teal: #2dd4bf;
+
+  --card-shadow: none;
+  --card-shadow-hover: none;
+  --card-border: 1px solid #2f2749;
+  --primary-grad: linear-gradient(180deg, #a78bfa 0%, #8b5cf6 100%);
+  --primary-glow: 0 6px 16px rgba(139, 92, 246, 0.35);
+  --hairline: rgba(255, 255, 255, 0.08);
+  --focus-ring: 0 0 0 3px rgba(167, 139, 250, 0.25);
+}
+
+/* Large-text mode (Profile → Larger text): scales the whole app ~10% */
+[data-text='large'] .app-shell { zoom: 1.1; }

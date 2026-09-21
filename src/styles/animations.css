@@ -1,0 +1,46 @@
+/* Keyframe animations shared across the app. Framer Motion handles most
+   component-level motion; these are for CSS-only effects. */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { transform: scale(1); box-shadow: 0 8px 24px rgba(76, 29, 149, 0.3); }
+  50% { transform: scale(1.06); box-shadow: 0 12px 32px rgba(76, 29, 149, 0.45); }
+}
+
+@keyframes rec-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes glow-green {
+  0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.5); }
+  100% { box-shadow: 0 0 0 32px rgba(22, 163, 74, 0); }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--skeleton) 25%, var(--skeleton-shine) 50%, var(--skeleton) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+.spin { animation: spin 0.9s linear infinite; }
+
+/* FAB attention pulse: transform-only (GPU), once every 10s */
+@keyframes fab-pulse {
+  0%, 90%, 100% { transform: scale(1); }
+  93% { transform: scale(1.1); }
+  96% { transform: scale(0.98); }
+}
+.fab-pulse { animation: fab-pulse 10s ease-in-out 2s infinite; will-change: transform; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

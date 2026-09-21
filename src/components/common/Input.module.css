@@ -1,0 +1,74 @@
+.field { display: flex; flex-direction: column; gap: 8px; width: 100%; min-width: 0; }
+.label { font-size: 14px; font-weight: 500; color: var(--text-2); }
+
+.wrap {
+  display: flex;
+  align-items: center;
+  min-height: var(--input-h);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  padding: 0 16px;
+  gap: 8px;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.wrap:focus-within {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow: var(--focus-ring);
+}
+.hasError { border-color: var(--danger); }
+.hasError:focus-within { border-color: var(--danger); background: var(--danger-soft); box-shadow: none; }
+.textareaWrap { padding: 12px 16px; align-items: flex-start; }
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  color: var(--text-1);
+  padding: 0;
+  appearance: none;
+  width: 100%;
+}
+input[type='date'].input { min-width: 0; font-size: 15px; }
+textarea.input { min-height: 96px; resize: vertical; line-height: 1.5; }
+select.input { height: 48px; cursor: pointer; }
+.input::placeholder { color: var(--text-3); }
+
+.prefix, .suffix { color: var(--text-2); font-weight: 500; flex-shrink: 0; display: flex; align-items: center; }
+.error { font-size: 13px; color: var(--danger); font-weight: 500; }
+
+.pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 40px; padding: 0 16px; border-radius: 999px;
+  border: 1.5px solid var(--border); background: var(--card);
+  font-weight: 500; font-size: 14px; color: var(--text-2);
+  transition: all 0.15s ease;
+}
+.pillActive { border-color: transparent; background: var(--primary); color: #fff; }
+.pillActive[data-tone='success'] { border-color: var(--success); background: var(--success); }
+.pillActive[data-tone='warning'] { border-color: var(--warning); background: var(--warning); color: #111827; }
+.pillActive[data-tone='danger'] { border-color: var(--danger); background: var(--danger); }
+.pillActive[data-tone='neutral'] { border-color: var(--text-2); background: var(--text-2); }
+
+.toggleRow {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 56px; padding: 8px 0; cursor: pointer;
+}
+.toggleIcon { width: 38px; height: 38px; border-radius: 12px; background: var(--primary-soft); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.toggle {
+  width: 52px; height: 32px; border-radius: 16px; background: var(--border);
+  position: relative; transition: background 0.2s ease; flex-shrink: 0;
+}
+.toggleOn { background: var(--primary); }
+.knob {
+  position: absolute; top: 3px; left: 3px; width: 26px; height: 26px;
+  border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.toggleOn .knob { transform: translateX(20px); }

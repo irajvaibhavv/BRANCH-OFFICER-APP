@@ -1,0 +1,115 @@
+.steps { display: flex; gap: 6px; margin: 4px 0 20px; }
+.step { flex: 1; height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; }
+.stepFill { height: 100%; background: var(--primary); border-radius: 3px; }
+
+/* Criteria grid */
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.crit {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left;
+  padding: 14px; border-radius: 16px; background: var(--card); border: 1.5px solid var(--hairline); box-shadow: var(--card-shadow);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.critOn { border-color: var(--tile); background: color-mix(in srgb, var(--tile) 7%, var(--card)); }
+.critLabel { font-weight: 600; font-size: 15px; margin-top: 4px; }
+.critCheck { position: absolute; top: 10px; right: 10px; width: 22px; height: 22px; border-radius: 50%; background: var(--tile); color: #fff; display: flex; align-items: center; justify-content: center; }
+
+.stepper { display: flex; align-items: center; gap: 4px; background: var(--bg); border-radius: 12px; padding: 4px; }
+.stepper button { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--card); color: var(--primary); box-shadow: var(--card-shadow); }
+.stepper span { min-width: 32px; text-align: center; font-weight: 700; font-size: 18px; }
+
+/* Suggestions */
+.critRow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.critPill { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--tile); background: color-mix(in srgb, var(--tile) 12%, var(--card)); border-radius: 999px; padding: 6px 12px; }
+.rank { width: 26px; height: 26px; border-radius: 50%; background: var(--primary); color: #fff; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 9px; }
+.reasons { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.reason { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--tile); background: color-mix(in srgb, var(--tile) 11%, var(--card)); border-radius: 8px; padding: 4px 8px; }
+.matchRow { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.match { flex: 1; height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; }
+.matchFill { height: 100%; background: var(--primary-grad); border-radius: 3px; }
+.remove { font-size: 13px; font-weight: 600; color: var(--text-3); min-height: 28px; padding: 0 4px; }
+.muted { opacity: 0.85; }
+
+/* Route step */
+.seg { display: flex; gap: 4px; background: var(--card); padding: 4px; border-radius: 14px; border: var(--card-border); box-shadow: var(--card-shadow); }
+.segBtn { flex: 1; height: 40px; border-radius: 10px; font-weight: 600; font-size: 14px; color: var(--text-2); display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s ease, color 0.15s ease; }
+.segOn { background: var(--primary-soft); color: var(--primary); }
+.summary > div { display: flex; justify-content: space-around; text-align: center; }
+.summary :global(.big-number) { font-size: 20px; white-space: nowrap; }
+.num { width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dragCard { cursor: grab; border-color: var(--primary) !important; }
+
+.planBar {
+  position: fixed; left: 0; right: 0; bottom: var(--tabbar-safe); margin: 0 auto; max-width: var(--max-w);
+  padding: 12px 20px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 55;
+}
+
+/* ---------- Zomato-style filter bar (DSA browse) ---------- */
+.filterBar { position: sticky; top: 0; z-index: 20; background: var(--bg); margin: -4px -20px 12px; padding: 4px 20px 10px; }
+.search { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1.5px solid var(--hairline); border-radius: 14px; padding: 0 12px; height: 42px; color: var(--text-3); }
+.search input { flex: 1; min-width: 0; height: 100%; background: none; border: 0; font-size: 15px; color: var(--text-1); }
+.search input::placeholder { color: var(--text-3); }
+.search button { width: 26px; height: 26px; border-radius: 50%; background: var(--bg); color: var(--text-2); display: flex; align-items: center; justify-content: center; }
+.chips { display: flex; gap: 8px; overflow-x: auto; margin: 10px -20px 0; padding: 0 20px 2px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; color: var(--text-2); background: var(--card); border: 1.5px solid var(--hairline); white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.chipOn { color: #fff; background: var(--tile); border-color: var(--tile); }
+
+.secHead { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.secTitle { font-weight: 700; font-size: 16px; }
+.pickedCard { border-color: var(--primary) !important; background: color-mix(in srgb, var(--primary) 4%, var(--card)) !important; }
+
+.addBtn {
+  display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 10px; border-radius: 999px; flex-shrink: 0;
+  font-size: 13px; font-weight: 700; color: var(--primary); background: var(--primary-soft); transition: background 0.15s ease, color 0.15s ease;
+}
+.addOn { color: #fff; background: var(--success); }
+
+/* compact rows for DSAs / customers outside the matched set */
+.miniRow { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--hairline); }
+.miniRow:last-child { border-bottom: 0; }
+.miniOn { background: color-mix(in srgb, var(--primary) 4%, var(--card)); }
+.miniName { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Plan chooser (3 modes) ---------- */
+.modes { display: flex; flex-direction: column; gap: 10px; }
+.mode { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 14px; border-radius: 16px; background: var(--card); border: 1.5px solid var(--hairline); box-shadow: var(--card-shadow); }
+.mode:active { transform: scale(0.99); }
+.modeTitle { font-weight: 700; font-size: 16px; }
+
+/* ---------- Customers ---------- */
+.kindSeg { display: flex; gap: 4px; background: var(--card); padding: 4px; border-radius: 14px; border: var(--card-border); box-shadow: var(--card-shadow); margin-bottom: 14px; }
+.kindBtn { flex: 1; height: 38px; border-radius: 10px; font-weight: 600; font-size: 13px; color: var(--text-2); display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.kindBtn b { font-size: 12px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--bg); color: var(--text-2); }
+.kindOn { background: var(--primary-soft); color: var(--primary); }
+.kindOn b { background: var(--primary); color: #fff; }
+
+/* ---------- Loan calculator ---------- */
+.calcGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.calcOut { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.calcTile { background: var(--bg); border-radius: 12px; padding: 10px 12px; }
+.calcTile .v { font-weight: 700; font-size: 18px; letter-spacing: -0.01em; white-space: nowrap; }
+.calcTile .k { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.slider { width: 100%; accent-color: var(--primary); margin-top: 6px; }
+.qRow { padding: 12px 0; border-bottom: 1px solid var(--hairline); }
+.qRow:last-child { border-bottom: 0; padding-bottom: 0; }
+.qText { font-weight: 600; font-size: 15px; margin-bottom: 8px; }
+.qOpts { display: flex; flex-wrap: wrap; gap: 6px; }
+.qOpt { height: 32px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--text-2); background: var(--bg); border: 1.5px solid var(--hairline); }
+.qOptOn { color: var(--primary); background: var(--primary-soft); border-color: var(--primary); }
+.qInput { width: 100%; height: 42px; border-radius: 12px; border: 1.5px solid var(--hairline); background: var(--bg); padding: 0 12px; font-size: 15px; color: var(--text-1); }
+.qHint { font-size: 12px; color: var(--text-3); margin-top: 6px; }
+
+/* ---------- Branch tasks ---------- */
+.task { display: flex; align-items: flex-start; gap: 12px; width: 100%; text-align: left; padding: 12px 0; border-bottom: 1px solid var(--hairline); }
+.task:last-child { border-bottom: 0; }
+.taskTick { width: 24px; height: 24px; border-radius: 8px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; margin-top: 2px; }
+.taskOn { background: var(--success); border-color: var(--success); }
+.taskDone { text-decoration: line-through; color: var(--text-3); }
+
+.aiRow { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 8px; padding: 9px 12px; border-radius: 12px; background: var(--card); border: 1px dashed color-mix(in srgb, var(--primary) 45%, var(--hairline)); font-size: 13px; color: var(--text-2); text-align: left; }
+.aiRow svg { color: var(--primary); flex-shrink: 0; }
+.aiRow b { color: var(--primary); }

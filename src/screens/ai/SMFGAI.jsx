@@ -271,7 +271,7 @@ export function AISession() {
       <div className={styles.ivStage}>
         <div className={`${styles.ivOrb} ${orbMode}`}>
           <span className={styles.ivWave} /><span className={styles.ivWave} /><span className={styles.ivWave} />
-          <span className={styles.ivCore}>{listening ? <FiMic size={30} /> : <IoSparkles size={30} />}</span>
+          <span className={styles.ivCore}>{listening ? <FiMic size={22} /> : <IoSparkles size={22} />}</span>
         </div>
         <div className={styles.ivState}>{state}</div>
 

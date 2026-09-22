@@ -18,7 +18,7 @@ import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { useToast } from '../../hooks/useToast';
 import { formatINR, timeAgo } from '../../utils/formatters';
 import { FLOWS, reflect, buildReport } from '../../utils/smfgAI';
-import { speak as tts, stopSpeaking, listen, canSpeak, canListen } from '../../utils/voice';
+import { speak as tts, stopSpeaking, prefetch, listen, canSpeak, canListen } from '../../utils/voice';
 import styles from './ai.module.css';
 
 /*
@@ -144,6 +144,7 @@ export function AISession() {
     const n = flow[nodeId];
     const lines = [...lead, ...n.say(ctxNow)];
     setNode(null);
+    if (voiceOn && canSpeak) prefetch(lines); // Murf: fetch all bubbles now so they play back-to-back
     let delay = 0;
     lines.forEach((line, i) => {
       later(() => setTyping(true), delay);

@@ -17,6 +17,7 @@ const SR = typeof window !== 'undefined' ? window.SpeechRecognition || window.we
 const ENV = import.meta.env;
 const ELEVEN_KEY = ENV.VITE_ELEVENLABS_API_KEY;
 const ELEVEN_VOICE = ENV.VITE_ELEVENLABS_VOICE || 'EXAVITQu4vr4xnSDxMaL'; // Sarah — calm, reassuring
+const SPEED = Number(ENV.VITE_TTS_SPEED) || 0.85; // ElevenLabs 0.7–1.2; Murf −50…50 derived below
 const MURF_KEY = ENV.VITE_MURF_API_KEY;
 const MURF_VOICE = ENV.VITE_MURF_VOICE || 'en-IN-arohi';
 const MURF_URL = 'https://api.murf.ai/v1/speech/generate';
@@ -42,7 +43,7 @@ function fetchMurf(text) {
   return fetch(MURF_URL, {
     method: 'POST',
     headers: { 'api-key': MURF_KEY, 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ text, voiceId: MURF_VOICE, format: 'MP3', sampleRate: 24000, modelVersion: 'GEN2', channelType: 'MONO' }),
+    body: JSON.stringify({ text, voiceId: MURF_VOICE, rate: Math.round((SPEED - 1) * 100), format: 'MP3', sampleRate: 24000, modelVersion: 'GEN2', channelType: 'MONO' }),
   })
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`Murf ${r.status}`))))
     .then((j) => j.audioFile || Promise.reject(new Error('Murf: no audioFile')));
@@ -52,7 +53,7 @@ function fetchEleven(text) {
   return fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN_VOICE}?output_format=mp3_22050_32`, {
     method: 'POST',
     headers: { 'xi-api-key': ELEVEN_KEY, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
-    body: JSON.stringify({ text, model_id: 'eleven_multilingual_v2', voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.2 } }),
+    body: JSON.stringify({ text, model_id: 'eleven_multilingual_v2', voice_settings: { stability: 0.6, similarity_boost: 0.8, style: 0.1, speed: SPEED } }),
   })
     .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`ElevenLabs ${r.status}`))))
     .then((b) => URL.createObjectURL(b));

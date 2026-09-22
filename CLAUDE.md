@@ -40,7 +40,7 @@ Demo login: any 10-digit number starting 6–9 → OTP `1234` → set a 4-digit 
 **Simulated AI** (`src/utils/`, pure JS, no React):
 - `smfgAI.js` — scripted handover interview flows (nodes with `say/options/input/next/key`, keyword-based branching), producing a report for the officer.
 - `meetingAI.js` — deterministic per-DSA transcript + summary generation for the meeting recorder.
-- `voice.js` — TTS via Murf AI when `VITE_MURF_API_KEY` is set (`.env.local`, see `.env.example`; on Vercel add it as an env var), else browser Web Speech API; STT is always browser. Lines queue and play in order; `prefetch(lines)` warms Murf before a multi-bubble turn. Everything must still work as typed text when unsupported.
+- `voice.js` — TTS via ElevenLabs (`VITE_ELEVENLABS_API_KEY`) or Murf AI (`VITE_MURF_API_KEY`) when set (`.env.local`, see `.env.example`; on Vercel add it as an env var), else browser Web Speech API; STT is always browser. Lines queue and play in order; `prefetch(lines)` warms Murf before a multi-bubble turn. Everything must still work as typed text when unsupported.
 - `loanCalc.js` (EMI/eligibility/FOIR), `commission.js`, `meetingPrep.js` — business logic shared across screens.
 
 ## Conventions

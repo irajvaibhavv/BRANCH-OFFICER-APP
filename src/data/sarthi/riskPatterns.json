@@ -1,0 +1,77 @@
+[
+  {
+    "patternId": "DWK-PARTNERSHIP-001",
+    "area": "Dwarka",
+    "businessType": "Partnership",
+    "failureRate": 0.6,
+    "whatWentWrong": "Partner absconded in 3 of 5 cases. Business collapsed within 6 months.",
+    "redFlags": [
+      "No registered partnership deed",
+      "Single signatory on bank account",
+      "Partner not available for verification",
+      "Business less than 3 years old"
+    ],
+    "questionsToAsk": [
+      "Partnership deed registered hai ya sirf verbal agreement?",
+      "Bank account mein dono partners ke signature hain?",
+      "Partner se kitne saal se jaante ho?",
+      "Agar partner kal chhod de toh business aap akele chala sakte ho?",
+      "Partner ka koi aur business bhi hai?"
+    ],
+    "questionsToAskHi": [
+      "पार्टनरशिप डीड रजिस्टर्ड है? या सिर्फ़ वर्बल एग्रीमेंट है?",
+      "बैंक अकाउंट में, दोनों पार्टनर्स के सिग्नेचर हैं?",
+      "पार्टनर को, कितने साल से जानते हैं?",
+      "अगर पार्टनर कल छोड़ दे। तो बिज़नेस, आप अकेले चला सकते हैं?",
+      "पार्टनर का, कोई और बिज़नेस भी है?"
+    ]
+  },
+  {
+    "patternId": "KB-HIGHRENT-002",
+    "area": "Karol Bagh",
+    "businessType": "Retail",
+    "failureRate": 0.35,
+    "whatWentWrong": "High rent area. Borrowers overstated income to get larger loans. EMI + rent exceeded actual capacity.",
+    "redFlags": [
+      "Declared rent significantly below market rate",
+      "Income declaration more than 30% above bank credits",
+      "No rent receipt or agreement provided"
+    ],
+    "questionsToAsk": [
+      "Shop ka monthly rent kitna hai?",
+      "Rent agreement kitne saal ka hai?",
+      "Pichle saal rent badhha tha?",
+      "Kya shop owned hai ya rented?"
+    ],
+    "questionsToAskHi": [
+      "शॉप का मंथली रेंट, कितना है?",
+      "रेंट एग्रीमेंट, कितने साल का है?",
+      "पिछले साल, रेंट बढ़ा था?",
+      "शॉप अपनी है, या रेंट पे है?"
+    ]
+  },
+  {
+    "patternId": "NOI-FREELANCE-003",
+    "area": "Noida",
+    "businessType": "Freelancer/IT",
+    "failureRate": 0.15,
+    "whatWentWrong": "Irregular income. Some months zero earnings. EMI bounce after 4-5 months.",
+    "redFlags": [
+      "Monthly income varies by more than 50%",
+      "Less than 3 regular clients",
+      "No retainer contracts"
+    ],
+    "questionsToAsk": [
+      "Kitne regular clients hain jo har mahine kaam dete hain?",
+      "Kya koi retainer ya fixed contract hai?",
+      "Koi mahina aisa gaya jab income zero thi?",
+      "Agar ek bada client chhod de toh income pe kitna asar padega?"
+    ],
+    "questionsToAskHi": [
+      "कितने रेगुलर क्लाइंट्स हैं, जो हर महीने काम देते हैं?",
+      "क्या कोई रिटेनर, या फ़िक्स्ड कॉन्ट्रैक्ट है?",
+      "कोई महीना ऐसा गया, जब इनकम ज़ीरो थी?",
+      "अगर एक बड़ा क्लाइंट छोड़ दे। तो इनकम पे, कितना असर पड़ेगा?"
+    ]
+  }
+]

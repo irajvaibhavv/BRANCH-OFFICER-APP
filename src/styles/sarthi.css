@@ -1,0 +1,96 @@
+/* ============================================================
+   SARTHI — its own visual language, scoped under .sarthi so the
+   rest of BO Connect is untouched.
+
+   The vocabulary is the credit file: ink, paper, rules, and the
+   stamp an underwriter puts on a verdict. Every screen is built
+   around one confrontation — what the applicant said against what
+   the data shows — so figures face each other rather than sitting
+   in separate cards.
+   ============================================================ */
+.sarthi {
+  --s-ink: #1f1a33;
+  --s-ink-2: #5f5482;
+  --s-ink-3: #7a6f99;
+  --s-paper: #ffffff;
+  --s-paper-2: #f1eef8;
+  --s-line: #e9e4f3;
+  --s-rule: #ddd6ec;
+
+  --s-stamp: #b3261e;   /* contradicted — the discrepancy */
+  --s-clear: #1e6f4c;   /* confirmed */
+  --s-watch: #9a6b00;   /* unverified, needs a human */
+  --s-accent: #4c1d95;  /* Sarthi itself */
+
+  --s-stamp-bg: #f7e4e1;
+  --s-clear-bg: #e2efe8;
+  --s-watch-bg: #f7eed6;
+
+  font-family: var(--font);
+  color: var(--s-ink);
+  font-feature-settings: 'tnum' 1; /* figures line up column to column */
+}
+
+[data-theme='dark'] .sarthi {
+  --s-ink: #eceaf4;
+  --s-ink-2: #a9b0c9;
+  --s-ink-3: #7d86a3;
+  --s-paper: #171327;
+  --s-paper-2: #1f1936;
+  --s-line: #332b4d;
+  --s-rule: #3d3459;
+
+  --s-stamp: #ff8a80;
+  --s-clear: #6ee7a8;
+  --s-watch: #f5c451;
+  --s-accent: #a78bfa;
+
+  --s-stamp-bg: rgba(255, 138, 128, 0.14);
+  --s-clear-bg: rgba(110, 231, 168, 0.13);
+  --s-watch-bg: rgba(245, 196, 81, 0.14);
+}
+
+/* ---------- type scale ---------- */
+.sarthi h1, .sarthi h2, .sarthi h3 { font-family: inherit; letter-spacing: -0.02em; }
+
+.sarthi :global(.s-figure) {
+  font-size: 27px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.sarthi :global(.s-heading) {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sarthi :global(.s-note) {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--s-ink-2);
+}
+
+/* ---------- the rule: a hairline that carries meaning, not decoration ---------- */
+.sarthi :global(.s-rule) {
+  height: 1px;
+  background: var(--s-line);
+  border: none;
+  margin: 18px 0;
+}
+
+/* ---------- status marks ---------- */
+.sarthi :global(.s-mark) {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+}
+.sarthi :global(.s-mark--clear) { color: var(--s-clear); background: var(--s-clear-bg); }
+.sarthi :global(.s-mark--stamp) { color: var(--s-stamp); background: var(--s-stamp-bg); }
+.sarthi :global(.s-mark--watch) { color: var(--s-watch); background: var(--s-watch-bg); }

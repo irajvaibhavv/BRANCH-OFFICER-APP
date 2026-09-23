@@ -18,7 +18,7 @@ function activeTab(pathname) {
   if (pathname === '/') return '/';
   if (pathname.startsWith('/dsas') || pathname.startsWith('/record') || pathname.startsWith('/engagements')) return '/dsas';
   if (pathname.startsWith('/route') || pathname.startsWith('/plan') || pathname.startsWith('/customers')) return '/route';
-  if (pathname.startsWith('/ai')) return '/more';
+  if (pathname.startsWith('/ai') || pathname.startsWith('/sarthi')) return '/more';
   if (pathname.startsWith('/activity') || pathname.startsWith('/visits')) return '/activity';
   return '/more';
 }

@@ -1,0 +1,162 @@
+[
+  {
+    "id": "sarthi_case_1",
+    "name": "Ramesh Gupta",
+    "age": 38,
+    "area": "Dwarka Sector 7, Delhi",
+    "areaKey": "Dwarka",
+    "business": "Partnership garment shop",
+    "businessKey": "garment_shop",
+    "businessName": "Gupta Garments",
+    "businessVintage": "2 years",
+    "loanPurpose": "Working capital",
+    "loanAmountRequested": 1500000,
+    "declaredIncome": 300000,
+    "employment": "Self-employed",
+    "riskLevel": "high",
+    "brief": {
+      "avgMonthlyCredit": 165000,
+      "bureauScore": 680,
+      "existingEMIs": 18000,
+      "runningLoans": [
+        {
+          "type": "Personal Loan",
+          "emi": 8000,
+          "remaining": 14
+        },
+        {
+          "type": "Credit Card",
+          "emi": 10000,
+          "outstanding": 120000
+        }
+      ],
+      "gstRegistered": true,
+      "gstVintage": "1.5 years",
+      "itrFiled": true,
+      "itrIncome": 220000,
+      "bankStatementMonths": 6,
+      "largeDeposits": [
+        {
+          "month": "March",
+          "amount": 500000,
+          "note": "Unusual spike"
+        }
+      ],
+      "missingDocs": [
+        "Partnership deed copy"
+      ],
+      "areaDefaultRate": 0.18,
+      "digInto": [
+        "Declared income (3L) is 82% above bank credits (1.65L)",
+        "Partnership deed not provided - verify partnership status",
+        "Large cash deposit in March - source unclear",
+        "Business vintage only 2 years, but claims established clientele"
+      ]
+    },
+    "riskPatternMatch": {
+      "patternId": "DWK-PARTNERSHIP-001",
+      "matchReason": "Dwarka + Partnership business",
+      "failureRate": 0.6,
+      "pastCause": "Partner absconding in 3 of 5 past cases"
+    },
+    "hi": {
+      "name": "रमेश गुप्ता",
+      "firstName": "रमेश",
+      "area": "द्वारका सेक्टर सात, दिल्ली",
+      "businessName": "गुप्ता गारमेंट्स",
+      "loanAmount": "पंद्रह लाख"
+    }
+  },
+  {
+    "id": "sarthi_case_2",
+    "name": "Sunita Sharma",
+    "age": 45,
+    "area": "Karol Bagh, Delhi",
+    "areaKey": "Karol Bagh",
+    "business": "Sole proprietor kirana store",
+    "businessKey": "kirana_store",
+    "businessName": "Sharma General Store",
+    "businessVintage": "8 years",
+    "loanPurpose": "Expand business - add second outlet",
+    "loanAmountRequested": 800000,
+    "declaredIncome": 120000,
+    "employment": "Self-employed",
+    "riskLevel": "medium",
+    "brief": {
+      "avgMonthlyCredit": 105000,
+      "bureauScore": 720,
+      "existingEMIs": 12000,
+      "runningLoans": [
+        {
+          "type": "Business Loan",
+          "emi": 12000,
+          "remaining": 8
+        }
+      ],
+      "gstRegistered": true,
+      "gstVintage": "6 years",
+      "itrFiled": true,
+      "itrIncome": 110000,
+      "bankStatementMonths": 12,
+      "largeDeposits": [],
+      "missingDocs": [],
+      "areaDefaultRate": 0.12,
+      "digInto": [
+        "Income declaration fairly consistent with bank credits",
+        "Second outlet location not specified - verify viability",
+        "Good bureau score but existing EMI reduces capacity"
+      ]
+    },
+    "riskPatternMatch": null,
+    "hi": {
+      "name": "सुनीता शर्मा",
+      "firstName": "सुनीता",
+      "area": "करोल बाग, दिल्ली",
+      "businessName": "शर्मा जनरल स्टोर",
+      "loanAmount": "आठ लाख"
+    }
+  },
+  {
+    "id": "sarthi_case_3",
+    "name": "Vikram Patel",
+    "age": 32,
+    "area": "Noida Sector 18, UP",
+    "areaKey": "Noida Sector 18",
+    "business": "IT freelancer - web development",
+    "businessKey": "it_freelancer",
+    "businessName": "Vikram Tech Solutions",
+    "businessVintage": "4 years",
+    "loanPurpose": "Buy equipment - laptops and monitors",
+    "loanAmountRequested": 500000,
+    "declaredIncome": 180000,
+    "employment": "Self-employed (Professional)",
+    "riskLevel": "low",
+    "brief": {
+      "avgMonthlyCredit": 175000,
+      "bureauScore": 780,
+      "existingEMIs": 0,
+      "runningLoans": [],
+      "gstRegistered": true,
+      "gstVintage": "3.5 years",
+      "itrFiled": true,
+      "itrIncome": 175000,
+      "bankStatementMonths": 12,
+      "largeDeposits": [],
+      "missingDocs": [],
+      "areaDefaultRate": 0.08,
+      "digInto": [
+        "Income consistent across bank, ITR, and declaration",
+        "No existing debt - good capacity",
+        "Verify client base stability - freelance income can be irregular"
+      ]
+    },
+    "riskPatternMatch": null,
+    "hi": {
+      "name": "विक्रम पटेल",
+      "firstName": "विक्रम",
+      "area": "नोएडा सेक्टर अठारह, यूपी",
+      "businessName": "विक्रम टेक सॉल्यूशंस",
+      "loanAmount": "पाँच लाख"
+    }
+  }
+]

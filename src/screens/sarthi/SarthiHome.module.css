@@ -1,0 +1,230 @@
+/*
+  The case queue. Cards, like the rest of BO Connect — Sarthi keeps its own
+  semantic colours (stamp / clear / watch) but not its own furniture.
+*/
+.page { padding-bottom: calc(var(--tabbar-safe) + 24px); }
+
+/* ---------------------------------------------------------------- header */
+.hero {
+  padding: 16px 18px;
+  border-radius: var(--radius-card);
+  background: linear-gradient(140deg, #5b2aa8 0%, #3f1a7d 100%);
+  color: #fff;
+  margin-bottom: 22px;
+}
+.heroCount {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+.heroNum {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.heroLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.86);
+}
+.heroFlag {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 12px;
+  font-weight: 600;
+}
+.intro {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.72);
+  margin: 12px 0 0;
+}
+
+.sectionLabel {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--s-ink-3);
+  margin-bottom: 10px;
+}
+
+/* ---------------------------------------------------------------- files */
+.list { display: flex; flex-direction: column; gap: var(--card-gap); }
+
+.file {
+  border-radius: var(--radius-card);
+  background: var(--card);
+  border: var(--card-border);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+
+.fileMain {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  text-align: left;
+  padding: 16px 18px;
+  background: none;
+  cursor: pointer;
+}
+.fileMain:focus-visible { outline: 2px solid var(--s-accent); outline-offset: -3px; }
+
+.fileHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.name {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--s-ink);
+}
+.risk {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+.high { color: var(--s-stamp); background: var(--s-stamp-bg); }
+.medium { color: var(--s-watch); background: var(--s-watch-bg); }
+.low { color: var(--s-clear); background: var(--s-clear-bg); }
+
+.trade {
+  font-size: 12.5px;
+  color: var(--s-ink-3);
+  margin-top: 2px;
+}
+
+/* Two bars on one scale: the claim over the evidence. */
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 14px 0 12px;
+}
+.barRow {
+  display: grid;
+  grid-template-columns: 30px 1fr 54px;
+  align-items: center;
+  gap: 10px;
+}
+.barLabel {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--s-ink-3);
+}
+.barTrack {
+  height: 8px;
+  background: var(--s-paper-2);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.bar { display: block; height: 100%; border-radius: var(--radius-pill); }
+.barSaid {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--s-ink-3) 0 3px,
+    transparent 3px 6px
+  ); /* hatched: a claim, not yet evidence */
+  box-shadow: inset 0 0 0 1px var(--s-ink-3);
+}
+.barBank { background: var(--s-accent); }
+.barValue {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--s-ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.fileFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 11px;
+  border-top: 1px solid var(--s-line);
+  font-size: 12.5px;
+}
+.gapBad { color: var(--s-stamp); font-weight: 700; }
+.gapWatch { color: var(--s-watch); font-weight: 700; }
+.gapOk { color: var(--s-clear); font-weight: 700; }
+.gapNone { color: var(--s-ink-3); font-weight: 600; }
+.ask { color: var(--s-ink-3); white-space: nowrap; }
+
+.pattern {
+  margin-top: 11px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  background: var(--s-stamp-bg);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--s-stamp);
+}
+
+/* A finished report is a second target, so it sits on its own band. */
+.done {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 11px 18px;
+  border-top: 1px solid var(--s-line);
+  background: var(--s-paper-2);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--s-accent);
+  cursor: pointer;
+}
+.done:focus-visible { outline: 2px solid var(--s-accent); outline-offset: -3px; }
+
+/* ---------------------------------------------------------------- new applicant */
+.add {
+  width: 100%;
+  height: var(--btn-h);
+  margin-top: 26px;
+  border: none;
+  border-radius: var(--radius-btn);
+  background: var(--primary-grad);
+  box-shadow: var(--primary-glow);
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.add:focus-visible { outline: 2px solid var(--s-accent); outline-offset: 2px; }
+.addNote {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--s-ink-3);
+  margin-top: 10px;
+  text-align: center;
+}
+.addAlt {
+  display: block;
+  margin: 10px auto 0;
+  padding: 8px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--s-accent);
+  background: none;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .file { transition: none; }
+}

@@ -1,0 +1,89 @@
+{
+  "garment_shop": {
+    "label": "Garment / Readymade Shop",
+    "knowledgeQuestions": [
+      {
+        "q": "Aap garments kahan se lete ho? Kaunsa market?",
+        "expect": "Surat, Gandhi Nagar, Tirupur, or a known wholesale market",
+        "flag": "Cannot name any supplier market",
+        "qHi": "आप गारमेंट्स कहाँ से लेते हैं? कौन सा मार्केट?"
+      },
+      {
+        "q": "Readymade garments pe GST rate kya hai?",
+        "expect": "5% (up to Rs 1000) or 12% (above Rs 1000)",
+        "flag": "Does not know GST rate for own goods",
+        "qHi": "रेडीमेड गारमेंट्स पे, जीएसटी रेट क्या है?"
+      },
+      {
+        "q": "Ek piece pe average margin kitna hota hai?",
+        "expect": "30-60% on readymade, 20-40% on fabric",
+        "flag": "Margin answer is unrealistic",
+        "qHi": "एक पीस पे, एवरेज मार्जिन कितना होता है?"
+      },
+      {
+        "q": "Season mein (Diwali/Eid) monthly sale kitna badh jaata hai?",
+        "expect": "2x to 4x is normal",
+        "flag": "Claims no seasonal variation or extreme numbers",
+        "qHi": "सीज़न में, जैसे दिवाली या ईद। तब मंथली सेल, कितना बढ़ जाता है?"
+      }
+    ]
+  },
+  "kirana_store": {
+    "label": "Kirana / General Store",
+    "knowledgeQuestions": [
+      {
+        "q": "Daily ka milk order kitna hota hai?",
+        "expect": "Depends on size, but owner should know exact number",
+        "flag": "Cannot give a number",
+        "qHi": "डेली का मिल्क ऑर्डर, कितना होता है?"
+      },
+      {
+        "q": "Supplier se credit milta hai ya cash mein lete ho?",
+        "expect": "Most kirana stores get 7-15 days credit",
+        "flag": "Claims only cash but has high turnover",
+        "qHi": "सप्लायर से क्रेडिट मिलता है, या कैश में लेते हैं?"
+      },
+      {
+        "q": "Atte pe margin kitna hai vs dal pe?",
+        "expect": "Atta margin ~5-8%, Dal ~8-12%",
+        "flag": "Does not know basic margins",
+        "qHi": "आटे पे मार्जिन कितना है, और दाल पे कितना?"
+      },
+      {
+        "q": "Kaunsa distributor aata hai aapke yahan?",
+        "expect": "Should name real FMCG distributors",
+        "flag": "Cannot name any distributor",
+        "qHi": "कौन सा डिस्ट्रिब्यूटर आता है, आपके यहाँ?"
+      }
+    ]
+  },
+  "it_freelancer": {
+    "label": "IT Freelancer / Web Developer",
+    "knowledgeQuestions": [
+      {
+        "q": "Kaunsi technologies use karte ho?",
+        "expect": "Should name specific languages/frameworks",
+        "flag": "Very vague answer like 'computers'",
+        "qHi": "कौन सी टेक्नोलॉजीज़, यूज़ करते हैं?"
+      },
+      {
+        "q": "Clients kaise milte hain? Platform use karte ho?",
+        "expect": "Upwork, Fiverr, LinkedIn, referrals",
+        "flag": "Cannot explain client acquisition",
+        "qHi": "क्लाइंट्स कैसे मिलते हैं? कोई प्लेटफ़ॉर्म यूज़ करते हैं?"
+      },
+      {
+        "q": "Average project kitne time mein complete hota hai?",
+        "expect": "Should give realistic timeline for their work type",
+        "flag": "Unrealistic timelines",
+        "qHi": "एवरेज प्रोजेक्ट, कितने टाइम में कम्प्लीट होता है?"
+      },
+      {
+        "q": "Kya koi retainer client hai jo monthly pay karta hai?",
+        "expect": "Stable freelancers have 1-3 retainers",
+        "flag": "All project-based, no stability",
+        "qHi": "क्या कोई रिटेनर क्लाइंट है, जो हर महीने पे करता है?"
+      }
+    ]
+  }
+}

@@ -43,6 +43,35 @@ Demo login: any 10-digit number starting 6–9 → OTP `1234` → set a 4-digit 
 - `voice.js` — TTS via ElevenLabs (`VITE_ELEVENLABS_API_KEY`) or Murf AI (`VITE_MURF_API_KEY`) when set (`.env.local`, see `.env.example`; on Vercel add it as an env var), else browser Web Speech API; STT is always browser. Lines queue and play in order; `prefetch(lines)` warms Murf before a multi-bubble turn. Everything must still work as typed text when unsupported.
 - `loanCalc.js` (EMI/eligibility/FOIR), `commission.js`, `meetingPrep.js` — business logic shared across screens.
 
+**Sarthi AI** (`src/screens/sarthi/`, `src/utils/sarthi*.js`, `src/data/sarthi/*.json`) — the one feature that
+calls a real model (Gemini), kept separate from SAARTHI AI (`screens/ai/`, `smfgAI.js`), which stays scripted.
+- Agent 1 interviews on a video-call screen and emits ```claim``` blocks; Agent 2 writes the officer's report.
+- The key never reaches the bundle: calls go to `/api/sarthi-chat` and `/api/sarthi-vision` — `api/*.js` on
+  Vercel (`GEMINI_API_KEY` env var, never `VITE_`-prefixed), `sarthi-proxy.mjs` in dev (`npm run sarthi`,
+  vite proxies :3001). **No reachable proxy → the interview runs `sarthiScript.js` scripted mode** and still
+  produces a full report, so a demo never dies on a missing key.
+- Anti-hallucination is the point of the file split: the model may only use the four JSON knowledge files,
+  `sarthiVerifier.js` (plain rules) decides confirmed/contradicted/unverified, `loanCalc.js` computes every
+  eligibility number, and `sarthiValidator.js` strips any finding whose (Turn X) / (Brief: field) citation
+  does not resolve. Keep new facts in the JSON files, new verdicts in the verifier — never in a prompt.
+- **Voice**: Sarthi has its own voice (`sarthiVoice.js` — Murf `hi-IN-kabir`), passed per `speak()` call so
+  SAARTHI AI keeps the app-default voice from `.env`. Captions are Hinglish but the TTS is fed Devanagari
+  (`speech` on each script step, a ```speech``` block from Agent 1): a Hindi voice reads romanized Hindi with
+  English pronunciation. Scripted lines are pre-rendered to `public/sarthi-audio/` by `npm run sarthi:voice`
+  and played from disk via `voiceManifest.json`, so a demo makes no TTS call — **re-run it after editing any
+  question or the voice config**, or that line silently falls back to a live API call.
+- **Walk-ins**: `/sarthi/new` builds a case for someone with no bureau or bank record (`buildNewCase`,
+  stored in `bo_sarthi_cases`). Every financial field stays `null` — `computeEligibility` then returns
+  `assessable: false` and both report writers must say "not assessable" rather than print a figure.
+  `sarthiId.js` does the offline document checks (Aadhaar Verhoeff, PAN structure + surname initial);
+  it is not eKYC and the copy says so everywhere.
+- **Photographs**: Sarthi asks for the shop and home mid-interview (`photo` on a script step, or a
+  ```photo shop``` fence from Agent 1). Images are downscaled in the browser and kept in
+  `bo_sarthi_photos_<case>`, separate from the report record so their weight cannot break its write.
+  Gemini Vision describes what is visible; with no proxy the photo is stored and flagged un-read.
+- Sarthi state is `bo_sarthi_*` in localStorage (cleared on logout like every `bo_` key); it is not part of
+  the AppState seed/date-shift system.
+
 ## Conventions
 
 - One folder per feature under `src/screens/`, each with its own `*.module.css`. Screens never import another screen's CSS — shared styles go in `src/styles/` (`variables.css` holds design tokens incl. dark theme) or become a `src/components/ui/` primitive.

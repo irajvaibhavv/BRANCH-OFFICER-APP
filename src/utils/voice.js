@@ -23,54 +23,76 @@ const MURF_VOICE = ENV.VITE_MURF_VOICE || 'en-IN-arohi';
 const MURF_URL = 'https://api.murf.ai/v1/speech/generate';
 
 const forced = ENV.VITE_TTS_ENGINE;
-const engine = forced === 'browser' ? 'browser'
-  : (forced === 'elevenlabs' || !forced) && ELEVEN_KEY ? 'elevenlabs'
-  : (forced === 'murf' || !forced) && MURF_KEY ? 'murf'
-  : 'browser';
+const pickEngine = (want) => (want === 'browser' ? 'browser'
+  : (want === 'elevenlabs' || !want) && ELEVEN_KEY ? 'elevenlabs'
+  : (want === 'murf' || !want) && MURF_KEY ? 'murf'
+  : 'browser');
+const engine = pickEngine(forced);
 const CLOUD = engine !== 'browser';
 
 export const canSpeak = CLOUD || !!synth;
 export const canListen = !!SR;
 export const ttsEngine = CLOUD ? engine : synth ? 'browser' : 'none';
 
+/*
+  A voice profile lets one feature sound different from another without changing anyone else's
+  voice. Callers that pass nothing get the app default from .env — which is what SAARTHI AI does,
+  so its voice is exactly whatever the env says, untouched by any other screen's choices.
+*/
+export function voiceProfile({ engine: want, voiceId, style, speed } = {}) {
+  return {
+    engine: pickEngine(want ?? forced),
+    voiceId: voiceId ?? null,
+    style: style ?? null,
+    speed: Number(speed) || SPEED,
+  };
+}
+const DEFAULT_PROFILE = voiceProfile();
+
 const clean = (text) => text.replace(/₹/g, 'rupees ').replace(/[*_`]/g, '');
 
 /* ---------- Cloud TTS: fetch → cache → play, one line at a time ---------- */
-const cache = new Map(); // text → Promise<audio url>
-let cloudBroken = false;  // after a failure (bad key, quota, offline) stay on browser TTS for the session
+const cache = new Map();          // profile+text → Promise<audio url>
+const brokenEngines = new Set();  // an engine that failed (bad key, quota, offline) is skipped for the session
 
-function fetchMurf(text) {
+function fetchMurf(text, p) {
+  const body = { text, voiceId: p.voiceId || MURF_VOICE, rate: Math.round((p.speed - 1) * 100), format: 'MP3', sampleRate: 24000, modelVersion: 'GEN2', channelType: 'MONO' };
+  // Murf reads in a flat narration voice unless a style is asked for; unsupported styles are ignored.
+  if (p.style) body.style = p.style;
   return fetch(MURF_URL, {
     method: 'POST',
     headers: { 'api-key': MURF_KEY, 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ text, voiceId: MURF_VOICE, rate: Math.round((SPEED - 1) * 100), format: 'MP3', sampleRate: 24000, modelVersion: 'GEN2', channelType: 'MONO' }),
+    body: JSON.stringify(body),
   })
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`Murf ${r.status}`))))
     .then((j) => j.audioFile || Promise.reject(new Error('Murf: no audioFile')));
 }
 
-function fetchEleven(text) {
-  return fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN_VOICE}?output_format=mp3_22050_32`, {
+function fetchEleven(text, p) {
+  return fetch(`https://api.elevenlabs.io/v1/text-to-speech/${p.voiceId || ELEVEN_VOICE}?output_format=mp3_22050_32`, {
     method: 'POST',
     headers: { 'xi-api-key': ELEVEN_KEY, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
-    body: JSON.stringify({ text, model_id: 'eleven_multilingual_v2', voice_settings: { stability: 0.6, similarity_boost: 0.8, style: 0.1, speed: SPEED } }),
+    body: JSON.stringify({ text, model_id: 'eleven_multilingual_v2', voice_settings: { stability: 0.6, similarity_boost: 0.8, style: 0.1, speed: p.speed } }),
   })
     .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`ElevenLabs ${r.status}`))))
     .then((b) => URL.createObjectURL(b));
 }
 
-function audioUrl(text) {
-  const key = clean(text);
+function audioUrl(text, p) {
+  const clean_ = clean(text);
+  const key = `${p.engine}|${p.voiceId}|${p.style}|${p.speed}|${clean_}`;
   if (!cache.has(key)) {
-    cache.set(key, (engine === 'elevenlabs' ? fetchEleven(key) : fetchMurf(key)).catch((e) => { cache.delete(key); throw e; }));
+    const req = p.engine === 'elevenlabs' ? fetchEleven(clean_, p) : fetchMurf(clean_, p);
+    cache.set(key, req.catch((e) => { cache.delete(key); throw e; }));
   }
   return cache.get(key);
 }
 
 /** Warm the cache for lines that are about to be spoken, so there is no gap between bubbles. */
-export function prefetch(texts = []) {
-  if (!CLOUD || cloudBroken) return;
-  texts.forEach((t) => audioUrl(t).catch(() => {}));
+export function prefetch(texts = [], voice) {
+  const p = voice ? voiceProfile(voice) : DEFAULT_PROFILE;
+  if (p.engine === 'browser' || brokenEngines.has(p.engine)) return;
+  texts.forEach((t) => audioUrl(t, p).catch(() => {}));
 }
 
 const queue = [];
@@ -86,7 +108,7 @@ async function drain() {
   const myGen = gen;
   const finish = () => { playing = false; current = null; item.onEnd?.(); drain(); };
   try {
-    const url = await audioUrl(item.text);
+    const url = item.src ?? await audioUrl(item.text, item.profile);
     if (myGen !== gen) { playing = false; return; } // stopped while fetching
     const audio = new Audio(url);
     audio.playbackRate = item.rate;
@@ -95,8 +117,8 @@ async function drain() {
     audio.onerror = finish;
     await audio.play();
   } catch (e) {
-    console.warn(`[voice] ${engine} unavailable, falling back to browser TTS`, e);
-    cloudBroken = true;
+    console.warn(`[voice] ${item.profile.engine} unavailable, falling back to browser TTS`, e);
+    brokenEngines.add(item.profile.engine); // only this engine is written off, not the other one
     playing = false; current = null;
     queue.length = 0;
     browserSpeak(item.text, item);
@@ -124,9 +146,19 @@ function browserSpeak(text, { rate = 1, onEnd } = {}) {
   synth.speak(u);
 }
 
-/** Speak a line; lines queue and play in order. onEnd fires when done (or immediately if unsupported). */
-export function speak(text, { rate = 1, onEnd } = {}) {
-  if (CLOUD && !cloudBroken) { queue.push({ text, rate, onEnd }); drain(); return; }
+/**
+ * Speak a line; lines queue and play in order. onEnd fires when done (or immediately if unsupported).
+ * `voice` overrides engine/voiceId/style/speed for this line only — pass nothing for the app default.
+ * `src` plays a pre-rendered audio file instead of calling a TTS API: no quota, no network, no lag.
+ */
+export function speak(text, { rate = 1, onEnd, voice, src } = {}) {
+  const profile = voice ? voiceProfile(voice) : DEFAULT_PROFILE;
+  if (src) { queue.push({ text, rate, onEnd, profile, src }); drain(); return; }
+  if (profile.engine !== 'browser' && !brokenEngines.has(profile.engine)) {
+    queue.push({ text, rate, onEnd, profile });
+    drain();
+    return;
+  }
   browserSpeak(text, { rate, onEnd });
 }
 

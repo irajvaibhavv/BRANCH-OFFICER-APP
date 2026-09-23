@@ -2,9 +2,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   FiTrendingUp, FiFolder, FiAward, FiCalendar,
-  FiBarChart2, FiClock, FiHelpCircle, FiUser, FiCheckSquare, FiMic,
+  FiBarChart2, FiClock, FiHelpCircle, FiUser, FiCheckSquare, FiMic, FiShield,
 } from 'react-icons/fi';
-import { IoSparkles } from 'react-icons/io5';
 import Page, { listContainer, listItem } from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import Avatar from '../../components/ui/Avatar';
@@ -14,7 +13,7 @@ import news from '../../data/mock/news.json';
 import styles from './MoreMenu.module.css';
 
 const ITEMS = [
-  { to: '/ai', label: 'SAARTHI AI', sub: 'Hand over · AI interviews & reports', icon: IoSparkles, tone: '#7c3aed' },
+  { to: '/sarthi', label: 'Sarthi AI', sub: 'AI field underwriter · PD on video', icon: FiShield, tone: '#0ea5a4' },
   { to: '/incentive', label: 'Incentives', sub: 'Slab progress & earnings', icon: FiTrendingUp, tone: '#16a34a' },
   { to: '/files', label: 'Loan Files', sub: 'Track every file status', icon: FiFolder, tone: '#4c1d95' },
   { to: '/documents', label: 'Documents', sub: 'Checklists & reminders', icon: FiCheckSquare, tone: '#7c3aed' },

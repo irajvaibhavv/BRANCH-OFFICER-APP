@@ -1,0 +1,112 @@
+{
+  "Dwarka": {
+    "landmarks": [
+      {
+        "name": "Vegas Mall",
+        "location": "Sector 14, near Dwarka Mor metro"
+      },
+      {
+        "name": "Dwarka Mor Metro Station",
+        "line": "Blue Line"
+      },
+      {
+        "name": "Sector 7 Market",
+        "type": "local market"
+      },
+      {
+        "name": "Ramphal Chowk",
+        "notable": "main crossing"
+      }
+    ],
+    "avgShopRent": {
+      "min": 20000,
+      "max": 50000,
+      "unit": "per month"
+    },
+    "avgHouseRent2BHK": {
+      "min": 15000,
+      "max": 25000
+    },
+    "nearestMetro": "Dwarka Sector 7 / Dwarka Mor",
+    "knownMarkets": [
+      "Sector 6 Market",
+      "Sector 7 Market",
+      "Sector 10 Market"
+    ],
+    "landmarkHi": "वेगास मॉल",
+    "metroHi": "द्वारका सेक्टर सात या द्वारका मोड़"
+  },
+  "Karol Bagh": {
+    "landmarks": [
+      {
+        "name": "Ajmal Khan Road",
+        "type": "main shopping street"
+      },
+      {
+        "name": "Karol Bagh Metro Station",
+        "line": "Blue Line"
+      },
+      {
+        "name": "Gaffar Market",
+        "notable": "electronics market"
+      },
+      {
+        "name": "Bank Street",
+        "type": "commercial area"
+      }
+    ],
+    "avgShopRent": {
+      "min": 30000,
+      "max": 80000,
+      "unit": "per month"
+    },
+    "avgHouseRent2BHK": {
+      "min": 20000,
+      "max": 35000
+    },
+    "nearestMetro": "Karol Bagh",
+    "knownMarkets": [
+      "Ajmal Khan Road",
+      "Arya Samaj Road",
+      "Gaffar Market"
+    ],
+    "landmarkHi": "अजमल खान रोड",
+    "metroHi": "करोल बाग"
+  },
+  "Noida Sector 18": {
+    "landmarks": [
+      {
+        "name": "DLF Mall of India",
+        "location": "Sector 18"
+      },
+      {
+        "name": "Atta Market",
+        "type": "popular food and shopping market"
+      },
+      {
+        "name": "Sector 18 Metro Station",
+        "line": "Aqua Line"
+      },
+      {
+        "name": "GIP Mall (Great India Place)",
+        "type": "shopping mall"
+      }
+    ],
+    "avgShopRent": {
+      "min": 25000,
+      "max": 60000,
+      "unit": "per month"
+    },
+    "avgHouseRent2BHK": {
+      "min": 12000,
+      "max": 22000
+    },
+    "nearestMetro": "Sector 18 (Aqua Line)",
+    "knownMarkets": [
+      "Atta Market",
+      "Brahmaputra Market"
+    ],
+    "landmarkHi": "डीएलएफ मॉल ऑफ इंडिया",
+    "metroHi": "सेक्टर अठारह"
+  }
+}

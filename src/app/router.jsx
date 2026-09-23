@@ -40,14 +40,15 @@ import HelpFAQ from '../screens/help/HelpFAQ';
 import ProfileSettings from '../screens/profile/ProfileSettings';
 import Prompter from '../screens/prompter/Prompter';
 import MeetingRecorder, { RecordingDetail, RecordingsList, EngagementDetail } from '../screens/recorder/MeetingRecorder';
+import { SarthiHome, SarthiNewCase, SarthiBrief, SarthiInterview, SarthiReport } from '../screens/sarthi';
 
 /** Persistent tab bar — on every screen after login (hidden only during auth). */
 export function PersistentTabBar() {
   const { pathname } = useLocation();
   const { isAuthed } = useAuth();
-  // Also hidden in SAARTHI AI handover mode (the customer/DSA holding the phone must not wander into the officer's app)
-  // and in the teleprompter, which is a full-screen stage.
-  if (!isAuthed || pathname.startsWith('/login') || pathname === '/ai/session' || pathname === '/prompter') return null;
+  // Also hidden in SAARTHI AI handover mode and in a Sarthi AI interview (the customer/DSA holding
+  // the phone must not wander into the officer's app), and in the teleprompter, a full-screen stage.
+  if (!isAuthed || pathname.startsWith('/login') || pathname === '/ai/session' || pathname === '/prompter' || pathname.startsWith('/sarthi/interview')) return null;
   return <BottomTabBar />;
 }
 
@@ -112,6 +113,11 @@ export function AnimatedRoutes() {
           <Route path="/ai" element={<AIHome />} />
           <Route path="/ai/session" element={<AISession />} />
           <Route path="/ai/reports/:id" element={<AIReport />} />
+          <Route path="/sarthi" element={<SarthiHome />} />
+          <Route path="/sarthi/new" element={<SarthiNewCase />} />
+          <Route path="/sarthi/brief/:id" element={<SarthiBrief />} />
+          <Route path="/sarthi/interview/:id" element={<SarthiInterview />} />
+          <Route path="/sarthi/report/:id" element={<SarthiReport />} />
           <Route path="/visits/new" element={<VisitLogger />} />
           <Route path="/prompter" element={<Prompter />} />
           <Route path="/record" element={<MeetingRecorder />} />

@@ -1,0 +1,87 @@
+.feed {
+  position: absolute;
+  inset: 0;
+  overflow: hidden; /* transparent: with no camera the screen's own gradient shows through */
+}
+
+/*
+  The glass sheet covers the lower half, so the video box stops just under its edge rather
+  than running the full screen. Covering a full-height portrait box scales a landscape webcam
+  frame ~1.8x and leaves only a strip of the face visible above the sheet; against a shorter
+  box the whole head fits.
+*/
+.video {
+  width: 100%;
+  height: 62%;
+  object-fit: cover;
+  object-position: center 38%; /* faces sit above centre — bias the crop upward */
+  transform: scaleX(-1); /* mirror, like every selfie camera */
+}
+.hidden { visibility: hidden; }
+
+/* Sits just above the glass sheet, clear of the status row and the avatar. */
+.noCamWrap {
+  position: absolute;
+  left: 16px;
+  bottom: calc(50% + 14px);
+  z-index: 4;
+}
+
+.noCam {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+/* Keeps the avatar, captions and controls readable over any camera image */
+.scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(4, 10, 24, 0.5) 0%, rgba(4, 10, 24, 0) 26%),
+    linear-gradient(0deg, rgba(4, 10, 24, 0.45) 0%, rgba(4, 10, 24, 0.12) 38%, rgba(4, 10, 24, 0) 56%);
+}
+/* Nothing to darken when there is no camera image — only the caption needs help. */
+.scrimLight {
+  background: linear-gradient(0deg, rgba(4, 10, 24, 0.34) 0%, rgba(4, 10, 24, 0) 46%);
+}
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #fff;
+  background: rgba(4, 10, 24, 0.55);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  padding: 5px 10px;
+  border-radius: 999px;
+}
+.liveOff { color: rgba(255, 255, 255, 0.6); }
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: blink 1.4s ease-in-out infinite;
+}
+.liveOff .dot { background: rgba(255, 255, 255, 0.45); animation: none; }
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot { animation: none; }
+}

@@ -44,7 +44,7 @@ export default function SarthiNewCase() {
   );
 
   const areaHit = useMemo(
-    () => Object.keys(locationKnowledge).find((k) => f.area.toLowerCase().includes(k.toLowerCase())) ?? null,
+    () => Object.keys(locationKnowledge.specific).find((k) => f.area.toLowerCase().includes(k.toLowerCase())) ?? null,
     [f.area],
   );
   const pattern = useMemo(() => matchPattern(areaHit, f.businessKey), [areaHit, f.businessKey]);

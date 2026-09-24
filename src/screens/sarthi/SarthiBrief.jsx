@@ -68,7 +68,13 @@ export default function SarthiBrief() {
           <Row term="Running EMIs" value={formatINR(b.existingEMIs, { compact: false })} note={b.runningLoans.length ? b.runningLoans.map((l) => l.type).join(', ') : 'nothing outstanding'} />
           <Row term="Filed as income" value={`${formatINR(b.itrIncome, { compact: false })} in the ITR`} note={b.gstRegistered ? `GST registered ${b.gstVintage}` : 'not GST registered'} />
           <Row term="Trading for" value={c.businessVintage} note={`${c.employment.toLowerCase()}, ${c.businessName}`} />
-          <Row term="Area default rate" value={`${Math.round(b.areaDefaultRate * 100)}%`} note="of lending in this locality" tone={b.areaDefaultRate > 0.15 ? 'stamp' : undefined} />
+          {/* A walk-in has no locality history on file — say so rather than render NaN%. */}
+          <Row
+            term="Area default rate"
+            value={b.areaDefaultRate != null ? `${Math.round(b.areaDefaultRate * 100)}%` : 'not on file'}
+            note={b.areaDefaultRate != null ? 'of lending in this locality' : 'no lending history for this locality'}
+            tone={b.areaDefaultRate > 0.15 ? 'stamp' : undefined}
+          />
         </dl>
 
         {(b.largeDeposits.length > 0 || b.missingDocs.length > 0) && (

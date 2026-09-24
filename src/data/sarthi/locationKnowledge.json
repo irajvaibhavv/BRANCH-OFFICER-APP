@@ -1,112 +1,90 @@
 {
-  "Dwarka": {
-    "landmarks": [
-      {
-        "name": "Vegas Mall",
-        "location": "Sector 14, near Dwarka Mor metro"
-      },
-      {
-        "name": "Dwarka Mor Metro Station",
-        "line": "Blue Line"
-      },
-      {
-        "name": "Sector 7 Market",
-        "type": "local market"
-      },
-      {
-        "name": "Ramphal Chowk",
-        "notable": "main crossing"
-      }
-    ],
-    "avgShopRent": {
-      "min": 20000,
-      "max": 50000,
-      "unit": "per month"
+  "tiers": {
+    "metro": {
+      "label": "Metro",
+      "cities": ["Delhi", "New Delhi", "Gurgaon", "Gurugram", "Noida", "Ghaziabad", "Faridabad", "Mumbai", "Navi Mumbai", "Thane", "Bangalore", "Bengaluru", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad"],
+      "avgShopRent": { "min": 15000, "max": 80000, "unit": "per month" },
+      "avgHouseRent2BHK": { "min": 12000, "max": 40000 },
+      "avgHelperSalary": { "min": 8000, "max": 15000 }
     },
-    "avgHouseRent2BHK": {
-      "min": 15000,
-      "max": 25000
+    "tier1": {
+      "label": "Tier 1 city",
+      "cities": ["Jaipur", "Lucknow", "Patna", "Bhopal", "Chandigarh", "Indore", "Nagpur", "Ranchi", "Bhubaneswar", "Dehradun", "Guwahati", "Thiruvananthapuram", "Kochi", "Coimbatore", "Visakhapatnam", "Vijayawada", "Surat", "Vadodara", "Rajkot", "Mysore", "Mysuru", "Ludhiana", "Amritsar", "Jalandhar", "Raipur", "Jamshedpur"],
+      "avgShopRent": { "min": 8000, "max": 30000, "unit": "per month" },
+      "avgHouseRent2BHK": { "min": 6000, "max": 18000 },
+      "avgHelperSalary": { "min": 6000, "max": 12000 }
     },
-    "nearestMetro": "Dwarka Sector 7 / Dwarka Mor",
-    "knownMarkets": [
-      "Sector 6 Market",
-      "Sector 7 Market",
-      "Sector 10 Market"
-    ],
-    "landmarkHi": "वेगास मॉल",
-    "metroHi": "द्वारका सेक्टर सात या द्वारका मोड़"
+    "tier2": {
+      "label": "Tier 2 town",
+      "cities": ["Muzaffarpur", "Gaya", "Bhagalpur", "Darbhanga", "Jabalpur", "Ajmer", "Gorakhpur", "Agra", "Varanasi", "Prayagraj", "Allahabad", "Bareilly", "Moradabad", "Aligarh", "Meerut", "Udaipur", "Jodhpur", "Kota", "Bikaner", "Gwalior", "Ujjain", "Sagar", "Hubli", "Belgaum", "Warangal", "Tirupati", "Salem", "Madurai", "Tiruchirappalli", "Siliguri", "Durgapur", "Asansol", "Cuttack", "Rourkela", "Hisar", "Rohtak", "Karnal", "Panipat", "Saharanpur", "Firozabad", "Mathura", "Jhansi", "Dhanbad", "Bokaro", "Bilaspur", "Korba"],
+      "avgShopRent": { "min": 4000, "max": 15000, "unit": "per month" },
+      "avgHouseRent2BHK": { "min": 3000, "max": 10000 },
+      "avgHelperSalary": { "min": 5000, "max": 9000 }
+    },
+    "tier3_rural": {
+      "label": "Small town or rural",
+      "cities": [],
+      "note": "Default for any area that matches nothing above. Ranges are wide on purpose: a wrong contradiction is worse than an unverified claim.",
+      "avgShopRent": { "min": 2000, "max": 8000, "unit": "per month" },
+      "avgHouseRent2BHK": { "min": 1500, "max": 5000 },
+      "avgHelperSalary": { "min": 4000, "max": 7000 }
+    }
   },
-  "Karol Bagh": {
-    "landmarks": [
-      {
-        "name": "Ajmal Khan Road",
-        "type": "main shopping street"
-      },
-      {
-        "name": "Karol Bagh Metro Station",
-        "line": "Blue Line"
-      },
-      {
-        "name": "Gaffar Market",
-        "notable": "electronics market"
-      },
-      {
-        "name": "Bank Street",
-        "type": "commercial area"
-      }
-    ],
-    "avgShopRent": {
-      "min": 30000,
-      "max": 80000,
-      "unit": "per month"
+
+  "specific": {
+    "Dwarka": {
+      "city": "Delhi",
+      "tier": "metro",
+      "landmarks": [
+        { "name": "Vegas Mall", "location": "Sector 14, near Dwarka Mor metro" },
+        { "name": "Dwarka Mor Metro Station", "line": "Blue Line" },
+        { "name": "Sector 7 Market", "type": "local market" },
+        { "name": "Ramphal Chowk", "notable": "main crossing" }
+      ],
+      "avgShopRent": { "min": 20000, "max": 50000, "unit": "per month" },
+      "avgHouseRent2BHK": { "min": 15000, "max": 25000 },
+      "avgHelperSalary": { "min": 9000, "max": 15000 },
+      "nearestMetro": "Dwarka Sector 7 / Dwarka Mor",
+      "knownMarkets": ["Sector 6 Market", "Sector 7 Market", "Sector 10 Market"],
+      "electricitySupplier": "BSES Rajdhani",
+      "landmarkHi": "वेगास मॉल",
+      "metroHi": "द्वारका सेक्टर सात या द्वारका मोड़"
     },
-    "avgHouseRent2BHK": {
-      "min": 20000,
-      "max": 35000
+    "Karol Bagh": {
+      "city": "Delhi",
+      "tier": "metro",
+      "landmarks": [
+        { "name": "Ajmal Khan Road", "type": "main shopping street" },
+        { "name": "Karol Bagh Metro Station", "line": "Blue Line" },
+        { "name": "Gaffar Market", "notable": "electronics market" },
+        { "name": "Bank Street", "type": "commercial area" }
+      ],
+      "avgShopRent": { "min": 30000, "max": 80000, "unit": "per month" },
+      "avgHouseRent2BHK": { "min": 20000, "max": 35000 },
+      "avgHelperSalary": { "min": 9000, "max": 16000 },
+      "nearestMetro": "Karol Bagh",
+      "knownMarkets": ["Ajmal Khan Road", "Arya Samaj Road", "Gaffar Market"],
+      "electricitySupplier": "BSES Rajdhani",
+      "landmarkHi": "अजमल खान रोड",
+      "metroHi": "करोल बाग"
     },
-    "nearestMetro": "Karol Bagh",
-    "knownMarkets": [
-      "Ajmal Khan Road",
-      "Arya Samaj Road",
-      "Gaffar Market"
-    ],
-    "landmarkHi": "अजमल खान रोड",
-    "metroHi": "करोल बाग"
-  },
-  "Noida Sector 18": {
-    "landmarks": [
-      {
-        "name": "DLF Mall of India",
-        "location": "Sector 18"
-      },
-      {
-        "name": "Atta Market",
-        "type": "popular food and shopping market"
-      },
-      {
-        "name": "Sector 18 Metro Station",
-        "line": "Aqua Line"
-      },
-      {
-        "name": "GIP Mall (Great India Place)",
-        "type": "shopping mall"
-      }
-    ],
-    "avgShopRent": {
-      "min": 25000,
-      "max": 60000,
-      "unit": "per month"
-    },
-    "avgHouseRent2BHK": {
-      "min": 12000,
-      "max": 22000
-    },
-    "nearestMetro": "Sector 18 (Aqua Line)",
-    "knownMarkets": [
-      "Atta Market",
-      "Brahmaputra Market"
-    ],
-    "landmarkHi": "डीएलएफ मॉल ऑफ इंडिया",
-    "metroHi": "सेक्टर अठारह"
+    "Noida Sector 18": {
+      "city": "Noida",
+      "tier": "metro",
+      "landmarks": [
+        { "name": "DLF Mall of India", "location": "Sector 18" },
+        { "name": "Atta Market", "type": "popular food and shopping market" },
+        { "name": "Sector 18 Metro Station", "line": "Aqua Line" },
+        { "name": "GIP Mall (Great India Place)", "type": "shopping mall" }
+      ],
+      "avgShopRent": { "min": 25000, "max": 60000, "unit": "per month" },
+      "avgHouseRent2BHK": { "min": 12000, "max": 22000 },
+      "avgHelperSalary": { "min": 8000, "max": 14000 },
+      "nearestMetro": "Sector 18 (Aqua Line)",
+      "knownMarkets": ["Atta Market", "Brahmaputra Market"],
+      "electricitySupplier": "Noida Power / UPPCL",
+      "landmarkHi": "डीएलएफ मॉल ऑफ इंडिया",
+      "metroHi": "सेक्टर अठारह"
+    }
   }
 }

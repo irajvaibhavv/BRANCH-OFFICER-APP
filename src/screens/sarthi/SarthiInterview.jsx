@@ -9,6 +9,8 @@ import { getCase, briefForCitation, buildNewCase, CUSTOM_CASES_KEY } from '../..
 import { askAgent, buildInterviewerPrompt, parseClaims, probeProxy, writeReport, VISION_URL, INTERVIEWER_TEMP, COMPLETE_TAG } from '../../utils/sarthiAgent';
 import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../utils/sarthiScript';
 import { verifyClaims, computeEligibility, toNumber } from '../../utils/sarthiVerifier';
+import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness } from '../../utils/sarthiMemory';
+import { getNextAction, directiveText, checkContradictions, checkInternalConsistency, getInterviewConfig, assessIncome } from '../../utils/sarthiController';
 import { validateReport, extractRecommendation } from '../../utils/sarthiValidator';
 import { validateAadhaar, validatePan } from '../../utils/sarthiId';
 import { startFrameCapture, stopCamera, getObservations, resetObservations } from '../../utils/sarthiVideo';
@@ -31,6 +33,10 @@ import styles from './SarthiInterview.module.css';
    - scripted  — sarthiScript.js, used when the proxy is unreachable so a demo always completes
   Everything after the interview (verification, eligibility, validation) is identical either way.
 */
+
+/* Controller field names → the verifier's claim types, so the same finding from both can be
+   recognised as one. Only fields both sides actually check appear here. */
+const CLAIM_FIELD = { monthly_income: 'income', existing_emi: 'existingEmi', monthly_rent: 'rent' };
 
 const save = (key, value) => {
   try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* quota — prototype */ }
@@ -75,6 +81,9 @@ export default function SarthiInterview() {
   const [photoBusy, setPhotoBusy] = useState(false);
   const [shownPhoto, setShownPhoto] = useState(null);
   const [collected, setCollected] = useState({});
+  // How much of the PD schema is actually filled — a truer progress bar than counting questions,
+  // because the controller ends on coverage, not on a question count.
+  const [covered, setCovered] = useState(null);
   const lastLine = useRef({ text: '', speech: '' });
   const photos = useRef([]);
 
@@ -84,6 +93,9 @@ export default function SarthiInterview() {
   const claims = useRef([]);
   const scriptRef = useRef([]);
   const stepRef = useRef(0);
+  // Structured PD memory — what the controller reads to decide the next question. Held in a ref
+  // because every read happens inside an async turn callback.
+  const memory = useRef(createEmptyMemory(null));
   const demoRef = useRef(false);
   const mutedRef = useRef(false);
   const doneRef = useRef(false);
@@ -164,6 +176,12 @@ export default function SarthiInterview() {
       const claim = claimFromAnswer(step ?? {}, text, borrowerTurn);
       if (claim) claims.current.push(claim);
 
+      // Scripted mode fills the same structured memory as the live agent, so the report, the
+      // consistency checks and the coverage bar behave identically with or without a proxy.
+      memory.current = recordTurn(memory.current, 'user', text);
+      if (step?.collect) memory.current = updateMemory(memory.current, { [step.collect]: text, _verbatim: text });
+      setCovered(completeness(memory.current));
+
       // Intake: this answer IS the file. Store it, and check a document the moment it arrives.
       if (isIntake && step?.collect) {
         intake.current[step.collect] = text;
@@ -177,6 +195,7 @@ export default function SarthiInterview() {
       if (!next) { finish(); return; }
       const line = next.text.replace(COMPLETE_TAG, '').trim();
       transcript.current.push({ role: 'assistant', content: line });
+      memory.current = recordTurn(memory.current, 'assistant', line);
       if (next.typed) setTypeMode(true);
       const after = next.photo
         ? { then: () => setPhotoAsk(next.photo) }
@@ -185,14 +204,50 @@ export default function SarthiInterview() {
       return;
     }
 
+    memory.current = recordTurn(memory.current, 'user', text);
+
     try {
+      /*
+        One call does both of the model's jobs: it extracts facts from the answer just given and
+        asks the next question. The directive is therefore computed from memory as of the previous
+        extraction — one turn behind the answer in hand. That is fine and deliberate: the model can
+        see the raw answer in its own history, so it won't re-ask what was just told to it, while
+        the controller still guarantees coverage across the interview, because a section only
+        closes once its fields are genuinely filled. Splitting this into two calls would double
+        both the latency and the cost of every turn for a directive that is right either way.
+      */
+      const action = getNextAction(memory.current, caseData);
+      if (action.memory) memory.current = action.memory;
+
+      if (action.action === 'end_interview') { finish(); return; }
+
       const raw = await askAgent({
-        systemPrompt: buildInterviewerPrompt(caseData),
+        systemPrompt: buildInterviewerPrompt(caseData, directiveText(action)),
         messages: history.current,
         temperature: INTERVIEWER_TEMP,
       });
-      const { display, speech, claims: found, complete, photo } = parseClaims(raw, borrowerTurn);
+      const { display, speech, claims: found, facts, complete, photo } = parseClaims(raw, borrowerTurn);
       claims.current.push(...found);
+
+      // Fold the answer into memory, then let the code-only checks look at it. The model never
+      // decides that something is a contradiction; it only reports what was said.
+      const before = memory.current;
+      memory.current = updateMemory(memory.current, { ...facts, _verbatim: text });
+      const config = getInterviewConfig(caseData);
+      const found_flags = [
+        ...checkContradictions(before, facts, caseData),
+        // A walk-in has nothing to check against, so their own numbers have to do the work.
+        ...(config.isNewApplicant ? checkInternalConsistency(memory.current, caseData) : []),
+      ];
+      // Only flags we have not already raised — the same contradiction resurfaces every turn.
+      const fresh = found_flags.filter((f) => !memory.current.flags.some((p) => p.detail === f.detail));
+      memory.current = addFlags(memory.current, fresh);
+      if (action.hyperLocal) memory.current = { ...memory.current, askedHyperLocal: true };
+      if (action.riskAlert) memory.current = { ...memory.current, askedRisk: true };
+
+      memory.current = recordTurn(memory.current, 'assistant', display);
+      setCovered(completeness(memory.current));
+
       history.current.push({ role: 'assistant', content: raw });
       transcript.current.push({ role: 'assistant', content: display });
       const after = photo ? { then: () => setPhotoAsk(photo) } : complete ? { then: finish } : {};
@@ -287,13 +342,34 @@ export default function SarthiInterview() {
     }
 
     setProgress('Verifying claims against bureau and bank data…');
-    const { evidence, flags } = verifyClaims(captured, subject);
-    const eligibility = computeEligibility(subject);
+    const { evidence, flags: claimFlags } = verifyClaims(captured, subject);
+
+    /*
+      Two independent sources of doubt, both decided in code:
+       - verifyClaims  — what they said against the bureau, the bank and the area data
+       - the controller's flags — contradictions caught live, plus, for a walk-in with nothing on
+         file, their own numbers checked against each other and against their trade's real margins
+      The second is the only thing standing behind a walk-in's file, so it runs once more at the
+      end, when every answer is in and the arithmetic finally has all its inputs.
+    */
+    const consistency = checkInternalConsistency(memory.current, subject);
+
+    // The verifier and the controller both catch a bad income figure, by different routes. The
+    // verifier's version is the one with a turn number and a verdict behind it, so where both
+    // fired on the same field the controller's duplicate is dropped rather than printed twice.
+    const settled = new Set(claimFlags.map((f) => f.claimType).filter(Boolean));
+    const flags = [...claimFlags, ...memory.current.flags, ...consistency]
+      .filter((f) => !(f.type === 'contradiction' && settled.has(CLAIM_FIELD[f.field])))
+      .filter((f, i, all) => all.findIndex((o) => o.detail === f.detail) === i);
+
+    const assessed = assessIncome(memory.current, subject);
+    const eligibility = computeEligibility(subject, assessed);
     const observations = getObservations();
+    const collectedFacts = memory.current.collected;
 
     save(`bo_sarthi_transcript_${subject.id}`, turns);
     save(`bo_sarthi_claims_${subject.id}`, captured);
-    save(`bo_sarthi_evidence_${subject.id}`, { evidence, flags, eligibility, observations });
+    save(`bo_sarthi_evidence_${subject.id}`, { evidence, flags, eligibility, observations, collected: collectedFacts });
     // Images are kept in their own key: base64 is heavy and must not risk the report's own write.
     save(`bo_sarthi_photos_${subject.id}`, photos.current);
 
@@ -304,9 +380,9 @@ export default function SarthiInterview() {
     if (!demoRef.current) {
       try {
         setProgress('Writing the PD report…');
-        const raw = await writeReport({ caseData: subject, transcript: turns, claims: captured, evidence, eligibility, observations, photos: photos.current, identity: caseData.identity });
+        const raw = await writeReport({ caseData: subject, transcript: turns, claims: captured, evidence, flags, collected: collectedFacts, verification: memory.current.verification, eligibility, observations, photos: photos.current, identity: caseData.identity });
         setProgress('Checking every citation…');
-        validation = validateReport(raw, turns, captured, briefForCitation(subject), eligibility);
+        validation = validateReport(raw, turns, captured, briefForCitation(subject), eligibility, { flags, collected: collectedFacts });
         report = validation.cleanedReport;
       } catch (e) {
         console.warn('[sarthi] report agent failed, using the built-in writer', e);
@@ -317,7 +393,7 @@ export default function SarthiInterview() {
     if (!report) {
       setProgress('Writing the PD report…');
       report = buildFallbackReport({ caseData: subject, transcript: turns, evidence, flags, eligibility, observations, photos: photos.current, identity: subject.identity, cameraOn: cameraRef.current });
-      validation = validateReport(report, turns, captured, briefForCitation(subject), eligibility);
+      validation = validateReport(report, turns, captured, briefForCitation(subject), eligibility, { flags, collected: collectedFacts });
     }
 
     const entry = {
@@ -350,6 +426,7 @@ export default function SarthiInterview() {
     let cancelled = false;
     resetObservations();
     scriptRef.current = isIntake ? buildIntakeScript() : buildScript(caseData);
+    memory.current = createEmptyMemory(caseData);
 
     (async () => {
       // Intake is scripted by design: the questions build a file in a fixed order, and the
@@ -365,9 +442,12 @@ export default function SarthiInterview() {
         if (cameraRef.current) startFrameCapture(VISION_URL, () => {});
         history.current = [{ role: 'user', content: '[System: the borrower has joined the call. Greet them and begin the interview.]' }];
         try {
-          const raw = await askAgent({ systemPrompt: buildInterviewerPrompt(caseData), messages: history.current, temperature: INTERVIEWER_TEMP });
+          const opening = getNextAction(memory.current, caseData);
+          if (opening.memory) memory.current = opening.memory;
+          const raw = await askAgent({ systemPrompt: buildInterviewerPrompt(caseData, directiveText(opening)), messages: history.current, temperature: INTERVIEWER_TEMP });
           if (cancelled) return;
           const { display, speech } = parseClaims(raw, 0);
+          memory.current = recordTurn(memory.current, 'assistant', display);
           history.current.push({ role: 'assistant', content: raw });
           transcript.current.push({ role: 'assistant', content: display });
           say(display, { speech });
@@ -448,7 +528,9 @@ export default function SarthiInterview() {
         <div className={styles.sheetHead}>
           <span className={styles.step}>{asked > 0 ? `Sawaal ${Math.min(asked, total)} / ${total}` : 'Shuru ho raha hai'}</span>
           <span className={styles.progress} aria-hidden="true">
-            <span className={styles.progressFill} style={{ width: `${Math.min(96, (asked / total) * 100)}%` }} />
+            {/* Coverage of the PD schema once anything has been collected — that is what actually
+                ends the interview. Falls back to the question count before the first answer. */}
+            <span className={styles.progressFill} style={{ width: `${Math.min(96, covered?.filled ? covered.pct : (asked / total) * 100)}%` }} />
           </span>
         </div>
 

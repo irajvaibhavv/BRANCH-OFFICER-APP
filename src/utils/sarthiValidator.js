@@ -24,7 +24,7 @@ const digits = (s) => Number(String(s).replace(/[^\d]/g, ''));
 /**
  * @returns {{ cleanedReport: string, issues: Array, removedCount: number, isClean: boolean }}
  */
-export function validateReport(reportText, transcript = [], claims = [], brief = {}, eligibility = {}) {
+export function validateReport(reportText, transcript = [], claims = [], brief = {}, eligibility = {}, { flags = [], collected = {} } = {}) {
   const issues = [];
   let cleanedReport = reportText || '';
 
@@ -51,7 +51,33 @@ export function validateReport(reportText, transcript = [], claims = [], brief =
     }
   });
 
-  // 3. Eligibility figures must be the ones the system calculated, not the model's own arithmetic.
+  /*
+    3. (Flag: field) and (Fact: key) — the two citation forms that exist for findings with no turn
+    behind them. An internal-consistency failure is arithmetic over the whole interview, so it
+    cannot point at one answer; the structured PD record likewise holds the merged value rather
+    than the moment it was said. Both are still only citable if the system actually produced them,
+    which is the point of validating them here rather than trusting the sentence.
+  */
+  const flagFields = new Set(flags.map((f) => f.field).filter(Boolean));
+  const flagRefs = cleanedReport.match(/\(Flag: [\w.]+\)/g) || [];
+  [...new Set(flagRefs)].forEach((ref) => {
+    const field = ref.match(/Flag: ([\w.]+)/)[1];
+    if (!flagFields.has(field)) {
+      issues.push({ type: 'invalid_flag_ref', detail: `${ref} — the system raised no flag on that field` });
+      cleanedReport = cleanedReport.replace(new RegExp(`[^.\\n]*\\(Flag: ${field}\\)[^.\\n]*\\.?`, 'g'), '[REMOVED: invalid citation]');
+    }
+  });
+
+  const factRefs = cleanedReport.match(/\(Fact: [\w.]+\)/g) || [];
+  [...new Set(factRefs)].forEach((ref) => {
+    const key = ref.match(/Fact: ([\w.]+)/)[1];
+    if (collected?.[key] == null) {
+      issues.push({ type: 'invalid_fact_ref', detail: `${ref} was never collected in the interview` });
+      cleanedReport = cleanedReport.replace(new RegExp(`[^.\\n]*\\(Fact: ${key}\\)[^.\\n]*\\.?`, 'g'), '[REMOVED: invalid citation]');
+    }
+  });
+
+  // 4. Eligibility figures must be the ones the system calculated, not the model's own arithmetic.
   const elig = cleanedReport.match(/###\s*6\.[\s\S]*?(?=###|$)/)?.[0];
   if (elig) {
     const allowed = allowedNumbers(eligibility);
@@ -64,7 +90,6 @@ export function validateReport(reportText, transcript = [], claims = [], brief =
     });
   }
 
-  // 4. A claim verdict in the report must match the verifier's verdict, never the model's opinion.
   const removedCount = (cleanedReport.match(/\[REMOVED:/g) || []).length;
 
   return {
@@ -72,7 +97,11 @@ export function validateReport(reportText, transcript = [], claims = [], brief =
     issues,
     removedCount,
     isClean: issues.length === 0,
-    checked: { turns: transcript.length, claims: claims.length, citations: turnRefs.length + briefRefs.length },
+    checked: {
+      turns: transcript.length,
+      claims: claims.length,
+      citations: turnRefs.length + briefRefs.length + flagRefs.length + factRefs.length,
+    },
   };
 }
 

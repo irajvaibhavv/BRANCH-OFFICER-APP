@@ -1,35 +1,23 @@
 {
-  "garment_shop": {
-    "label": "Garment / Readymade Shop",
-    "knowledgeQuestions": [
-      {
-        "q": "Aap garments kahan se lete ho? Kaunsa market?",
-        "expect": "Surat, Gandhi Nagar, Tirupur, or a known wholesale market",
-        "flag": "Cannot name any supplier market",
-        "qHi": "आप गारमेंट्स कहाँ से लेते हैं? कौन सा मार्केट?"
-      },
-      {
-        "q": "Readymade garments pe GST rate kya hai?",
-        "expect": "5% (up to Rs 1000) or 12% (above Rs 1000)",
-        "flag": "Does not know GST rate for own goods",
-        "qHi": "रेडीमेड गारमेंट्स पे, जीएसटी रेट क्या है?"
-      },
-      {
-        "q": "Ek piece pe average margin kitna hota hai?",
-        "expect": "30-60% on readymade, 20-40% on fabric",
-        "flag": "Margin answer is unrealistic",
-        "qHi": "एक पीस पे, एवरेज मार्जिन कितना होता है?"
-      },
-      {
-        "q": "Season mein (Diwali/Eid) monthly sale kitna badh jaata hai?",
-        "expect": "2x to 4x is normal",
-        "flag": "Claims no seasonal variation or extreme numbers",
-        "qHi": "सीज़न में, जैसे दिवाली या ईद। तब मंथली सेल, कितना बढ़ जाता है?"
-      }
-    ]
-  },
   "kirana_store": {
+    "id": "kirana_store",
     "label": "Kirana / General Store",
+    "aliases": ["general store", "grocery", "kirana", "provision store", "departmental store", "rashan", "ration shop"],
+    "typicalMarginPct": { "min": 8, "max": 15 },
+    "monthlyIncomeRange": { "small": { "min": 15000, "max": 40000 }, "medium": { "min": 40000, "max": 100000 }, "large": { "min": 100000, "max": 300000 } },
+    "dailyCustomers": { "min": 50, "max": 200 },
+    "avgBillValue": { "min": 80, "max": 400 },
+    "commonExpenses": ["rent", "wholesale purchase", "helper salary", "electricity", "transport"],
+    "creditPeriodDays": "7-15 from FMCG distributors",
+    "peakSeason": "Diwali, Holi, wedding season",
+    "rentPctOfIncome": { "min": 10, "max": 25 },
+    "redFlags": [
+      "Margin claimed above 25% when staples run 8-15%",
+      "No wholesale purchase bills",
+      "Cash only, no UPI at all in a city shop",
+      "Cannot name a single FMCG distributor",
+      "Claims no udhaar at all on a high turnover"
+    ],
     "knowledgeQuestions": [
       {
         "q": "Daily ka milk order kitna hota hai?",
@@ -57,8 +45,71 @@
       }
     ]
   },
+
+  "garment_shop": {
+    "id": "garment_shop",
+    "label": "Garment / Readymade Shop",
+    "aliases": ["garment", "readymade", "cloth shop", "kapda", "boutique retail", "saree shop", "fashion store"],
+    "typicalMarginPct": { "min": 25, "max": 55 },
+    "monthlyIncomeRange": { "small": { "min": 20000, "max": 50000 }, "medium": { "min": 50000, "max": 150000 }, "large": { "min": 150000, "max": 500000 } },
+    "dailyCustomers": { "min": 10, "max": 60 },
+    "avgBillValue": { "min": 500, "max": 3000 },
+    "commonExpenses": ["rent", "stock purchase", "staff salary", "electricity", "packaging"],
+    "creditPeriodDays": "30-60 from wholesalers",
+    "peakSeason": "Diwali, Eid, wedding season, back-to-school",
+    "rentPctOfIncome": { "min": 15, "max": 35 },
+    "redFlags": [
+      "Cannot name the wholesale market they buy from",
+      "Does not know the GST rate on their own goods",
+      "Claims no seasonal variation in a trade that lives on festivals",
+      "Dead stock not accounted for in margin claims"
+    ],
+    "knowledgeQuestions": [
+      {
+        "q": "Aap garments kahan se lete ho? Kaunsa market?",
+        "expect": "Surat, Gandhi Nagar, Tirupur, or a known wholesale market",
+        "flag": "Cannot name any supplier market",
+        "qHi": "आप गारमेंट्स कहाँ से लेते हैं? कौन सा मार्केट?"
+      },
+      {
+        "q": "Readymade garments pe GST rate kya hai?",
+        "expect": "5% (up to Rs 1000) or 12% (above Rs 1000)",
+        "flag": "Does not know GST rate for own goods",
+        "qHi": "रेडीमेड गारमेंट्स पे, जीएसटी रेट क्या है?"
+      },
+      {
+        "q": "Ek piece pe average margin kitna hota hai?",
+        "expect": "30-60% on readymade, 20-40% on fabric",
+        "flag": "Margin answer is unrealistic",
+        "qHi": "एक पीस पे, एवरेज मार्जिन कितना होता है?"
+      },
+      {
+        "q": "Season mein (Diwali/Eid) monthly sale kitna badh jaata hai?",
+        "expect": "2x to 4x is normal",
+        "flag": "Claims no seasonal variation or extreme numbers",
+        "qHi": "सीज़न में, जैसे दिवाली या ईद। तब मंथली सेल, कितना बढ़ जाता है?"
+      }
+    ]
+  },
+
   "it_freelancer": {
+    "id": "it_freelancer",
     "label": "IT Freelancer / Web Developer",
+    "aliases": ["freelancer", "web developer", "software", "it consultant", "app developer", "designer", "programmer"],
+    "soloOk": true,
+    "typicalMarginPct": { "min": 60, "max": 90 },
+    "monthlyIncomeRange": { "small": { "min": 25000, "max": 60000 }, "medium": { "min": 60000, "max": 200000 }, "large": { "min": 200000, "max": 600000 } },
+    "commonExpenses": ["internet", "hardware", "software subscriptions", "co-working rent"],
+    "creditPeriodDays": "30-60 day client payment cycles",
+    "peakSeason": "No strong season; client budget cycles matter more",
+    "rentPctOfIncome": { "min": 0, "max": 15 },
+    "redFlags": [
+      "Income varies more than 50% month to month",
+      "Fewer than 3 regular clients",
+      "No retainer or contract of any kind",
+      "Cannot name the technologies they work in",
+      "Claims steady salary-like income from pure project work"
+    ],
     "knowledgeQuestions": [
       {
         "q": "Kaunsi technologies use karte ho?",
@@ -84,6 +135,840 @@
         "flag": "All project-based, no stability",
         "qHi": "क्या कोई रिटेनर क्लाइंट है, जो हर महीने पे करता है?"
       }
+    ]
+  },
+
+  "medical_store": {
+    "id": "medical_store",
+    "label": "Medical Store / Pharmacy",
+    "aliases": ["pharmacy", "chemist", "medical", "dawai", "drug store"],
+    "typicalMarginPct": { "min": 16, "max": 22 },
+    "monthlyIncomeRange": { "small": { "min": 25000, "max": 60000 }, "medium": { "min": 60000, "max": 150000 }, "large": { "min": 150000, "max": 400000 } },
+    "dailyCustomers": { "min": 40, "max": 150 },
+    "avgBillValue": { "min": 150, "max": 600 },
+    "commonExpenses": ["rent", "stock purchase", "pharmacist salary", "refrigeration", "licence renewal"],
+    "creditPeriodDays": "21-30 from distributors",
+    "peakSeason": "Monsoon and winter illness months",
+    "rentPctOfIncome": { "min": 10, "max": 25 },
+    "redFlags": [
+      "No drug licence number, or licence in someone else's name",
+      "Margin claimed above 35% when scheduled drugs are price-capped",
+      "No registered pharmacist on the premises",
+      "Cannot name their main distributor"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Drug licence kiske naam pe hai, aur renewal kab hai?", "expect": "Owner or employed pharmacist, with a date", "flag": "Licence is in an unrelated person's name" },
+      { "q": "Scheduled drugs pe margin kitna milta hai?", "expect": "Around 16-20%, it is price controlled", "flag": "Claims 40%+ margin" },
+      { "q": "Expiry stock ka kya karte ho?", "expect": "Returned to distributor on credit note", "flag": "Says there is never any expiry loss" }
+    ]
+  },
+
+  "mobile_electronics": {
+    "id": "mobile_electronics",
+    "label": "Mobile / Electronics Shop",
+    "aliases": ["mobile shop", "electronics", "mobile repair", "cell phone", "gadget"],
+    "typicalMarginPct": { "min": 4, "max": 12 },
+    "monthlyIncomeRange": { "small": { "min": 20000, "max": 50000 }, "medium": { "min": 50000, "max": 130000 }, "large": { "min": 130000, "max": 400000 } },
+    "dailyCustomers": { "min": 10, "max": 50 },
+    "avgBillValue": { "min": 800, "max": 15000 },
+    "commonExpenses": ["rent", "stock purchase", "staff salary", "display and demo units"],
+    "creditPeriodDays": "7-21 from distributors",
+    "peakSeason": "Diwali, new model launches",
+    "rentPctOfIncome": { "min": 15, "max": 35 },
+    "redFlags": [
+      "Claims 25%+ margin on handsets when the trade runs 4-8%",
+      "Cannot name their distributor for any brand",
+      "High turnover claimed with no IMEI-level stock record",
+      "Accessories claimed as the whole income with no handset sales"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Handset pe margin zyada hai ya accessories pe?", "expect": "Accessories, by a wide margin; handsets are 4-8%", "flag": "Says handsets carry the bigger margin" },
+      { "q": "Kaunse brand ka distributor aapko supply karta hai?", "expect": "Names a real distributor for a real brand", "flag": "Cannot name any" },
+      { "q": "Mahine mein kitne handset nikal jaate hain?", "expect": "A confident specific number", "flag": "No idea of unit volume" }
+    ]
+  },
+
+  "hardware_paint": {
+    "id": "hardware_paint",
+    "label": "Hardware / Paint Store",
+    "aliases": ["hardware", "paint", "sanitary", "building hardware", "tools shop"],
+    "typicalMarginPct": { "min": 12, "max": 25 },
+    "monthlyIncomeRange": { "small": { "min": 20000, "max": 50000 }, "medium": { "min": 50000, "max": 140000 }, "large": { "min": 140000, "max": 400000 } },
+    "dailyCustomers": { "min": 15, "max": 60 },
+    "avgBillValue": { "min": 300, "max": 4000 },
+    "commonExpenses": ["rent", "stock purchase", "helper salary", "delivery"],
+    "creditPeriodDays": "30-45 from dealers; gives 15-30 days to contractors",
+    "peakSeason": "Post-monsoon construction months",
+    "rentPctOfIncome": { "min": 10, "max": 25 },
+    "redFlags": [
+      "Large contractor credit given but no record of recovery",
+      "Cannot name the paint company whose dealership they hold",
+      "Claims no bad debt in a trade built on contractor udhaar"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Contractors ko kitne din ka udhaar dete ho?", "expect": "15-30 days is normal", "flag": "Says no credit is ever given" },
+      { "q": "Kaunsi paint company ki dealership hai?", "expect": "Asian Paints, Berger, Nerolac and similar", "flag": "Cannot name one" },
+      { "q": "Barish ke mahine mein sale kitni gir jaati hai?", "expect": "Noticeable monsoon dip", "flag": "Claims flat sales all year" }
+    ]
+  },
+
+  "stationery_books": {
+    "id": "stationery_books",
+    "label": "Stationery / Book Shop",
+    "aliases": ["stationery", "book shop", "xerox", "photocopy", "school supplies"],
+    "typicalMarginPct": { "min": 15, "max": 30 },
+    "monthlyIncomeRange": { "small": { "min": 10000, "max": 30000 }, "medium": { "min": 30000, "max": 80000 }, "large": { "min": 80000, "max": 200000 } },
+    "dailyCustomers": { "min": 20, "max": 100 },
+    "avgBillValue": { "min": 50, "max": 500 },
+    "commonExpenses": ["rent", "stock purchase", "electricity", "machine maintenance"],
+    "creditPeriodDays": "15-30 from publishers and distributors",
+    "peakSeason": "April to July, the school session start",
+    "rentPctOfIncome": { "min": 10, "max": 25 },
+    "redFlags": [
+      "Claims even income through the year when the trade is seasonal",
+      "No tie-up with any nearby school",
+      "Turnover claimed far above what the floor area can hold"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Session ke time aur baaki mahine mein kitna farq padta hai?", "expect": "3-4x in April-June", "flag": "Says there is no difference" },
+      { "q": "Kaunse school ki list aapke paas aati hai?", "expect": "Names local schools", "flag": "Cannot name one" }
+    ]
+  },
+
+  "auto_parts": {
+    "id": "auto_parts",
+    "label": "Auto Parts / Spare Parts",
+    "aliases": ["spare parts", "auto parts", "automobile spares", "garage spares", "motor parts"],
+    "typicalMarginPct": { "min": 15, "max": 35 },
+    "monthlyIncomeRange": { "small": { "min": 20000, "max": 50000 }, "medium": { "min": 50000, "max": 130000 }, "large": { "min": 130000, "max": 350000 } },
+    "dailyCustomers": { "min": 10, "max": 50 },
+    "avgBillValue": { "min": 300, "max": 3000 },
+    "commonExpenses": ["rent", "stock purchase", "helper salary", "transport"],
+    "creditPeriodDays": "30 from distributors; gives credit to garages",
+    "peakSeason": "Post-monsoon repair season",
+    "rentPctOfIncome": { "min": 10, "max": 25 },
+    "redFlags": [
+      "Cannot say which vehicle makes they stock for",
+      "Claims genuine-parts margins on a counterfeit-heavy line",
+      "Garage credit given with no ledger"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Kaunsi gaadiyon ke parts rakhte ho?", "expect": "Specific makes and models", "flag": "Vague answer" },
+      { "q": "Genuine aur local parts ke margin mein kitna farq hai?", "expect": "Local carries much higher margin", "flag": "Does not know the difference" }
+    ]
+  },
+
+  "jewellery": {
+    "id": "jewellery",
+    "label": "Jewellery Shop",
+    "aliases": ["jewellery", "jeweller", "sonar", "gold shop", "silver shop"],
+    "typicalMarginPct": { "min": 8, "max": 20 },
+    "monthlyIncomeRange": { "small": { "min": 30000, "max": 80000 }, "medium": { "min": 80000, "max": 250000 }, "large": { "min": 250000, "max": 800000 } },
+    "dailyCustomers": { "min": 3, "max": 25 },
+    "avgBillValue": { "min": 5000, "max": 80000 },
+    "commonExpenses": ["rent", "stock", "karigar payments", "insurance", "security"],
+    "creditPeriodDays": "Mostly cash or gold-metal loan against stock",
+    "peakSeason": "Wedding season, Akshaya Tritiya, Dhanteras",
+    "rentPctOfIncome": { "min": 8, "max": 20 },
+    "redFlags": [
+      "No hallmarking registration",
+      "Turnover claimed with no stock insurance",
+      "Margin claimed above 30% on plain gold",
+      "Very large cash sales with no PAN capture above the threshold"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Making charges kis hisaab se lete ho?", "expect": "Per gram or a percentage, stated confidently", "flag": "Cannot explain" },
+      { "q": "Hallmarking ka HUID registration hai?", "expect": "Yes, with a number", "flag": "Unaware of the requirement" }
+    ]
+  },
+
+  "optical": {
+    "id": "optical",
+    "label": "Optical / Eyewear Shop",
+    "aliases": ["optical", "chasma", "spectacles", "eyewear", "optician"],
+    "typicalMarginPct": { "min": 40, "max": 65 },
+    "monthlyIncomeRange": { "small": { "min": 15000, "max": 40000 }, "medium": { "min": 40000, "max": 110000 }, "large": { "min": 110000, "max": 280000 } },
+    "dailyCustomers": { "min": 5, "max": 30 },
+    "avgBillValue": { "min": 800, "max": 6000 },
+    "commonExpenses": ["rent", "frames and lens stock", "optometrist salary", "eye-test equipment"],
+    "creditPeriodDays": "30-45 from lens suppliers",
+    "peakSeason": "Steady; school eye-check months lift it",
+    "rentPctOfIncome": { "min": 12, "max": 28 },
+    "redFlags": [
+      "No qualified optometrist but claims eye testing",
+      "Volume claimed far above what one testing room can do",
+      "Cannot name a lens brand"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Eye testing khud karte ho ya koi optometrist hai?", "expect": "Names who does it and their qualification", "flag": "Claims to test with no training" },
+      { "q": "Frame pe margin zyada hai ya lens pe?", "expect": "Both are high; lens usually higher", "flag": "Does not know" }
+    ]
+  },
+
+  "cosmetics": {
+    "id": "cosmetics",
+    "label": "Cosmetics / Beauty Products",
+    "aliases": ["cosmetics", "beauty products", "makeup shop", "perfume shop"],
+    "typicalMarginPct": { "min": 20, "max": 40 },
+    "monthlyIncomeRange": { "small": { "min": 12000, "max": 35000 }, "medium": { "min": 35000, "max": 90000 }, "large": { "min": 90000, "max": 250000 } },
+    "dailyCustomers": { "min": 15, "max": 80 },
+    "avgBillValue": { "min": 150, "max": 1200 },
+    "commonExpenses": ["rent", "stock purchase", "staff salary", "display"],
+    "creditPeriodDays": "15-30 from distributors",
+    "peakSeason": "Wedding season and festivals",
+    "rentPctOfIncome": { "min": 12, "max": 30 },
+    "redFlags": [
+      "Cannot distinguish genuine from grey-market stock sourcing",
+      "Expiry management not explained",
+      "Margin claimed above 60%"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Stock kahan se aata hai, distributor ya wholesale market?", "expect": "A specific named source", "flag": "Vague" },
+      { "q": "Expiry wala saman ka kya karte ho?", "expect": "Return or discount policy", "flag": "Says it never happens" }
+    ]
+  },
+
+  "restaurant": {
+    "id": "restaurant",
+    "label": "Restaurant / Dhaba",
+    "aliases": ["restaurant", "dhaba", "hotel", "eatery", "cafe", "canteen", "food stall"],
+    "typicalMarginPct": { "min": 15, "max": 35 },
+    "monthlyIncomeRange": { "small": { "min": 20000, "max": 60000 }, "medium": { "min": 60000, "max": 180000 }, "large": { "min": 180000, "max": 600000 } },
+    "dailyCustomers": { "min": 30, "max": 300 },
+    "avgBillValue": { "min": 100, "max": 800 },
+    "commonExpenses": ["rent", "raw material", "cook and staff salary", "gas", "electricity", "delivery commission"],
+    "creditPeriodDays": "7-15 from vegetable and grocery suppliers",
+    "peakSeason": "Winter, festivals, wedding catering",
+    "rentPctOfIncome": { "min": 15, "max": 35 },
+    "redFlags": [
+      "Food cost claimed below 25% of sales",
+      "No FSSAI licence",
+      "Swiggy/Zomato commission not counted as an expense",
+      "Covers claimed far above the seating capacity"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Kitne table hain aur ek din mein kitni baar bharte hain?", "expect": "Seat count and turns, stated confidently", "flag": "Numbers do not multiply to the claimed sale" },
+      { "q": "Raw material cost sale ka kitna percent baith jaata hai?", "expect": "30-40% is normal", "flag": "Claims under 20%" },
+      { "q": "Online delivery pe commission kitna katta hai?", "expect": "18-25% if they are listed", "flag": "Says there is no commission" }
+    ]
+  },
+
+  "sweet_bakery": {
+    "id": "sweet_bakery",
+    "label": "Sweet Shop / Bakery",
+    "aliases": ["sweet shop", "mithai", "bakery", "halwai", "cake shop", "confectionery"],
+    "typicalMarginPct": { "min": 25, "max": 45 },
+    "monthlyIncomeRange": { "small": { "min": 20000, "max": 55000 }, "medium": { "min": 55000, "max": 160000 }, "large": { "min": 160000, "max": 500000 } },
+    "dailyCustomers": { "min": 40, "max": 250 },
+    "avgBillValue": { "min": 100, "max": 900 },
+    "commonExpenses": ["rent", "milk and raw material", "karigar salary", "gas", "packaging"],
+    "creditPeriodDays": "Daily to weekly for milk; 15-30 for dry goods",
+    "peakSeason": "Diwali, Raksha Bandhan, wedding season",
+    "rentPctOfIncome": { "min": 12, "max": 30 },
+    "redFlags": [
+      "Claims no festival spike in a festival-driven trade",
+      "Daily milk quantity not known",
+      "Wastage never accounted for in a perishable line"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Roz kitna doodh lagta hai?", "expect": "A confident quantity in litres", "flag": "Does not know" },
+      { "q": "Diwali ke hafte mein sale kitni guna ho jaati hai?", "expect": "3-6x is normal", "flag": "Claims no spike" }
+    ]
+  },
+
+  "fruit_vegetable": {
+    "id": "fruit_vegetable",
+    "label": "Fruit & Vegetable Vendor",
+    "aliases": ["sabzi", "vegetable", "fruit", "greengrocer", "mandi vendor", "thela"],
+    "typicalMarginPct": { "min": 15, "max": 30 },
+    "monthlyIncomeRange": { "small": { "min": 8000, "max": 25000 }, "medium": { "min": 25000, "max": 60000 }, "large": { "min": 60000, "max": 150000 } },
+    "dailyCustomers": { "min": 40, "max": 200 },
+    "avgBillValue": { "min": 40, "max": 250 },
+    "commonExpenses": ["mandi purchase", "transport", "wastage", "pitch or rent"],
+    "creditPeriodDays": "Cash at the mandi, almost no credit",
+    "peakSeason": "Winter vegetables; festival fruit demand",
+    "rentPctOfIncome": { "min": 0, "max": 15 },
+    "redFlags": [
+      "Wastage claimed at zero on a perishable line where 10-15% is normal",
+      "Cannot name the mandi they buy from",
+      "Income claimed well above what a single cart can turn over"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Kaunsi mandi se maal uthate ho aur kitne baje?", "expect": "Names the mandi and an early hour", "flag": "Cannot name it" },
+      { "q": "Roz kitna maal kharab ho jaata hai?", "expect": "10-15% is normal", "flag": "Says nothing is ever wasted" }
+    ]
+  },
+
+  "dairy_booth": {
+    "id": "dairy_booth",
+    "label": "Milk Dairy / Booth",
+    "aliases": ["dairy", "milk booth", "doodh", "amul booth", "mother dairy"],
+    "typicalMarginPct": { "min": 4, "max": 10 },
+    "monthlyIncomeRange": { "small": { "min": 10000, "max": 25000 }, "medium": { "min": 25000, "max": 60000 }, "large": { "min": 60000, "max": 150000 } },
+    "dailyCustomers": { "min": 60, "max": 300 },
+    "avgBillValue": { "min": 30, "max": 150 },
+    "commonExpenses": ["booth rent", "refrigeration electricity", "helper salary"],
+    "creditPeriodDays": "Prepaid or daily settlement with the dairy",
+    "peakSeason": "Festivals lift paneer and curd volumes",
+    "rentPctOfIncome": { "min": 8, "max": 20 },
+    "redFlags": [
+      "Margin claimed above 15% on a fixed-commission product",
+      "Daily litre volume not known",
+      "Claims income that no booth allocation could support"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Roz kitne litre ka allotment milta hai?", "expect": "An exact litre figure", "flag": "Does not know" },
+      { "q": "Doodh pe commission kitna milta hai?", "expect": "A small fixed rate per litre", "flag": "Claims a large percentage" }
+    ]
+  },
+
+  "chai_snack_stall": {
+    "id": "chai_snack_stall",
+    "label": "Chai / Snack Stall",
+    "aliases": ["chai", "tea stall", "snacks", "nashta", "samosa", "juice corner", "pan shop"],
+    "typicalMarginPct": { "min": 40, "max": 65 },
+    "monthlyIncomeRange": { "small": { "min": 8000, "max": 20000 }, "medium": { "min": 20000, "max": 50000 }, "large": { "min": 50000, "max": 120000 } },
+    "dailyCustomers": { "min": 60, "max": 400 },
+    "avgBillValue": { "min": 15, "max": 80 },
+    "commonExpenses": ["raw material", "gas", "pitch rent", "helper"],
+    "creditPeriodDays": "Cash purchase",
+    "peakSeason": "Winter for tea; steady otherwise",
+    "rentPctOfIncome": { "min": 5, "max": 20 },
+    "redFlags": [
+      "Cup count claimed beyond what one stall can serve in a day",
+      "Income claimed far above the cup-count arithmetic",
+      "No idea of daily gas or milk consumption"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Din bhar mein kitni chai ban jaati hai?", "expect": "A confident cup count", "flag": "Cannot say" },
+      { "q": "Ek cylinder kitne din chalta hai?", "expect": "A specific number of days", "flag": "Does not know" }
+    ]
+  },
+
+  "beauty_salon": {
+    "id": "beauty_salon",
+    "label": "Beauty Parlour / Salon",
+    "aliases": ["salon", "parlour", "beauty parlour", "barber", "hair cutting", "spa"],
+    "typicalMarginPct": { "min": 40, "max": 70 },
+    "monthlyIncomeRange": { "small": { "min": 12000, "max": 35000 }, "medium": { "min": 35000, "max": 100000 }, "large": { "min": 100000, "max": 300000 } },
+    "dailyCustomers": { "min": 5, "max": 40 },
+    "avgBillValue": { "min": 100, "max": 2000 },
+    "commonExpenses": ["rent", "products", "staff salary or commission", "electricity"],
+    "creditPeriodDays": "Cash or 15-day product supplier credit",
+    "peakSeason": "Wedding season and festivals",
+    "rentPctOfIncome": { "min": 15, "max": 35 },
+    "redFlags": [
+      "Client count claimed beyond the number of chairs and hours",
+      "Staff commission not counted as an expense",
+      "Bridal income claimed as monthly recurring"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Kitni chair hain aur roz kitne customer baith jaate hain?", "expect": "Chair count and a realistic footfall", "flag": "Numbers exceed capacity" },
+      { "q": "Staff ko salary dete ho ya commission?", "expect": "Commission is common; states the split", "flag": "Cannot explain the arrangement" }
+    ]
+  },
+
+  "tailoring": {
+    "id": "tailoring",
+    "label": "Tailoring / Boutique",
+    "aliases": ["tailor", "darzi", "boutique", "stitching", "silai"],
+    "typicalMarginPct": { "min": 45, "max": 70 },
+    "monthlyIncomeRange": { "small": { "min": 8000, "max": 25000 }, "medium": { "min": 25000, "max": 70000 }, "large": { "min": 70000, "max": 200000 } },
+    "dailyCustomers": { "min": 2, "max": 20 },
+    "avgBillValue": { "min": 200, "max": 3000 },
+    "commonExpenses": ["rent", "thread and lining", "karigar wages", "machine maintenance", "electricity"],
+    "creditPeriodDays": "Advance taken from the customer; little supplier credit",
+    "peakSeason": "Wedding season, Diwali, Eid",
+    "rentPctOfIncome": { "min": 10, "max": 25 },
+    "redFlags": [
+      "Piece count claimed beyond what the machines and hands can stitch",
+      "Karigar wages not counted",
+      "Claims flat income in a sharply seasonal trade"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Mahine mein kitne suit ya piece ban jaate hain?", "expect": "A confident count matching the staff", "flag": "Count is impossible for the team size" },
+      { "q": "Kitne karigar kaam karte hain aapke saath?", "expect": "A specific number", "flag": "Vague" }
+    ]
+  },
+
+  "laundry": {
+    "id": "laundry",
+    "label": "Laundry / Dry Cleaning",
+    "aliases": ["laundry", "dhobi", "dry clean", "ironing", "press"],
+    "typicalMarginPct": { "min": 35, "max": 60 },
+    "monthlyIncomeRange": { "small": { "min": 8000, "max": 22000 }, "medium": { "min": 22000, "max": 60000 }, "large": { "min": 60000, "max": 160000 } },
+    "dailyCustomers": { "min": 10, "max": 80 },
+    "avgBillValue": { "min": 50, "max": 500 },
+    "commonExpenses": ["rent", "detergent and solvent", "electricity", "staff", "delivery"],
+    "creditPeriodDays": "Cash; monthly accounts for regular households",
+    "peakSeason": "Winter for heavy garments; wedding season",
+    "rentPctOfIncome": { "min": 10, "max": 25 },
+    "redFlags": [
+      "Piece volume claimed beyond machine capacity",
+      "Dry cleaning claimed without a dry-cleaning machine",
+      "Electricity cost implausibly low for the claimed volume"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Dry cleaning khud karte ho ya bahar bhejte ho?", "expect": "Clear answer either way", "flag": "Claims in-house with no machine" },
+      { "q": "Roz kitne kapde aate hain?", "expect": "A confident piece count", "flag": "Cannot say" }
+    ]
+  },
+
+  "repair_shop": {
+    "id": "repair_shop",
+    "label": "Repair Shop (mobile / AC / appliance)",
+    "aliases": ["repair", "mechanic", "service centre", "ac repair", "appliance repair", "mobile repair"],
+    "typicalMarginPct": { "min": 35, "max": 60 },
+    "monthlyIncomeRange": { "small": { "min": 10000, "max": 28000 }, "medium": { "min": 28000, "max": 75000 }, "large": { "min": 75000, "max": 200000 } },
+    "dailyCustomers": { "min": 3, "max": 25 },
+    "avgBillValue": { "min": 200, "max": 2500 },
+    "commonExpenses": ["rent", "spare parts", "tools", "helper wages"],
+    "creditPeriodDays": "15-30 on parts from suppliers",
+    "peakSeason": "Summer for AC and cooling; steady otherwise",
+    "rentPctOfIncome": { "min": 8, "max": 22 },
+    "redFlags": [
+      "Job count claimed beyond one technician's daily capacity",
+      "Parts cost not separated from labour income",
+      "Seasonal trade claimed as flat monthly income"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Ek din mein kitne repair nikal jaate hain?", "expect": "A realistic job count", "flag": "Impossible for the staff size" },
+      { "q": "Parts ka kharcha alag hai ya usi mein jodte ho?", "expect": "Separates parts from labour", "flag": "Counts full bill as income" }
+    ]
+  },
+
+  "gym": {
+    "id": "gym",
+    "label": "Gym / Fitness Centre",
+    "aliases": ["gym", "fitness", "health club", "yoga centre", "zumba"],
+    "typicalMarginPct": { "min": 30, "max": 55 },
+    "monthlyIncomeRange": { "small": { "min": 20000, "max": 50000 }, "medium": { "min": 50000, "max": 150000 }, "large": { "min": 150000, "max": 400000 } },
+    "commonExpenses": ["rent", "trainer salary", "electricity", "equipment maintenance", "marketing"],
+    "creditPeriodDays": "Members pay in advance; equipment bought on EMI",
+    "peakSeason": "January and pre-summer months",
+    "rentPctOfIncome": { "min": 20, "max": 40 },
+    "redFlags": [
+      "Member count claimed beyond floor capacity",
+      "Annual memberships booked as monthly income",
+      "Equipment EMI not disclosed as an existing obligation"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Abhi kitne active members hain aur monthly fee kitni hai?", "expect": "Two numbers that multiply to the claimed income", "flag": "Arithmetic does not hold" },
+      { "q": "Equipment ki EMI chal rahi hai?", "expect": "Discloses it if it exists", "flag": "Hides a running obligation" }
+    ]
+  },
+
+  "doctor_clinic": {
+    "id": "doctor_clinic",
+    "label": "Doctor / Clinic",
+    "aliases": ["doctor", "clinic", "dentist", "physiotherapy", "diagnostic", "nursing home"],
+    "soloOk": true,
+    "typicalMarginPct": { "min": 45, "max": 75 },
+    "monthlyIncomeRange": { "small": { "min": 30000, "max": 80000 }, "medium": { "min": 80000, "max": 250000 }, "large": { "min": 250000, "max": 800000 } },
+    "dailyCustomers": { "min": 10, "max": 60 },
+    "avgBillValue": { "min": 200, "max": 1500 },
+    "commonExpenses": ["clinic rent", "assistant salary", "consumables", "equipment maintenance"],
+    "creditPeriodDays": "Cash or insurance cycles of 30-60 days",
+    "peakSeason": "Seasonal illness months",
+    "rentPctOfIncome": { "min": 10, "max": 30 },
+    "redFlags": [
+      "Patient count claimed beyond consulting hours",
+      "No registration number offered",
+      "Equipment loan not disclosed"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Roz kitne patient dekhte hain aur consultation fee kitni hai?", "expect": "Numbers that reconcile with the claimed income", "flag": "Arithmetic does not hold" },
+      { "q": "Clinic kitne ghante khula rehta hai?", "expect": "Specific hours", "flag": "Hours cannot support the patient count" }
+    ]
+  },
+
+  "ca_tax": {
+    "id": "ca_tax",
+    "label": "CA / Tax Consultant",
+    "aliases": ["ca", "chartered accountant", "tax consultant", "accountant", "gst practitioner", "advocate", "lawyer"],
+    "soloOk": true,
+    "typicalMarginPct": { "min": 55, "max": 85 },
+    "monthlyIncomeRange": { "small": { "min": 20000, "max": 60000 }, "medium": { "min": 60000, "max": 200000 }, "large": { "min": 200000, "max": 600000 } },
+    "commonExpenses": ["office rent", "staff salary", "software subscriptions", "travel"],
+    "creditPeriodDays": "Client payment on filing, often 30-60 days",
+    "peakSeason": "July for ITR, quarterly GST months, September audit",
+    "rentPctOfIncome": { "min": 8, "max": 25 },
+    "redFlags": [
+      "Client count claimed far beyond what the staff can service",
+      "Seasonal filing income presented as flat monthly",
+      "No membership or registration number offered"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Kitne regular clients hain aur average fee kitni hai?", "expect": "Numbers that reconcile with the income", "flag": "Arithmetic does not hold" },
+      { "q": "July aur baaki mahine mein kitna farq padta hai?", "expect": "A clear filing-season spike", "flag": "Claims no seasonality" }
+    ]
+  },
+
+  "coaching_center": {
+    "id": "coaching_center",
+    "label": "Coaching / Tuition Centre",
+    "aliases": ["coaching", "tuition", "institute", "classes", "academy", "training centre"],
+    "typicalMarginPct": { "min": 35, "max": 65 },
+    "monthlyIncomeRange": { "small": { "min": 12000, "max": 40000 }, "medium": { "min": 40000, "max": 120000 }, "large": { "min": 120000, "max": 400000 } },
+    "commonExpenses": ["rent", "teacher salary", "printing", "electricity", "marketing"],
+    "creditPeriodDays": "Fees collected monthly or per term in advance",
+    "peakSeason": "April to July admissions; exam months",
+    "rentPctOfIncome": { "min": 15, "max": 35 },
+    "redFlags": [
+      "Student count claimed beyond the seating capacity",
+      "Annual fees booked as one month's income",
+      "Teacher salaries not counted as an expense"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Abhi kitne students hain aur monthly fee kitni hai?", "expect": "Numbers that multiply to the claimed income", "flag": "Arithmetic does not hold" },
+      { "q": "Kitne batch chalte hain aur kitne teacher hain?", "expect": "Consistent with the student count", "flag": "Capacity does not match" }
+    ]
+  },
+
+  "photography": {
+    "id": "photography",
+    "label": "Photography / Videography",
+    "aliases": ["photographer", "photography", "videography", "studio", "wedding photographer"],
+    "soloOk": true,
+    "typicalMarginPct": { "min": 40, "max": 70 },
+    "monthlyIncomeRange": { "small": { "min": 12000, "max": 35000 }, "medium": { "min": 35000, "max": 120000 }, "large": { "min": 120000, "max": 350000 } },
+    "commonExpenses": ["equipment EMI", "studio rent", "assistant wages", "travel", "printing"],
+    "creditPeriodDays": "Advance booking, balance on delivery",
+    "peakSeason": "Wedding season; sharp lull otherwise",
+    "rentPctOfIncome": { "min": 5, "max": 25 },
+    "redFlags": [
+      "Wedding-season income presented as monthly average",
+      "Equipment EMI not disclosed",
+      "Booking count claimed beyond the season's dates"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Saal mein kitni shaadi shoot kar lete ho?", "expect": "A confident booking count", "flag": "Count exceeds the season" },
+      { "q": "Camera equipment ki koi EMI chal rahi hai?", "expect": "Discloses it", "flag": "Hides a running obligation" }
+    ]
+  },
+
+  "auto_rickshaw": {
+    "id": "auto_rickshaw",
+    "label": "Auto Rickshaw Owner",
+    "aliases": ["auto", "rickshaw", "e-rickshaw", "tempo passenger", "three wheeler"],
+    "soloOk": true,
+    "typicalMarginPct": { "min": 35, "max": 60 },
+    "monthlyIncomeRange": { "small": { "min": 10000, "max": 20000 }, "medium": { "min": 20000, "max": 40000 }, "large": { "min": 40000, "max": 90000 } },
+    "commonExpenses": ["CNG or fuel", "permit and insurance", "maintenance", "vehicle EMI"],
+    "creditPeriodDays": "Daily cash earnings",
+    "peakSeason": "Steady; monsoon lifts short trips",
+    "rentPctOfIncome": { "min": 0, "max": 10 },
+    "redFlags": [
+      "Daily earning claimed well above the local norm",
+      "Fuel cost not deducted from the claimed income",
+      "Vehicle EMI not disclosed",
+      "Claims to own several autos with no permits to show"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Roz ka kitna kama lete ho aur CNG pe kitna kharch hota hai?", "expect": "Both numbers, with fuel deducted", "flag": "Quotes gross as income" },
+      { "q": "Permit aapke naam pe hai?", "expect": "Yes, with detail", "flag": "Drives someone else's permit" }
+    ]
+  },
+
+  "taxi_cab": {
+    "id": "taxi_cab",
+    "label": "Taxi / Cab Owner",
+    "aliases": ["taxi", "cab", "ola", "uber", "car rental", "driver"],
+    "soloOk": true,
+    "typicalMarginPct": { "min": 30, "max": 50 },
+    "monthlyIncomeRange": { "small": { "min": 15000, "max": 30000 }, "medium": { "min": 30000, "max": 70000 }, "large": { "min": 70000, "max": 200000 } },
+    "commonExpenses": ["fuel", "aggregator commission", "insurance", "maintenance", "vehicle EMI", "driver salary"],
+    "creditPeriodDays": "Aggregator settles weekly",
+    "peakSeason": "Festive travel and wedding season",
+    "rentPctOfIncome": { "min": 0, "max": 10 },
+    "redFlags": [
+      "Aggregator commission of 20-25% not deducted",
+      "Vehicle EMI not disclosed",
+      "Gross fare quoted as take-home income"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Ola ya Uber pe commission kitna katta hai?", "expect": "Around 20-25%", "flag": "Says nothing is deducted" },
+      { "q": "Gaadi apni hai ya EMI chal rahi hai?", "expect": "Clear answer with the EMI figure", "flag": "Evades the question" }
+    ]
+  },
+
+  "truck_tempo": {
+    "id": "truck_tempo",
+    "label": "Truck / Tempo Owner",
+    "aliases": ["truck", "tempo", "goods carrier", "transport", "lorry", "pickup"],
+    "typicalMarginPct": { "min": 20, "max": 40 },
+    "monthlyIncomeRange": { "small": { "min": 20000, "max": 50000 }, "medium": { "min": 50000, "max": 150000 }, "large": { "min": 150000, "max": 500000 } },
+    "commonExpenses": ["diesel", "driver salary", "toll", "maintenance", "insurance and permit", "vehicle EMI"],
+    "creditPeriodDays": "Freight payment 30-60 days from the consignor",
+    "peakSeason": "Post-harvest and festive freight",
+    "rentPctOfIncome": { "min": 0, "max": 10 },
+    "redFlags": [
+      "Freight receipts quoted as income with no diesel deduction",
+      "Vehicle EMI not disclosed",
+      "Fleet size claimed with no RC copies",
+      "Idle days never accounted for"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Ek trip ka freight kitna milta hai aur diesel kitna lagta hai?", "expect": "Both figures, netting out", "flag": "Quotes freight as profit" },
+      { "q": "Mahine mein kitne din gaadi khali khadi rehti hai?", "expect": "Admits idle days", "flag": "Claims the truck never stops" }
+    ]
+  },
+
+  "delivery_service": {
+    "id": "delivery_service",
+    "label": "Delivery Service",
+    "aliases": ["delivery", "courier", "logistics", "last mile", "parcel"],
+    "typicalMarginPct": { "min": 20, "max": 40 },
+    "monthlyIncomeRange": { "small": { "min": 12000, "max": 30000 }, "medium": { "min": 30000, "max": 90000 }, "large": { "min": 90000, "max": 250000 } },
+    "commonExpenses": ["fuel", "rider salary", "vehicle maintenance", "packaging"],
+    "creditPeriodDays": "Principal settles weekly or fortnightly",
+    "peakSeason": "Festive e-commerce months",
+    "rentPctOfIncome": { "min": 0, "max": 15 },
+    "redFlags": [
+      "Per-parcel rate multiplied without deducting fuel and rider cost",
+      "Rider count claimed with no salary outgo",
+      "Single-principal dependence not acknowledged"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Ek parcel pe kitna milta hai aur roz kitne parcel karte ho?", "expect": "Numbers that reconcile", "flag": "Arithmetic does not hold" },
+      { "q": "Kitne rider aapke saath kaam karte hain?", "expect": "A count with a salary cost", "flag": "Riders claimed with zero cost" }
+    ]
+  },
+
+  "small_manufacturing": {
+    "id": "small_manufacturing",
+    "label": "Small Manufacturing Unit",
+    "aliases": ["manufacturing", "factory", "production unit", "workshop", "udyog", "packaging unit"],
+    "typicalMarginPct": { "min": 10, "max": 25 },
+    "monthlyIncomeRange": { "small": { "min": 25000, "max": 60000 }, "medium": { "min": 60000, "max": 200000 }, "large": { "min": 200000, "max": 800000 } },
+    "commonExpenses": ["raw material", "labour wages", "power", "rent", "machine maintenance", "transport"],
+    "creditPeriodDays": "Buys on 30-45 days; sells on 45-90 days",
+    "peakSeason": "Depends on the product line",
+    "rentPctOfIncome": { "min": 8, "max": 25 },
+    "redFlags": [
+      "Capacity claimed beyond what the installed machines can produce",
+      "Power bill implausibly low for the claimed output",
+      "Long receivable cycle not disclosed",
+      "No GST registration despite the claimed turnover"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Mahine ka production capacity kitna hai aur abhi kitna use ho raha hai?", "expect": "Capacity and utilisation figures", "flag": "Output exceeds capacity" },
+      { "q": "Bijli ka bill mahine ka kitna aata hai?", "expect": "Consistent with the machinery", "flag": "Far too low for the claimed output" },
+      { "q": "Customer se payment kitne din mein aata hai?", "expect": "45-90 days is normal", "flag": "Claims instant payment" }
+    ]
+  },
+
+  "printing_press": {
+    "id": "printing_press",
+    "label": "Printing Press",
+    "aliases": ["printing", "press", "offset", "flex printing", "digital printing", "screen printing"],
+    "typicalMarginPct": { "min": 20, "max": 40 },
+    "monthlyIncomeRange": { "small": { "min": 15000, "max": 40000 }, "medium": { "min": 40000, "max": 120000 }, "large": { "min": 120000, "max": 350000 } },
+    "commonExpenses": ["paper and ink", "machine EMI", "labour", "power", "rent"],
+    "creditPeriodDays": "Sells on 30-60 days to institutional clients",
+    "peakSeason": "Election season, exam season, wedding cards",
+    "rentPctOfIncome": { "min": 10, "max": 25 },
+    "redFlags": [
+      "Machine EMI not disclosed",
+      "Volume claimed beyond machine hours",
+      "Institutional receivables treated as cash income"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Kaunsi machine hai aur ek ghante mein kitne impression nikalte hain?", "expect": "Specific machine and rate", "flag": "Cannot describe the machine" },
+      { "q": "Payment kitne din mein aata hai clients se?", "expect": "30-60 days", "flag": "Claims all cash on delivery" }
+    ]
+  },
+
+  "furniture_carpenter": {
+    "id": "furniture_carpenter",
+    "label": "Furniture / Carpenter",
+    "aliases": ["carpenter", "furniture", "badhai", "woodwork", "modular kitchen"],
+    "typicalMarginPct": { "min": 25, "max": 45 },
+    "monthlyIncomeRange": { "small": { "min": 12000, "max": 35000 }, "medium": { "min": 35000, "max": 100000 }, "large": { "min": 100000, "max": 300000 } },
+    "commonExpenses": ["wood and ply", "hardware", "labour wages", "workshop rent", "transport"],
+    "creditPeriodDays": "Advance from the customer; 15-30 days on material",
+    "peakSeason": "Wedding season and post-monsoon house moves",
+    "rentPctOfIncome": { "min": 8, "max": 22 },
+    "redFlags": [
+      "Order count claimed beyond the workshop's throughput",
+      "Material cost not separated from labour",
+      "Claims steady flow in an order-driven trade"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Mahine mein kitne order pure ho jaate hain?", "expect": "A realistic count for the team", "flag": "Impossible for the staff" },
+      { "q": "Ply aur hardware kahan se lete ho?", "expect": "Names a market or dealer", "flag": "Cannot name a source" }
+    ]
+  },
+
+  "welding_fabrication": {
+    "id": "welding_fabrication",
+    "label": "Welding / Fabrication",
+    "aliases": ["welding", "fabrication", "grill", "steel works", "lohar", "metal work"],
+    "typicalMarginPct": { "min": 20, "max": 40 },
+    "monthlyIncomeRange": { "small": { "min": 10000, "max": 30000 }, "medium": { "min": 30000, "max": 90000 }, "large": { "min": 90000, "max": 250000 } },
+    "commonExpenses": ["steel and rods", "electrodes", "power", "labour wages", "workshop rent"],
+    "creditPeriodDays": "Buys on 15-30 days; contractor payments run late",
+    "peakSeason": "Construction season after the monsoon",
+    "rentPctOfIncome": { "min": 8, "max": 20 },
+    "redFlags": [
+      "Steel price volatility never mentioned",
+      "Contractor dues treated as received income",
+      "Power bill too low for the claimed fabrication volume"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Steel ka rate aaj kal kitna chal raha hai per kilo?", "expect": "A current confident rate", "flag": "No idea of their main input price" },
+      { "q": "Contractor se paisa kitne din mein milta hai?", "expect": "Admits a delay", "flag": "Claims immediate payment" }
+    ]
+  },
+
+  "wholesaler": {
+    "id": "wholesaler",
+    "label": "Wholesaler / Distributor",
+    "aliases": ["wholesale", "distributor", "trader", "stockist", "supplier", "commission agent"],
+    "typicalMarginPct": { "min": 3, "max": 10 },
+    "monthlyIncomeRange": { "small": { "min": 30000, "max": 80000 }, "medium": { "min": 80000, "max": 250000 }, "large": { "min": 250000, "max": 900000 } },
+    "commonExpenses": ["stock purchase", "godown rent", "transport", "staff salary", "interest on credit"],
+    "creditPeriodDays": "Buys on 15-30 days; gives retailers 15-45 days",
+    "peakSeason": "Festive stocking months",
+    "rentPctOfIncome": { "min": 5, "max": 15 },
+    "redFlags": [
+      "Margin claimed above 20% on a thin-margin volume trade",
+      "Retailer receivables treated as cash",
+      "Turnover claimed with no godown to hold the stock",
+      "No GST registration at a turnover well past the threshold"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Retailer ko kitne din ka credit dete ho?", "expect": "15-45 days", "flag": "Claims cash-only wholesale" },
+      { "q": "Margin percentage mein kitna baith jaata hai?", "expect": "Low single digits to 10%", "flag": "Claims retail-level margins" },
+      { "q": "Godown kitna bada hai?", "expect": "A size that can hold the claimed stock", "flag": "No storage for the claimed volume" }
+    ]
+  },
+
+  "scrap_dealer": {
+    "id": "scrap_dealer",
+    "label": "Scrap Dealer",
+    "aliases": ["scrap", "kabadi", "kabaad", "recycling", "raddi"],
+    "typicalMarginPct": { "min": 15, "max": 35 },
+    "monthlyIncomeRange": { "small": { "min": 12000, "max": 35000 }, "medium": { "min": 35000, "max": 100000 }, "large": { "min": 100000, "max": 300000 } },
+    "commonExpenses": ["purchase from collectors", "transport", "yard rent", "labour", "weighing"],
+    "creditPeriodDays": "Cash purchase; sells to recyclers on 7-15 days",
+    "peakSeason": "Steady; scrap prices swing with metal rates",
+    "rentPctOfIncome": { "min": 5, "max": 18 },
+    "redFlags": [
+      "Almost entirely cash with no purchase records",
+      "Cannot quote current scrap rates for their main material",
+      "Volume claimed beyond the yard's capacity"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Loha aur plastic ka aaj ka rate kya chal raha hai?", "expect": "Current rates per kilo", "flag": "Does not know their own input prices" },
+      { "q": "Maal kahan bechte ho?", "expect": "Names recyclers or a larger dealer", "flag": "Cannot name a buyer" }
+    ]
+  },
+
+  "construction_material": {
+    "id": "construction_material",
+    "label": "Construction Material Trader",
+    "aliases": ["cement", "sariya", "bricks", "sand", "building material", "tiles", "marble"],
+    "typicalMarginPct": { "min": 5, "max": 15 },
+    "monthlyIncomeRange": { "small": { "min": 25000, "max": 60000 }, "medium": { "min": 60000, "max": 200000 }, "large": { "min": 200000, "max": 700000 } },
+    "commonExpenses": ["stock purchase", "transport", "yard rent", "labour", "interest"],
+    "creditPeriodDays": "Buys on 15-30 days; builders pay in 30-90 days",
+    "peakSeason": "Post-monsoon to summer construction season",
+    "rentPctOfIncome": { "min": 5, "max": 18 },
+    "redFlags": [
+      "Builder receivables counted as income",
+      "Margin claimed above 25% on cement, which is rate-controlled by the brand",
+      "Monsoon slowdown not acknowledged"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Cement ki ek bori pe kitna margin milta hai?", "expect": "A small fixed amount per bag", "flag": "Claims a large percentage" },
+      { "q": "Builder se payment kitne din mein aata hai?", "expect": "30-90 days", "flag": "Claims cash on delivery" }
+    ]
+  },
+
+  "agri_trader": {
+    "id": "agri_trader",
+    "label": "Agricultural Trader",
+    "aliases": ["agri", "anaj", "grain", "mandi trader", "arhatiya", "fertiliser", "seeds", "farming"],
+    "typicalMarginPct": { "min": 3, "max": 12 },
+    "monthlyIncomeRange": { "small": { "min": 15000, "max": 40000 }, "medium": { "min": 40000, "max": 130000 }, "large": { "min": 130000, "max": 500000 } },
+    "commonExpenses": ["procurement", "mandi fee", "transport", "storage", "labour"],
+    "creditPeriodDays": "Farmer paid at purchase; buyer pays in 15-45 days",
+    "peakSeason": "Harvest months, sharply seasonal",
+    "rentPctOfIncome": { "min": 3, "max": 15 },
+    "redFlags": [
+      "Harvest-season income presented as steady monthly earning",
+      "Cannot name the mandi or the commission structure",
+      "Storage losses never accounted for"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Kaunsi mandi mein kaam karte ho aur commission kitna hai?", "expect": "Names the mandi and a rate", "flag": "Cannot name either" },
+      { "q": "Season aur off-season mein kitna farq padta hai?", "expect": "A large swing", "flag": "Claims flat income" }
+    ]
+  },
+
+  "building_contractor": {
+    "id": "building_contractor",
+    "label": "Building Contractor",
+    "aliases": ["contractor", "builder", "civil contractor", "thekedar", "construction"],
+    "typicalMarginPct": { "min": 8, "max": 20 },
+    "monthlyIncomeRange": { "small": { "min": 25000, "max": 60000 }, "medium": { "min": 60000, "max": 200000 }, "large": { "min": 200000, "max": 800000 } },
+    "commonExpenses": ["material", "labour wages", "equipment hire", "transport", "site expenses"],
+    "creditPeriodDays": "Running bills paid in 30-90 days with retention held back",
+    "peakSeason": "Post-monsoon to summer; monsoon stops work",
+    "rentPctOfIncome": { "min": 0, "max": 10 },
+    "redFlags": [
+      "Project value quoted as income rather than margin",
+      "Retention money and delayed bills not accounted for",
+      "Monsoon idle months not acknowledged",
+      "No written work order for the claimed projects"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Abhi kitne site chal rahe hain aur ek site pe margin kitna baith jaata hai?", "expect": "Site count and a 8-20% margin", "flag": "Quotes contract value as income" },
+      { "q": "Payment running bill pe milta hai? Retention kitna katta hai?", "expect": "Aware of retention, typically 5-10%", "flag": "Unaware of standard terms" }
+    ]
+  },
+
+  "plumber_electrician": {
+    "id": "plumber_electrician",
+    "label": "Plumber / Electrician (service)",
+    "aliases": ["plumber", "electrician", "mistri", "bijli", "wiring", "sanitary fitting"],
+    "soloOk": true,
+    "typicalMarginPct": { "min": 40, "max": 70 },
+    "monthlyIncomeRange": { "small": { "min": 10000, "max": 25000 }, "medium": { "min": 25000, "max": 60000 }, "large": { "min": 60000, "max": 160000 } },
+    "commonExpenses": ["tools", "material bought for jobs", "travel", "helper wages"],
+    "creditPeriodDays": "Cash on completion; contractor jobs run 30+ days",
+    "peakSeason": "Construction season and summer for cooling work",
+    "rentPctOfIncome": { "min": 0, "max": 10 },
+    "redFlags": [
+      "Material cost billed to the customer counted as income",
+      "Job count claimed beyond a working day",
+      "No repeat clients or contractor tie-up named"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Ek din mein kitne kaam nikal jaate hain aur ek kaam ka kitna milta hai?", "expect": "Numbers that reconcile with the income", "flag": "Arithmetic does not hold" },
+      { "q": "Material aap lagate ho ya customer?", "expect": "Clear answer separating labour from material", "flag": "Counts material as earnings" }
+    ]
+  },
+
+  "interior_designer": {
+    "id": "interior_designer",
+    "label": "Interior Designer",
+    "aliases": ["interior", "interior designer", "decor", "turnkey interiors", "false ceiling"],
+    "typicalMarginPct": { "min": 15, "max": 35 },
+    "monthlyIncomeRange": { "small": { "min": 25000, "max": 60000 }, "medium": { "min": 60000, "max": 180000 }, "large": { "min": 180000, "max": 600000 } },
+    "commonExpenses": ["material", "carpenter and labour wages", "site supervision", "office rent", "marketing"],
+    "creditPeriodDays": "Milestone advances; final payment often delayed",
+    "peakSeason": "Wedding season and post-monsoon possession handovers",
+    "rentPctOfIncome": { "min": 5, "max": 20 },
+    "redFlags": [
+      "Project value quoted as income rather than margin",
+      "Very few projects a year presented as monthly income",
+      "Final-payment delays never mentioned"
+    ],
+    "knowledgeQuestions": [
+      { "q": "Saal mein kitne project karte ho aur ek pe margin kitna baith jaata hai?", "expect": "Project count and a 15-35% margin", "flag": "Quotes project value as income" },
+      { "q": "Payment milestone pe milta hai ya end mein?", "expect": "Describes a milestone schedule", "flag": "Cannot explain their own terms" }
     ]
   }
 }

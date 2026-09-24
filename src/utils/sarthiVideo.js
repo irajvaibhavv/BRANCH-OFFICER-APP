@@ -1,13 +1,26 @@
 /*
   SARTHI — camera + background frame analysis.
 
-  One-way video: the borrower's camera runs in the browser, a frame is grabbed every 15s and sent
-  to Gemini Vision through the same proxy. Observations are stored silently and only ever surface
-  in the officer's report — the borrower is never shown them. Everything here is best effort: a
-  denied camera or a dead proxy must not stop the interview.
+  One-way video: the borrower's camera runs in the browser, a frame is periodically grabbed and
+  sent to Gemini Vision through the same proxy. Observations are stored silently and only ever
+  surface in the officer's report — the borrower is never shown them. Everything here is best
+  effort: a denied camera or a dead proxy must not stop the interview.
+
+  Frame capture is the single biggest consumer of API quota in the whole product: it runs on a
+  clock, so it bills for wall time whether or not anyone is speaking, and on a free key it can
+  outspend the actual conversation three to one. Hence a slow default and a hard per-interview
+  cap — observations are a bonus layer, and they must never be the reason the interview itself
+  runs out of quota. Both are tunable without touching code:
+
+    VITE_SARTHI_VISION_MS=45000   seconds between frames; 0 or "off" disables capture entirely
+    VITE_SARTHI_VISION_MAX=12     most frames one interview may ever send
 */
 
-const CAPTURE_MS = 15000;
+const envMs = import.meta.env.VITE_SARTHI_VISION_MS;
+const OFF = envMs === 'off' || Number(envMs) === 0;
+// Floor of 15s: anything faster burns quota with no extra signal — the scene barely changes.
+const CAPTURE_MS = Math.max(15000, Number(envMs) || 45000);
+const MAX_FRAMES = Math.max(1, Number(import.meta.env.VITE_SARTHI_VISION_MAX) || 12);
 const FRAME_W = 320;
 const FRAME_H = 240;
 
@@ -50,7 +63,11 @@ export function stopCamera() {
 /** Begin background frame analysis. Silent on every failure — this layer is a bonus, not a gate. */
 export function startFrameCapture(visionUrl, onObservation) {
   if (captureInterval) clearInterval(captureInterval);
+  if (OFF) return; // vision explicitly disabled; the interview and report work without it
+  let sent = 0;
   captureInterval = setInterval(async () => {
+    // Stop once the budget is spent, so a long interview cannot drain the day's quota.
+    if (sent >= MAX_FRAMES) { clearInterval(captureInterval); captureInterval = null; return; }
     if (!videoEl || videoEl.readyState < 2) return;
     let base64;
     try {
@@ -63,6 +80,8 @@ export function startFrameCapture(visionUrl, onObservation) {
       return;
     }
 
+    // Counted at the point the request goes out, not on success: a failed call still cost quota.
+    sent += 1;
     try {
       const res = await fetch(visionUrl, {
         method: 'POST',

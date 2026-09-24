@@ -25,11 +25,11 @@ const FENCE = '```';
 /* ============================================================ proxy call */
 
 /** POST one turn to the proxy. Throws when the proxy or key is unavailable — callers decide. */
-export async function askAgent({ systemPrompt, messages, temperature = INTERVIEWER_TEMP, maxTokens = 1024 }) {
+export async function askAgent({ systemPrompt, messages, temperature = INTERVIEWER_TEMP, maxTokens = 1024, thinkingBudget = 0 }) {
   const res = await fetch(CHAT_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ systemPrompt, messages, temperature, maxTokens }),
+    body: JSON.stringify({ systemPrompt, messages, temperature, maxTokens, thinkingBudget }),
   });
   if (!res.ok) throw new Error(`Sarthi proxy ${res.status}`);
   const data = await res.json();
@@ -54,8 +54,9 @@ export async function probeProxy() {
 
 /* ============================================================ Agent 1 — interviewer */
 
-export function buildInterviewerPrompt(c) {
-  const area = lookupLocation(c.areaKey);
+export function buildInterviewerPrompt(c, directive = '') {
+  // areaKey only exists for areas we surveyed; the free-text area still resolves to a tier.
+  const area = lookupLocation(c.areaKey || c.area);
   const biz = lookupBusiness(c.businessKey);
   const pattern = c.riskPatternMatch ? lookupRiskPattern(c.riskPatternMatch.patternId) : null;
   const brief = JSON.stringify(briefForCitation(c), null, 2);
@@ -70,6 +71,12 @@ export function buildInterviewerPrompt(c) {
 - You NEVER say whether the loan will be approved or rejected
 - You NEVER confront the borrower with contradictions
 - You just keep asking natural follow-up questions to get clarity
+
+## Who decides what to ask
+A controller walks a fixed PD schema in code and tells you, each turn, which topic is due. That
+instruction arrives as a "THIS TURN" block at the end of this prompt. Follow it. Your job is HOW
+to say it — natural, warm, in their register — not WHAT to cover. If the block names a topic you
+think is odd, ask it anyway; the schema exists so nothing gets missed on a long call.
 
 ## Interview structure
 1. Start with a warm greeting and explain you'll ask some questions about their loan application
@@ -113,6 +120,34 @@ GOOD: { "verbatim": "Teen lakh aata hai mahine ka" }
 "turn" is the number of the borrower message you are reacting to (their first reply is turn 1).
 For money, "stated_value" must be a plain number in rupees (300000, not "3 lakh").
 
+## Fact capture (separate from claims, and required whenever a fact was stated)
+The claim block above is the evidence trail. This one is the file itself: it fills named fields
+the controller tracks, so it knows what is still missing. After each of YOUR messages, if the
+borrower's previous answer stated anything factual, output:
+
+${FENCE}facts
+{ "business_age": 5, "residence_type": "rented", "monthly_rent": 18000 }
+${FENCE}
+
+Use ONLY these keys:
+age, family_size, dependents, residence_type (owned|rented|family), residence_duration,
+monthly_rent, business_type, business_age, business_location, ownership (sole|partnership|family),
+employees, products_services, customers_per_day, monthly_sales, monthly_expenses, supplier_credit,
+avg_bill_value, monthly_purchase, payment_mode, peak_day_sales, slow_day_sales, supplier_names,
+credit_given, seasonal_variation, monthly_income, household_expenses, existing_loans, existing_emi,
+bank_account, savings, aadhaar_address, aadhaar_address_match (match|different|not_shared),
+pan_type (personal|firm|not_shared), bank_account_type (savings|current|both|not_shared),
+loan_purpose, loan_amount, repayment_plan, area_knowledge_score, business_domain_score
+
+Rules:
+- Convert Hindi number words to digits: "teen lakh" → 300000, "paanch saal" → 5, "dedh lakh" → 150000.
+- Include a key ONLY if they clearly stated it. Never guess, never carry a value over from an
+  earlier turn, never fill a field from what seems likely for their trade.
+- After a knowledge or trap question, score how they handled it: area_knowledge_score or
+  business_domain_score as "high", "medium" or "low" — high means instant and specific, low means
+  they fumbled or did not know. Score their CONFIDENCE, not whether the answer was factually right.
+- If nothing factual was stated, output no facts block at all.
+
 ## Spoken form (REQUIRED with every message)
 Your message is shown on screen in Hinglish (Latin script) but spoken aloud by a Hindi voice.
 A Hindi voice reading Latin text mispronounces it ("lagenge" is read as an English word), so after
@@ -147,7 +182,11 @@ ${brief}
 ${pattern ? JSON.stringify({ ...c.riskPatternMatch, ...pattern }, null, 2) : 'No specific risk patterns matched.'}
 
 ## AREA KNOWLEDGE (for trap questions):
-${area ? JSON.stringify(area, null, 2) : `No area data available for "${c.area}". Skip all area-based trap questions.`}
+${area.source === 'specific'
+    ? JSON.stringify(area, null, 2)
+    : `We hold no surveyed data for "${c.area}". The ranges below are typical for a ${area.label ?? 'town'} of this size and are indicative ONLY — never quote them to the borrower and never treat a figure outside them as wrong:
+${JSON.stringify({ avgShopRent: area.avgShopRent, avgHouseRent2BHK: area.avgHouseRent2BHK, avgHelperSalary: area.avgHelperSalary }, null, 2)}
+There are no landmarks or markets on file, so do NOT ask "how far from X" about any named place. For the area check, ask something any real resident answers instantly — nearest thana, bijli company, nearest station, the local market's name — and judge their confidence, not the answer.`}
 
 ## BUSINESS KNOWLEDGE (for integrity questions):
 ${biz ? JSON.stringify(biz, null, 2) : `No business data available for "${c.business}". Skip all trade-knowledge questions.`}
@@ -162,8 +201,9 @@ You must ONLY use facts from the AREA KNOWLEDGE and BUSINESS KNOWLEDGE sections 
 - Sarthi is voiced by a male Hindi voice, so use masculine first-person verb forms ("poochhunga", "karunga"), never feminine ("poochhungi").
 - If the borrower seems confused, simplify your language.
 - Total interview should be 15-20 questions. Do not drag it beyond that.
-- When you have covered all topics, end the interview naturally.
-- Your last message should include the phrase "[INTERVIEW_COMPLETE]" so the system knows to move to the report phase.`;
+- Do not decide on your own that the interview is over. The controller ends it: when the THIS TURN
+  block tells you every topic is covered, close warmly and include "[INTERVIEW_COMPLETE]".
+${directive ? `\n## ${directive}` : ''}`;
 }
 
 export const COMPLETE_TAG = '[INTERVIEW_COMPLETE]';
@@ -173,11 +213,39 @@ export const COMPLETE_TAG = '[INTERVIEW_COMPLETE]';
  * and the structured claims behind it. Anything that fails to parse is dropped, never guessed at;
  * a missing speech block just means the caption text gets spoken, which is the old behaviour.
  */
+/**
+ * Read a ```facts``` block. JSON is what the prompt asks for and what the model gives in
+ * practice, but a dropped facts block is uniquely costly: the controller would see every field
+ * as still missing and re-ask the same question for the rest of the interview. So a `key: value`
+ * block — the one drift observed in testing — is also accepted rather than thrown away.
+ * Anything else yields {}, which is the honest answer: nothing was extracted.
+ */
+function parseFacts(body) {
+  try {
+    const parsed = JSON.parse(body);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+  } catch { /* fall through to the loose form */ }
+
+  const out = {};
+  body.split('\n').forEach((line) => {
+    const m = line.match(/^\s*["']?([a-z_]+)["']?\s*:\s*(.+?)\s*,?\s*$/i);
+    if (!m) return;
+    const value = m[2].replace(/^["']|["']$/g, '');
+    if (value && value !== 'null') out[m[1]] = /^-?\d+(\.\d+)?$/.test(value) ? Number(value) : value;
+  });
+  return out;
+}
+
 export function parseClaims(raw, fallbackTurn) {
   const claims = [];
   let speech = '';
   let photo = null;
+  let facts = {};
   const display = raw
+    .replace(/```facts\s*([\s\S]*?)```/g, (_, body) => {
+      facts = parseFacts(body.trim());
+      return '';
+    })
     .replace(/```claim\s*([\s\S]*?)```/g, (_, body) => {
       try {
         const c = JSON.parse(body.trim());
@@ -193,7 +261,7 @@ export function parseClaims(raw, fallbackTurn) {
     .replace(/\[INTERVIEW_COMPLETE\]/g, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
-  return { display, speech: speech || display, claims, photo, complete: raw.includes(COMPLETE_TAG) };
+  return { display, speech: speech || display, claims, facts, photo, complete: raw.includes(COMPLETE_TAG) };
 }
 
 /* ============================================================ Agent 2 — report writer */
@@ -261,7 +329,10 @@ Write the report in this exact format:
 *This report was generated by Sarthi AI. The final loan decision must be made by an authorized human officer. AI assessment is advisory only.*
 
 ## Rules
-- EVERY finding must cite its source: (Turn X) for interview answers, (Brief: field_name) for Borrower Brief data points, (Vision: MM:SS) for video observations, (Pattern: PATTERN-ID) for risk pattern matches
+- EVERY finding must cite its source: (Turn X) for interview answers, (Brief: field_name) for Borrower Brief data points, (Fact: field_name) for a value in the STRUCTURED PD RECORD, (Flag: field_name) for a system-raised flag, (Vision: MM:SS) for video observations, (Pattern: PATTERN-ID) for risk pattern matches
+- Internal-consistency findings are arithmetic across the whole interview and have no single turn behind them. Cite those as (Flag: field_name), using the field exactly as the FLAGS list spells it.
+- Every flag in the FLAGS list must appear in section 4. Do not soften one, drop one, or add one of your own — those verdicts were decided in code.
+- If ELIGIBILITY says assessedIncomeMethod is "calculated_from_answers", the income was rebuilt from what the applicant said, not read off a statement. Say so plainly in section 6 and repeat that no bank statement has been seen. Never present a rebuilt figure as verified income.
 - STRICT RULE: Every finding must cite its source. If you cannot cite a specific turn number, brief field, or pattern ID, DO NOT include that finding. Uncited findings are automatically removed by post-processing. Never fabricate a citation.
 - Use clear, simple language. The officer may not be fluent in English.
 - Numbers must be in Indian format (1,50,000 not 150,000)
@@ -273,7 +344,7 @@ Write the report in this exact format:
 - Output plain markdown only. No preamble, no code fences around the report.`;
 
 /** Everything Agent 2 is allowed to know, as one user message. */
-export function buildReporterInput({ caseData, transcript, claims, evidence, eligibility, observations, photos = [], identity, mode = 'Handover' }) {
+export function buildReporterInput({ caseData, transcript, claims, evidence, flags = [], collected = null, verification = null, eligibility, observations, photos = [], identity, mode = 'Handover' }) {
   const turns = transcript
     .map((m, i) => `[${i + 1}] ${m.role === 'assistant' ? 'SARTHI' : 'BORROWER'}: ${m.content}`)
     .join('\n');
@@ -300,6 +371,15 @@ ${JSON.stringify(claims, null, 2)}
 ## EVIDENCE TRAIL (verdicts from the system verifier — do not change these)
 ${JSON.stringify(evidence, null, 2)}
 
+## STRUCTURED PD RECORD (extracted field by field during the interview)
+${collected ? JSON.stringify(Object.fromEntries(Object.entries(collected).filter(([, v]) => v != null)), null, 2) : 'Not captured.'}
+
+## FLAGS RAISED BY THE SYSTEM (contradictions, coaching drift and internal-consistency failures — decided in code, not by you)
+${flags.length ? JSON.stringify(flags, null, 2) : 'None raised.'}
+
+## KNOWLEDGE CHECK RESULTS
+${verification && (verification.area?.length || verification.business?.length) ? JSON.stringify(verification, null, 2) : 'Scores are in the structured PD record as area_knowledge_score and business_domain_score.'}
+
 ## VIDEO OBSERVATIONS
 ${observations?.length ? JSON.stringify(observations, null, 2) : 'No notable observations.'}
 
@@ -313,11 +393,19 @@ ${photos.length ? JSON.stringify(photos.map(({ dataUrl, ...p }) => p), null, 2) 
 ${JSON.stringify(eligibility, null, 2)}`;
 }
 
+/*
+  The report is the one call worth thinking about: it is written once, nobody is waiting on a
+  live conversation, and it has to hold every citation to its source. So unlike the interview
+  turns it keeps its reasoning — with a token ceiling well above what the report itself needs,
+  because thought tokens are billed against the same budget and a truncated report would lose
+  its recommendation section entirely.
+*/
 export async function writeReport(input) {
   return askAgent({
     systemPrompt: REPORTER_SYSTEM,
     messages: [{ role: 'user', content: buildReporterInput(input) }],
     temperature: REPORTER_TEMP,
-    maxTokens: 3000,
+    maxTokens: 12000,
+    thinkingBudget: 4000,
   });
 }

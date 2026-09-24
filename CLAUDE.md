@@ -46,9 +46,32 @@ Demo login: any 10-digit number starting 6–9 → OTP `1234` → set a 4-digit 
 **Sarthi AI** (`src/screens/sarthi/`, `src/utils/sarthi*.js`, `src/data/sarthi/*.json`) — the one feature that
 calls a real model (Gemini), kept separate from SAARTHI AI (`screens/ai/`, `smfgAI.js`), which stays scripted.
 - Agent 1 interviews on a video-call screen and emits ```claim``` blocks; Agent 2 writes the officer's report.
+- **The controller decides what to ask; the model only decides how to say it.** `sarthiController.js`
+  walks `pdSchema.json` in code and injects a "THIS TURN" directive into Agent 1's prompt each turn;
+  `sarthiMemory.js` holds the extracted facts (Agent 1 returns them in a ```facts``` fence). Coverage
+  is therefore a property of the program, not something the model has to remember on a long call, and
+  the interview ends when the schema is satisfied — not when the model decides it is done. The
+  directive is computed one turn behind the answer in hand (one model call does both jobs); the model
+  sees the raw answer in its own history, so it does not re-ask.
+- **Area data resolves specific → tier → rural** (`lookupLocation`). Only `source: 'specific'` areas
+  have landmarks, so trap questions are gated on that; tier ranges are indicative and the verifier
+  softens a rent verdict to `unverified` rather than `contradicted` on them. Always resolve with
+  `areaKey || area` — a walk-in has no `areaKey`.
+- **Walk-ins are assessed on internal consistency**: `checkInternalConsistency` compares their own
+  numbers against each other and against `typicalMarginPct` in `businessKnowledge.json`, and
+  `assessIncome` rebuilds income from footfall × bill × margin, taking the LOWER of that and what
+  they declared. `computeEligibility(caseData, assessed)` then reports it as rebuilt, never as verified.
+- Findings with no single turn behind them cite `(Flag: field)` or `(Fact: key)`; `sarthiValidator.js`
+  checks those against the flags and collected facts the system actually produced.
 - The key never reaches the bundle: calls go to `/api/sarthi-chat` and `/api/sarthi-vision` — `api/*.js` on
   Vercel (`GEMINI_API_KEY` env var, never `VITE_`-prefixed), `sarthi-proxy.mjs` in dev (`npm run sarthi`,
-  vite proxies :3001). **No reachable proxy → the interview runs `sarthiScript.js` scripted mode** and still
+  which loads `.env.local` itself; vite proxies :3001). Model is `gemini-3.6-flash`, overridable with
+  `GEMINI_MODEL` (server-side var — 2.5-flash is retired for new keys).
+- **Thinking is off by default** (`thinkingConfig.thinkingBudget: 0`). Thought tokens are billed against
+  `maxOutputTokens`, so a thinking model silently starves its own reply: a 1024-token interview turn
+  spent ~730 thinking, and the 100-token vision call would return an empty string every time. Callers
+  opt back in — only `writeReport` does (budget 4000, ceiling 12000). Always read the reply by joining
+  **all** `content.parts`, never `parts[0]`. **No reachable proxy → the interview runs `sarthiScript.js` scripted mode** and still
   produces a full report, so a demo never dies on a missing key.
 - Anti-hallucination is the point of the file split: the model may only use the four JSON knowledge files,
   `sarthiVerifier.js` (plain rules) decides confirmed/contradicted/unverified, `loanCalc.js` computes every

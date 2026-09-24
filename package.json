@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "sarthi": "node sarthi-proxy.mjs",
+    "sarthi": "node --env-file-if-exists=.env.local sarthi-proxy.mjs",
     "sarthi:voice": "node prerender-sarthi-voice.mjs"
   },
   "dependencies": {

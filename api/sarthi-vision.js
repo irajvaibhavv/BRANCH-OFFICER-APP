@@ -2,7 +2,7 @@
 // Takes one base64 JPEG frame from the interview and returns a short, factual observation.
 // Observations are advisory context for the officer, never shown to the borrower.
 
-const MODEL = 'gemini-2.5-flash';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
 export const VISION_PROMPT = `You are analyzing a frame from a loan interview video call.
 The person on camera is a loan applicant.
@@ -36,7 +36,14 @@ export default async function handler(req, res) {
               { text: prompt || VISION_PROMPT },
             ],
           }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: prompt ? 200 : 100 },
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: prompt ? 200 : 100,
+            // Mandatory here, not an optimisation: thought tokens count against maxOutputTokens,
+            // and a thinking model given a 100-token ceiling spends the lot thinking and returns
+            // an empty string. Every observation would silently come back blank.
+            thinkingConfig: { thinkingBudget: 0 },
+          },
         }),
       },
     );
@@ -44,7 +51,7 @@ export default async function handler(req, res) {
     const data = await response.json();
     if (!response.ok) return res.status(response.status).json({ error: data?.error?.message || `Gemini ${response.status}` });
 
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text || '').join('');
     return res.json({ observation: text.includes('nothing_notable') ? null : text });
   } catch (e) {
     return res.status(500).json({ error: e.message });

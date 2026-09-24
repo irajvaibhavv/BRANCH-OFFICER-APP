@@ -23,7 +23,7 @@ const fmt = (n) => formatINR(n, { compact: false });
  * pronounces it as English spelling, so what is spoken and what is displayed have to differ.
  */
 export function buildScript(c) {
-  const area = lookupLocation(c.areaKey);
+  const area = lookupLocation(c.areaKey || c.area);
   const biz = lookupBusiness(c.businessKey);
   const pattern = c.riskPatternMatch ? lookupRiskPattern(c.riskPatternMatch.patternId) : null;
   const hi = c.hi ?? {};
@@ -46,8 +46,13 @@ export function buildScript(c) {
     { text: 'Ghar ka mahine ka kharcha kitna ho jaata hai?', speech: 'और घर का खर्चा, महीने का कितना हो जाता है?', claimType: 'expense' },
   ];
 
-  if (area?.avgShopRent) {
+  // Rent is worth asking wherever we have a range to check it against, including a tier range.
+  if (area.avgShopRent) {
     steps.push({ text: 'Shop ka monthly rent kitna hai? Ya shop apni hai?', speech: 'शॉप का मंथली रेंट, कितना है? या शॉप अपनी है?', claimType: 'rent' });
+  }
+  // Landmark and metro questions need real surveyed data — a tier range has no landmarks, and
+  // asking "how far from undefined" is worse than not asking.
+  if (area.source === 'specific') {
     const landmark = area.landmarks?.[0]?.name;
     if (landmark) {
       steps.push({
@@ -189,11 +194,19 @@ const inr = (n) => (typeof n === 'number' ? n.toLocaleString('en-IN') : n);
  * Assembles the report without Agent 2. Same structure, same citation style — but every line is
  * built from the evidence trail and the calculated eligibility, so nothing can be invented.
  */
+/** Headings for controller flags, which carry a type and a field rather than a written label. */
+const FLAG_HEADS = {
+  contradiction: 'Contradicts the file',
+  coaching_detected: 'Answer changed when asked again',
+  internal_consistency: 'Their own numbers do not add up',
+  inconsistency: 'Stated differently across the interview',
+};
+
 export function buildFallbackReport({ caseData, transcript, evidence, flags, eligibility, observations, photos = [], identity, cameraOn, mode = 'Handover' }) {
   const c = caseData;
   const pattern = c.riskPatternMatch ? lookupRiskPattern(c.riskPatternMatch.patternId) : null;
   const biz = lookupBusiness(c.businessKey);
-  const area = lookupLocation(c.areaKey);
+  const area = lookupLocation(c.areaKey || c.area);
   const contradicted = evidence.filter((e) => e.status === 'contradicted');
   // Claims we had no rule for are not "concerns" — only claims a rule could not settle are.
   const unverified = evidence.filter((e) => e.status === 'unverified' && !e.noRule);
@@ -259,16 +272,30 @@ ${rows}
 ${pattern
       ? `- Pattern match: ${pattern.area} + ${pattern.businessType}. ${Math.round(pattern.failureRate * 100)}% of past cases failed. ${pattern.whatWentWrong} (Pattern: ${pattern.patternId})`
       : '- No known risk patterns matched.'}
-${flags.length ? flags.map((f) => `- ${f.label}: ${f.detail}${f.turns?.length ? ` (Turn ${f.turns[0]})` : ''}`).join('\n') : '- No inconsistencies detected across the interview.'}
-- Area default rate for this location: ${Math.round(c.brief.areaDefaultRate * 100)}% (Brief: areaDefaultRate)
+${flags.length
+      ? flags.map((f) => {
+        // Two shapes reach here: the verifier's cross-claim flags carry a label and turns, the
+        // controller's carry a field and a severity. Cite whichever the flag can actually support.
+        const head = f.label ?? FLAG_HEADS[f.type] ?? 'Flag';
+        const cite = f.turns?.length ? ` (Turn ${f.turns[0]})` : f.turn ? ` (Turn ${f.turn})` : f.field ? ` (Flag: ${f.field})` : '';
+        return `- ${head}: ${f.detail}${cite}`;
+      }).join('\n')
+      : '- No inconsistencies detected across the interview.'}
+${c.brief.areaDefaultRate != null
+      ? `- Area default rate for this location: ${Math.round(c.brief.areaDefaultRate * 100)}% (Brief: areaDefaultRate)`
+      : '- Area default rate: not on file for this location.'}
 
 ### 5. KNOWLEDGE VERIFICATION
-${area ? `- Area questions asked using ${c.areaKey} data (landmarks, metro, shop rent range ${fmt(area.avgShopRent.min)}–${fmt(area.avgShopRent.max)}). Officer should read the transcript for how they were answered.` : '- No area data on file for this location; area trap questions were skipped.'}
+${area.source === 'specific'
+      ? `- Area questions asked using ${c.areaKey} data (landmarks, metro, shop rent range ${fmt(area.avgShopRent.min)}–${fmt(area.avgShopRent.max)}). Officer should read the transcript for how they were answered.`
+      : `- No surveyed data for ${c.area || 'this location'}, so landmark questions were skipped. Rent was checked against the ${area.label ?? 'small town'} range (${fmt(area.avgShopRent.min)}–${fmt(area.avgShopRent.max)}), which is indicative only — the officer should confirm it on the ground.`}
 ${biz ? `- Trade-knowledge questions asked for ${biz.label}. Watch for: ${biz.knowledgeQuestions.map((q) => q.flag).slice(0, 2).join('; ')}.` : '- No trade-knowledge data on file for this business type; those questions were skipped.'}
 
 ### 6. LOAN ELIGIBILITY
 ${eligibility.assessable
-      ? `- Assessed Monthly Income: ₹${inr(eligibility.assessedIncome)} (Brief: avgMonthlyCredit — bank credits, not declared income)
+      ? `- Assessed Monthly Income: ₹${inr(eligibility.assessedIncome)} ${eligibility.assessedIncomeMethod === 'calculated_from_answers'
+        ? `— **rebuilt from the interview, not from a statement**. ${eligibility.assessedIncomeSource}${eligibility.assessedIncomeNote ? ` ${eligibility.assessedIncomeNote}` : ''}`
+        : '(Brief: avgMonthlyCredit — bank credits, not declared income)'}
 - Existing EMIs: ₹${inr(eligibility.existingEmi)} (Brief: existingEMIs)
 - Available EMI Capacity: ₹${inr(eligibility.availableEmiCapacity)} (${eligibility.foirPct}% FOIR less existing EMIs)
 - Recommended Product: ${eligibility.product} at ${eligibility.rate}% for ${eligibility.tenureMonths} months

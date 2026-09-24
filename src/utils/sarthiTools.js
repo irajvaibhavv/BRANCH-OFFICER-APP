@@ -37,7 +37,9 @@ export function getCase(id) {
  * showing a number the file cannot support.
  */
 export function buildNewCase(form) {
-  const areaKey = Object.keys(locationKnowledge).find((k) => form.area.toLowerCase().includes(k.toLowerCase())) ?? null;
+  // areaKey stays null unless we hold real data for that area — tier ranges are still applied by
+  // lookupLocation(form.area), but a null key keeps the agent off landmark trap questions.
+  const areaKey = Object.keys(locationKnowledge.specific).find((k) => form.area.toLowerCase().includes(k.toLowerCase())) ?? null;
   const pattern = matchPattern(areaKey, form.businessKey);
 
   return {
@@ -105,18 +107,50 @@ export function matchPattern(areaKey, businessKey = '') {
   }) ?? null;
 }
 
-/** Area facts (rents, landmarks, markets) — null when we have no data for that area. */
+export const AREA_SPECIFIC = locationKnowledge.specific;
+export const AREA_TIERS = locationKnowledge.tiers;
+
+/**
+ * Area facts, resolved in three steps: the area we hold real data for, else the tier its city
+ * falls in, else small-town defaults.
+ *
+ * Tier ranges exist so a rent claim from Muzaffarpur or a village can still be checked against
+ * something sane instead of going unverified. They are wide on purpose — `source` says which
+ * step answered, and the verifier only calls a tier-based rent "contradicted" at the extremes,
+ * because a wrong contradiction is far more damaging than an honest "unverified".
+ */
 export function lookupLocation(areaKey) {
-  if (!areaKey) return null;
-  if (locationKnowledge[areaKey]) return locationKnowledge[areaKey];
+  if (!areaKey) return { ...AREA_TIERS.tier3_rural, source: 'default', tier: 'tier3_rural' };
+  const lower = String(areaKey).toLowerCase();
+
+  if (AREA_SPECIFIC[areaKey]) return { ...AREA_SPECIFIC[areaKey], source: 'specific', areaKey };
   // tolerate "Dwarka Sector 7, Delhi" style strings
-  const hit = Object.keys(locationKnowledge).find((k) => areaKey.toLowerCase().includes(k.toLowerCase()));
-  return hit ? locationKnowledge[hit] : null;
+  const hit = Object.keys(AREA_SPECIFIC).find((k) => lower.includes(k.toLowerCase()));
+  if (hit) return { ...AREA_SPECIFIC[hit], source: 'specific', areaKey: hit };
+
+  const tier = Object.entries(AREA_TIERS).find(([, data]) =>
+    data.cities?.some((c) => lower.includes(c.toLowerCase())));
+  if (tier) return { ...tier[1], source: 'tier', tier: tier[0] };
+
+  return { ...AREA_TIERS.tier3_rural, source: 'default', tier: 'tier3_rural' };
 }
 
-/** Trade-knowledge questions a real owner of this business should be able to answer. */
+/** True only when we hold real landmark/market data — the trap questions need that, tiers cannot give it. */
+export function hasAreaDetail(areaKey) {
+  return lookupLocation(areaKey).source === 'specific';
+}
+
+/**
+ * Trade knowledge, by key or by anything the borrower called their business.
+ * Aliases matter because a walk-in says "sabzi ka thela", not "fruit_vegetable".
+ */
 export function lookupBusiness(businessKey) {
-  return businessKnowledge[businessKey] ?? null;
+  if (!businessKey) return null;
+  if (businessKnowledge[businessKey]) return businessKnowledge[businessKey];
+  const lower = String(businessKey).toLowerCase();
+  return Object.values(businessKnowledge).find((b) =>
+    lower.includes(b.label.toLowerCase())
+    || b.aliases?.some((a) => lower.includes(a.toLowerCase()))) ?? null;
 }
 
 /** The full pattern record behind a case's riskPatternMatch, or null. */

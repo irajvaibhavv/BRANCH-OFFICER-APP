@@ -11,7 +11,7 @@
 import http from 'http';
 
 const PORT = 3001;
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 const KEY = process.env.GEMINI_API_KEY;
 
 const VISION_PROMPT = `You are analyzing a frame from a loan interview video call.
@@ -33,7 +33,8 @@ const gemini = (body) =>
   }).then(async (r) => {
     const data = await r.json();
     if (!r.ok) throw new Error(data?.error?.message || `Gemini ${r.status}`);
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    // Join all parts: a thinking model may split its answer, and parts[0] can hold no text.
+    return (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text || '').join('');
   });
 
 http.createServer(async (req, res) => {
@@ -57,16 +58,18 @@ http.createServer(async (req, res) => {
         if (!payload.image) return send(400, { error: 'No image supplied' });
         const text = await gemini({
           contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: payload.image } }, { text: payload.prompt || VISION_PROMPT }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: payload.prompt ? 200 : 100 },
+          // thinkingBudget 0 is mandatory: thought tokens count against maxOutputTokens, so a
+          // thinking model given 100 tokens spends them all thinking and returns nothing.
+          generationConfig: { temperature: 0.3, maxOutputTokens: payload.prompt ? 200 : 100, thinkingConfig: { thinkingBudget: 0 } },
         });
         return send(200, { observation: text.includes('nothing_notable') ? null : text });
       }
 
-      const { messages = [], systemPrompt = '', temperature = 0.5, maxTokens = 1024 } = payload;
+      const { messages = [], systemPrompt = '', temperature = 0.5, maxTokens = 1024, thinkingBudget = 0 } = payload;
       const text = await gemini({
         system_instruction: { parts: [{ text: systemPrompt }] },
         contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-        generationConfig: { temperature, maxOutputTokens: maxTokens },
+        generationConfig: { temperature, maxOutputTokens: maxTokens, thinkingConfig: { thinkingBudget } },
       });
       return send(200, { reply: text });
     } catch (e) {

@@ -136,11 +136,31 @@ const RULES = {
     const value = toNumber(claimed);
     if (value == null) return { status: 'unverified', detail: 'No numeric rent stated' };
     if (!areaData?.avgShopRent) return { status: 'unverified', detail: 'No rent data for this area' };
+
+    /*
+      An area we hold real data for is checked tightly. A range inferred from the city's tier
+      covers a whole class of towns, so it is only worth a verdict at the extremes and only ever
+      a soft one — calling a rent "contradicted" off a tier average would put a red mark on a
+      file for no better reason than the applicant living somewhere we have not surveyed.
+    */
+    const loose = areaData.source !== 'specific';
+    const floor = loose ? THRESHOLDS.rentFloor * 0.5 : THRESHOLDS.rentFloor;
+    const ceiling = loose ? THRESHOLDS.rentCeiling * 2 : THRESHOLDS.rentCeiling;
     const { min, max } = areaData.avgShopRent;
     const range = `${fmt(min)}–${fmt(max)}`;
-    if (value < min * THRESHOLDS.rentFloor) return { status: 'contradicted', detail: `Claimed ${fmt(value)}, area range is ${range}`, verified: range, source: 'Area data' };
-    if (value > max * THRESHOLDS.rentCeiling) return { status: 'contradicted', detail: `Claimed ${fmt(value)}, area range is ${range}`, verified: range, source: 'Area data' };
-    return { status: 'confirmed', detail: `Within expected range for area (${range})`, verified: range, source: 'Area data' };
+    const basis = loose ? `${areaData.label ?? 'tier'} range` : 'area range';
+    const source = loose ? `Tier data: ${areaData.label ?? areaData.tier}` : 'Area data';
+
+    if (value < min * floor || value > max * ceiling) {
+      return {
+        status: loose ? 'unverified' : 'contradicted',
+        detail: `Claimed ${fmt(value)}, ${basis} is ${range}${loose ? ' — no survey data for this area, officer should confirm' : ''}`,
+        verified: range,
+        source,
+      };
+    }
+    if (loose) return { status: 'unverified', detail: `Plausible for a ${areaData.label ?? 'town'} of this size (${range}), but we hold no data for this area`, verified: range, source };
+    return { status: 'confirmed', detail: `Within expected range for area (${range})`, verified: range, source };
   },
 };
 
@@ -166,7 +186,9 @@ function ruleKey(claimType = '') {
  * Returns the evidence trail plus the inconsistency / coaching flags found across claims.
  */
 export function verifyClaims(claims = [], caseData) {
-  const areaData = lookupLocation(caseData.areaKey);
+  // Fall back to the typed area so a walk-in's rent is checked against their city's tier
+  // rather than dropping to rural defaults just because we hold no survey for the place.
+  const areaData = lookupLocation(caseData.areaKey || caseData.area);
   const ctx = { brief: caseData.brief, areaData, caseData };
 
   const evidence = claims.map((c, i) => {
@@ -213,6 +235,7 @@ function findFlags(claims, evidence) {
     if (lo > 0 && ((hi - lo) / lo) * 100 > THRESHOLDS.coachingDriftPct) {
       flags.push({
         type: 'inconsistency',
+        claimType: key,
         label: `${LABEL[key]} stated differently across the interview`,
         detail: `${fmt(lo)} and ${fmt(hi)} given for the same question`,
         turns: list.map((c) => c.turn).filter(Boolean),
@@ -221,7 +244,8 @@ function findFlags(claims, evidence) {
   });
 
   evidence.filter((e) => e.status === 'contradicted').forEach((e) => {
-    flags.push({ type: 'contradiction', label: `${e.claim} contradicted`, detail: e.detail, turns: e.turn ? [e.turn] : [] });
+    // claimType lets the caller tell that this flag and a controller flag are the same finding.
+    flags.push({ type: 'contradiction', claimType: e.claimType, label: `${e.claim} contradicted`, detail: e.detail, turns: e.turn ? [e.turn] : [] });
   });
 
   return flags;
@@ -240,20 +264,28 @@ export function pickProduct(loanPurpose = '') {
  * Eligibility — the one set of numbers the AI is never allowed to compute.
  * Income is taken from bank credits, EMIs from the bureau: verified data, not declarations.
  */
-export function computeEligibility(caseData) {
+export function computeEligibility(caseData, assessed = null) {
   const { brief } = caseData;
   const product = pickProduct(caseData.loanPurpose);
   const { rate, maxTenure, maxAmt } = PRODUCT_RATES[product];
-  const assessedIncome = brief.avgMonthlyCredit;
   const existingEmi = brief.existingEMIs ?? 0;
 
-  // No verified income means no eligibility. Saying "not assessable" is the honest answer;
-  // computing a number off a self-declared figure would be the dangerous one.
+  /*
+    Bank credits first. Failing that, an income rebuilt by the controller from the borrower's own
+    footfall and their trade's real margin (assessIncome) — never the declared figure on its own.
+    A declaration is a claim, not evidence, and lending against one is the exact failure this
+    product exists to catch.
+  */
+  const rebuilt = !brief.avgMonthlyCredit && assessed?.assessable ? assessed : null;
+  const assessedIncome = brief.avgMonthlyCredit ?? rebuilt?.income ?? null;
+
+  // Nothing verified and nothing rebuildable means no eligibility. "Not assessable" is the
+  // honest answer; a number off a self-declared figure would be the dangerous one.
   if (!assessedIncome) {
     return {
       assessable: false,
       assessedIncome: null,
-      assessedIncomeSource: 'No bank statement on file',
+      assessedIncomeSource: assessed?.source ?? 'No bank statement on file',
       declaredIncome: caseData.declaredIncome,
       existingEmi: brief.existingEMIs,
       foirPct: FOIR * 100,
@@ -277,7 +309,11 @@ export function computeEligibility(caseData) {
   return {
     assessable: true,
     assessedIncome,
-    assessedIncomeSource: 'Brief: avgMonthlyCredit (bank credits, not declared income)',
+    assessedIncomeSource: rebuilt
+      ? `Rebuilt from the interview — ${rebuilt.source}. No bank statement has been seen.`
+      : 'Brief: avgMonthlyCredit (bank credits, not declared income)',
+    assessedIncomeMethod: rebuilt ? 'calculated_from_answers' : 'bank_credits',
+    assessedIncomeNote: rebuilt?.note,
     declaredIncome: caseData.declaredIncome,
     existingEmi,
     existingEmiSource: 'Brief: existingEMIs (bureau)',
@@ -291,6 +327,6 @@ export function computeEligibility(caseData) {
     requested,
     emiOnRequested: Math.round(emi(requested, rate, maxTenure)),
     gap,
-    formula: `EMI capacity = ${fmt(assessedIncome)} × ${FOIR * 100}% − ${fmt(existingEmi)} = ${fmt(Math.round(capacity))}/month at ${rate}% for ${maxTenure} months`,
+    formula: `${rebuilt ? 'Income rebuilt from the interview, not from a statement. ' : ''}EMI capacity = ${fmt(assessedIncome)} × ${FOIR * 100}% − ${fmt(existingEmi)} = ${fmt(Math.round(capacity))}/month at ${rate}% for ${maxTenure} months`,
   };
 }

@@ -38,6 +38,9 @@ import styles from './SarthiInterview.module.css';
    recognised as one. Only fields both sides actually check appear here. */
 const CLAIM_FIELD = { monthly_income: 'income', existing_emi: 'existingEmi', monthly_rent: 'rent' };
 
+/* Upstream statuses that may clear on their own, so live mode is worth trying again next turn. */
+const TRANSIENT = new Set([429, 500, 502, 503, 504]);
+
 const save = (key, value) => {
   try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* quota — prototype */ }
 };
@@ -253,12 +256,26 @@ export default function SarthiInterview() {
       const after = photo ? { then: () => setPhotoAsk(photo) } : complete ? { then: finish } : {};
       say(display, { speech, ...after });
     } catch (e) {
-      console.warn('[sarthi] live turn failed, switching to scripted mode', e);
-      demoRef.current = true;
-      setDemoMode(true);
+      /*
+        askAgent has already retried the transient cases. Falling back is therefore right, but
+        making it permanent is not: a 503 means Google was busy for a moment, and locking the
+        rest of the interview to the script over one blip is the worst outcome in a demo. So we
+        borrow one scripted question to keep the conversation moving and let the NEXT turn try
+        live again. Only a hard failure — bad key, retired model, no proxy at all — sticks,
+        because that one will never recover on its own.
+      */
+      const permanent = e?.status != null && !TRANSIENT.has(e.status);
+      console.warn(`[sarthi] live turn failed (${e?.message}) — ${permanent ? 'switching to scripted mode' : 'using a scripted question, will retry live next turn'}`);
+      if (permanent) {
+        demoRef.current = true;
+        setDemoMode(true);
+      }
       const next = scriptRef.current[stepRef.current] ?? scriptRef.current[scriptRef.current.length - 1];
       const line = next.text.replace(COMPLETE_TAG, '').trim();
+      // Advance the script cursor so a second stumble does not repeat the same question.
+      stepRef.current = Math.min(stepRef.current + 1, scriptRef.current.length - 1);
       transcript.current.push({ role: 'assistant', content: line });
+      memory.current = recordTurn(memory.current, 'assistant', line);
       say(line, { speech: next.speech });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

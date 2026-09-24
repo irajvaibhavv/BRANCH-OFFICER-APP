@@ -24,27 +24,70 @@ const FENCE = '```';
 
 /* ============================================================ proxy call */
 
-/** POST one turn to the proxy. Throws when the proxy or key is unavailable — callers decide. */
-export async function askAgent({ systemPrompt, messages, temperature = INTERVIEWER_TEMP, maxTokens = 1024, thinkingBudget = 0 }) {
-  const res = await fetch(CHAT_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ systemPrompt, messages, temperature, maxTokens, thinkingBudget }),
-  });
-  if (!res.ok) throw new Error(`Sarthi proxy ${res.status}`);
-  const data = await res.json();
-  if (data.error) throw new Error(data.error);
-  if (!data.reply) throw new Error('Sarthi proxy returned an empty reply');
-  return data.reply;
+/*
+  Transient upstream failures, worth another go:
+    503  the model is overloaded — routine on the free tier, and usually clear within a second
+    429  rate limited
+    500 / 502 / 504  upstream blips
+  Everything else (400 bad request, 401 bad key, 404 retired model) will fail identically however
+  many times we ask, so those fall through to scripted mode immediately rather than stalling the
+  interview behind pointless retries.
+*/
+const RETRYABLE = new Set([429, 500, 502, 503, 504]);
+const BACKOFF_MS = [700, 1800];
+
+const wait = (ms) => new Promise((r) => { setTimeout(r, ms); });
+
+/**
+ * POST one turn to the proxy, retrying the errors that are worth retrying.
+ * Throws once the attempts are spent — the caller decides what that means.
+ */
+export async function askAgent({ systemPrompt, messages, temperature = INTERVIEWER_TEMP, maxTokens = 1024, thinkingBudget = 0, retries = BACKOFF_MS.length }) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    if (attempt > 0) await wait(BACKOFF_MS[attempt - 1] ?? BACKOFF_MS.at(-1));
+    try {
+      const res = await fetch(CHAT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ systemPrompt, messages, temperature, maxTokens, thinkingBudget }),
+      });
+      if (!res.ok) {
+        const err = new Error(`Sarthi proxy ${res.status}`);
+        err.status = res.status;
+        throw err;
+      }
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      if (!data.reply) throw new Error('Sarthi proxy returned an empty reply');
+      return data.reply;
+    } catch (e) {
+      lastError = e;
+      // A network failure has no status; treat it as transient — the venue wifi may have blinked.
+      const transient = e.status == null || RETRYABLE.has(e.status);
+      if (!transient || attempt === retries) break;
+      console.warn(`[sarthi] ${e.message} — retrying (${attempt + 1}/${retries})`);
+    }
+  }
+
+  throw lastError;
 }
 
-/** Is the Gemini proxy reachable? Decides live mode vs scripted demo mode at interview start. */
+/**
+ * Is the Gemini proxy reachable? Decides live mode vs scripted demo mode at interview start.
+ * Deliberately impatient: this runs while the applicant is looking at a "connecting" screen, so
+ * one quick retry is worth it but a long stall is not. If this fails the whole interview is
+ * scripted — mixing engines mid-interview would change Sarthi's voice and phrasing halfway
+ * through, which is more jarring than simply staying scripted throughout.
+ */
 export async function probeProxy() {
   try {
     const reply = await askAgent({
       systemPrompt: 'Reply with the single word OK.',
       messages: [{ role: 'user', content: 'ping' }],
       maxTokens: 8,
+      retries: 1,
     });
     return !!reply;
   } catch {

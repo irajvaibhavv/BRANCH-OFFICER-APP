@@ -71,21 +71,39 @@ calls a real model (Gemini), kept separate from SAARTHI AI (`screens/ai/`, `smfg
   `maxOutputTokens`, so a thinking model silently starves its own reply: a 1024-token interview turn
   spent ~730 thinking, and the 100-token vision call would return an empty string every time. Callers
   opt back in — only `writeReport` does (budget 4000, ceiling 12000). Always read the reply by joining
-  **all** `content.parts`, never `parts[0]`. **No reachable proxy → the interview runs `sarthiScript.js` scripted mode** and still
-  produces a full report, so a demo never dies on a missing key.
-- Anti-hallucination is the point of the file split: the model may only use the four JSON knowledge files,
+  **all** `content.parts`, never `parts[0]`.
+- **Degrading is per-turn, not permanent.** Free-tier Gemini returns 503 "model overloaded" often, so
+  `askAgent` retries 429/500/502/503/504 and network errors twice (700ms, 1800ms) while failing fast on
+  400/401/404, which retries cannot fix. A turn that still fails borrows one scripted question and tries
+  live again next turn; only a permanent status sets `demoRef`. **No reachable proxy at all → the whole
+  interview runs `sarthiScript.js` scripted mode** and still produces a full report, so a demo never dies
+  on a missing key. Engines are never mixed mid-interview by design — the voice and phrasing would shift
+  audibly halfway through.
+- **Vision is the biggest quota consumer**, because it bills wall-clock time whether or not anyone is
+  speaking: one frame per 45s, hard cap 12 per interview (`VITE_SARTHI_VISION_MS` / `_MAX`, `0`/`off`
+  disables). Observations are a bonus layer the report cites when present — never let them be the reason
+  the interview itself runs out of quota.
+- Anti-hallucination is the point of the file split: the model may only use the JSON knowledge files
+  (`borrowers`, `businessKnowledge`, `locationKnowledge`, `riskPatterns`, `pdSchema`),
   `sarthiVerifier.js` (plain rules) decides confirmed/contradicted/unverified, `loanCalc.js` computes every
-  eligibility number, and `sarthiValidator.js` strips any finding whose (Turn X) / (Brief: field) citation
-  does not resolve. Keep new facts in the JSON files, new verdicts in the verifier — never in a prompt.
+  eligibility number, and `sarthiValidator.js` strips any finding whose citation does not resolve.
+  Keep new facts in the JSON files, new fields in `pdSchema.json`, new verdicts in the verifier — never
+  in a prompt.
 - **Voice**: Sarthi has its own voice (`sarthiVoice.js` — Murf `hi-IN-kabir`), passed per `speak()` call so
   SAARTHI AI keeps the app-default voice from `.env`. Captions are Hinglish but the TTS is fed Devanagari
   (`speech` on each script step, a ```speech``` block from Agent 1): a Hindi voice reads romanized Hindi with
   English pronunciation. Scripted lines are pre-rendered to `public/sarthi-audio/` by `npm run sarthi:voice`
   and played from disk via `voiceManifest.json`, so a demo makes no TTS call — **re-run it after editing any
-  question or the voice config**, or that line silently falls back to a live API call.
+  question or the voice config**, or that line silently falls back to a live API call. The manifest only
+  covers scripted lines: **live mode writes novel text every turn, so it always pays the TTS round trip.**
+  `say()` sets the caption before calling the voice engine, so the question is readable while audio loads.
 - **Walk-ins**: `/sarthi/new` builds a case for someone with no bureau or bank record (`buildNewCase`,
-  stored in `bo_sarthi_cases`). Every financial field stays `null` — `computeEligibility` then returns
-  `assessable: false` and both report writers must say "not assessable" rather than print a figure.
+  stored in `bo_sarthi_cases`). Every field on the brief stays `null` — nothing is invented. Eligibility
+  then depends on what the interview collected: with footfall and average bill, `assessIncome` rebuilds
+  income and `computeEligibility` returns `assessable: true` flagged `assessedIncomeMethod:
+  'calculated_from_answers'`, which both report writers must present as rebuilt and explicitly unverified.
+  Without those answers it stays `assessable: false` and the report says "not assessable" rather than
+  printing a figure. A declared income alone is never enough to produce a number.
   `sarthiId.js` does the offline document checks (Aadhaar Verhoeff, PAN structure + surname initial);
   it is not eKYC and the copy says so everywhere.
 - **Photographs**: Sarthi asks for the shop and home mid-interview (`photo` on a script step, or a

@@ -1,3 +1,9 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "_comment": "SPA fallback for client-side routes. /api/* MUST be excluded or the Sarthi endpoints return index.html instead of JSON, and the interview silently drops to scripted mode.",
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ]
 }

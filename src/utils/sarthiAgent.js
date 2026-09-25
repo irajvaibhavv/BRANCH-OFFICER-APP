@@ -42,7 +42,7 @@ const wait = (ms) => new Promise((r) => { setTimeout(r, ms); });
  * POST one turn to the proxy, retrying the errors that are worth retrying.
  * Throws once the attempts are spent — the caller decides what that means.
  */
-export async function askAgent({ systemPrompt, messages, temperature = INTERVIEWER_TEMP, maxTokens = 1024, thinkingBudget = 0, retries = BACKOFF_MS.length }) {
+export async function askAgent({ systemPrompt, messages, temperature = INTERVIEWER_TEMP, maxTokens = 1024, thinkingBudget = 0, provider = 'llm', retries = BACKOFF_MS.length }) {
   let lastError;
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
@@ -51,7 +51,7 @@ export async function askAgent({ systemPrompt, messages, temperature = INTERVIEW
       const res = await fetch(CHAT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ systemPrompt, messages, temperature, maxTokens, thinkingBudget }),
+        body: JSON.stringify({ systemPrompt, messages, temperature, maxTokens, thinkingBudget, provider }),
       });
       if (!res.ok) {
         const err = new Error(`Sarthi proxy ${res.status}`);
@@ -68,6 +68,72 @@ export async function askAgent({ systemPrompt, messages, temperature = INTERVIEW
       const transient = e.status == null || RETRYABLE.has(e.status);
       if (!transient || attempt === retries) break;
       console.warn(`[sarthi] ${e.message} — retrying (${attempt + 1}/${retries})`);
+    }
+  }
+
+  throw lastError;
+}
+
+/**
+ * The same call, streamed.
+ *
+ * `onChunk(textSoFar, chunk)` fires as tokens arrive, which buys two things. The caption can type
+ * out from ~0.5s instead of waiting the full 2-3s for the reply, and — because the prompt puts
+ * the ```speech``` block before the ```claim```/```facts``` blocks — the caller can hand the
+ * spoken text to the voice engine while the bookkeeping is still on the wire.
+ *
+ * Retries work only until the first byte. After that the response is already a 200 with text
+ * delivered, so a failure mid-stream returns what arrived rather than starting a second reply the
+ * borrower would hear as a stutter. The caller validates what it got.
+ */
+export async function askAgentStream({ systemPrompt, messages, temperature = INTERVIEWER_TEMP, maxTokens = 1024, thinkingBudget = 0, onChunk, retries = BACKOFF_MS.length }) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    if (attempt > 0) await wait(BACKOFF_MS[attempt - 1] ?? BACKOFF_MS.at(-1));
+    let started = false;
+    try {
+      const res = await fetch(CHAT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ systemPrompt, messages, temperature, maxTokens, thinkingBudget, provider: 'llm', stream: true }),
+      });
+      if (!res.ok) {
+        const err = new Error(`Sarthi proxy ${res.status}`);
+        err.status = res.status;
+        throw err;
+      }
+      // A server that cannot stream (an older deployment) answers with JSON. Honour it rather
+      // than failing: the turn is slower, not broken.
+      if ((res.headers.get('content-type') || '').includes('application/json')) {
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        if (!data.reply) throw new Error('Sarthi proxy returned an empty reply');
+        onChunk?.(data.reply, data.reply);
+        return data.reply;
+      }
+      if (!res.body) throw new Error('Sarthi proxy returned no stream');
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let full = '';
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        if (!chunk) continue;
+        started = true;
+        full += chunk;
+        onChunk?.(full, chunk);
+      }
+      if (!full.trim()) throw new Error('Sarthi proxy returned an empty reply');
+      return full;
+    } catch (e) {
+      lastError = e;
+      const transient = e.status == null || RETRYABLE.has(e.status);
+      // Once text has been shown or spoken, retrying would replay the turn. Keep what we have.
+      if (started || !transient || attempt === retries) break;
+      console.warn(`[sarthi] ${e.message} — retrying stream (${attempt + 1}/${retries})`);
     }
   }
 
@@ -141,6 +207,30 @@ After each answer, silently evaluate:
 ## Coaching detection
 Ask about income/business earnings twice during the interview, in different words, at different points. Once early ("Monthly income kitni hai?") and once later ("Toh mahine mein roughly kitna collection hota hai?"). Do NOT ask back to back.
 
+## Output order (matters for speed)
+Write your reply in EXACTLY this order, because the app speaks your words as they arrive:
+  1. your visible message
+  2. the ${FENCE}speech${FENCE} block
+  3. any ${FENCE}claim${FENCE} / ${FENCE}facts${FENCE} / ${FENCE}photo${FENCE} blocks
+The speech block is what the borrower HEARS, so it must come before the bookkeeping blocks —
+every token you put before it is silence on the call. Never put it last.
+
+## Spoken form (REQUIRED with every message)
+Your message is shown on screen in Hinglish (Latin script) but spoken aloud by a Hindi voice.
+A Hindi voice reading Latin text mispronounces it ("lagenge" is read as an English word), so after
+every message you must also output the SAME sentence in Devanagari, wrapped in ${FENCE}speech fences:
+
+${FENCE}speech
+नमस्ते जी, आपकी शॉप का मंथली रेंट कितना है?
+${FENCE}
+
+Rules for the spoken form:
+- Write EVERYTHING in Devanagari, including English words: shop → शॉप, monthly → मंथली, EMI → ईएमआई, loan → लोन, income → इनकम.
+- Same meaning and same sentence as your visible message — never add or drop a question.
+- Digits may stay as digits. Do not include the [INTERVIEW_COMPLETE] tag inside the speech block.
+- Shape it for the voice: short clauses, a comma where a person would pause, one idea per sentence.
+  FLAT:    महीने की इनकम कितनी हो जाती है, लगभग?
+  SPOKEN:  महीने की इनकम, लगभग कितनी हो जाती है?
 ## Claim capture
 After each of YOUR messages, output a JSON block wrapped in ${FENCE}claim fences if the borrower's previous answer contained a verifiable claim:
 
@@ -173,6 +263,7 @@ ${FENCE}facts
 ${FENCE}
 
 Use ONLY these keys:
+applicant_name, aadhaar_number, pan_number,
 age, family_size, dependents, residence_type (owned|rented|family), residence_duration,
 monthly_rent, business_type, business_age, business_location, ownership (sole|partnership|family),
 employees, products_services, customers_per_day, monthly_sales, monthly_expenses, supplier_credit,
@@ -189,24 +280,11 @@ Rules:
 - After a knowledge or trap question, score how they handled it: area_knowledge_score or
   business_domain_score as "high", "medium" or "low" — high means instant and specific, low means
   they fumbled or did not know. Score their CONFIDENCE, not whether the answer was factually right.
+- applicant_name is their full name as they say it. aadhaar_number and pan_number are whatever
+  they typed, digits and letters only, spaces stripped — copy them EXACTLY and never correct,
+  complete or reformat a document number. If it looks wrong, capture it as given; a checksum in
+  code decides, not you.
 - If nothing factual was stated, output no facts block at all.
-
-## Spoken form (REQUIRED with every message)
-Your message is shown on screen in Hinglish (Latin script) but spoken aloud by a Hindi voice.
-A Hindi voice reading Latin text mispronounces it ("lagenge" is read as an English word), so after
-every message you must also output the SAME sentence in Devanagari, wrapped in ${FENCE}speech fences:
-
-${FENCE}speech
-नमस्ते जी, आपकी शॉप का मंथली रेंट कितना है?
-${FENCE}
-
-Rules for the spoken form:
-- Write EVERYTHING in Devanagari, including English words: shop → शॉप, monthly → मंथली, EMI → ईएमआई, loan → लोन, income → इनकम.
-- Same meaning and same sentence as your visible message — never add or drop a question.
-- Digits may stay as digits. Do not include the [INTERVIEW_COMPLETE] tag inside the speech block.
-- Shape it for the voice: short clauses, a comma where a person would pause, one idea per sentence.
-  FLAT:    महीने की इनकम कितनी हो जाती है, लगभग?
-  SPOKEN:  महीने की इनकम, लगभग कितनी हो जाती है?
 
 ## Asking for a photograph
 The applicant is holding the phone, so you can ask them to photograph something. Ask once for the
@@ -219,7 +297,8 @@ The camera opens for them. Do not ask for a photograph twice for the same thing,
 comment on the picture afterwards — you never see it; the officer does.
 
 ## BORROWER BRIEF (what we already know):
-${brief}
+${c.isNew ? `This is a WALK-IN. There is no bureau record, no bank statement and no file — nothing about them is known until they tell you, so open by asking their name and treat every answer as new information rather than a confirmation. Do NOT say the file is missing or that they are unregistered; just take their details naturally.
+${brief}` : brief}
 
 ## RISK ALERTS:
 ${pattern ? JSON.stringify({ ...c.riskPatternMatch, ...pattern }, null, 2) : 'No specific risk patterns matched.'}
@@ -277,6 +356,36 @@ function parseFacts(body) {
     if (value && value !== 'null') out[m[1]] = /^-?\d+(\.\d+)?$/.test(value) ? Number(value) : value;
   });
   return out;
+}
+
+/**
+ * The ```speech``` block out of a PARTIAL reply, or null while it is still arriving.
+ *
+ * The prompt orders the reply so this block lands before the claim/facts bookkeeping, which is
+ * the whole point of streaming here: the moment this returns a string the voice can start, while
+ * the rest of the reply is still on the wire. Only a CLOSED fence counts — speaking half a
+ * sentence and then continuing would be worse than a short wait.
+ */
+export function peekSpeech(partial) {
+  const m = partial.match(/```speech\s*([\s\S]*?)```/);
+  if (!m) return null;
+  const body = m[1].replace(/\[INTERVIEW_COMPLETE\]/g, '').trim();
+  return body || null;
+}
+
+/**
+ * What the borrower should see, given a partial reply: the message with any fence — complete or
+ * half-arrived — stripped. Without the trailing cut, the caption would briefly flash "```spe"
+ * and then the raw Devanagari before the block closed.
+ */
+export function peekDisplay(partial) {
+  return partial
+    .replace(/```(?:facts|claim|speech)\s*[\s\S]*?```/g, '')
+    .replace(/```photo\s+(?:shop|home)\s*```/g, '')
+    .replace(/```[\s\S]*$/, '')            // a fence that has opened but not yet closed
+    .replace(/\[INTERVIEW_COMPLETE\]/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 export function parseClaims(raw, fallbackTurn) {

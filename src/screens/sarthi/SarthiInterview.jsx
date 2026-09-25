@@ -6,16 +6,19 @@ import { IoCall, IoCamera, IoMic, IoMicOff, IoSend, IoVolumeHigh } from 'react-i
 import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { getCase, briefForCitation, buildNewCase, CUSTOM_CASES_KEY } from '../../utils/sarthiTools';
-import { askAgent, buildInterviewerPrompt, parseClaims, probeProxy, writeReport, VISION_URL, INTERVIEWER_TEMP, COMPLETE_TAG } from '../../utils/sarthiAgent';
+import { parseClaims, peekSpeech, peekDisplay, probeProxy, writeReport, VISION_URL, COMPLETE_TAG } from '../../utils/sarthiAgent';
+import { extractFacts, askTurn } from '../../utils/sarthiModel';
 import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../utils/sarthiScript';
 import { verifyClaims, computeEligibility, toNumber } from '../../utils/sarthiVerifier';
-import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness } from '../../utils/sarthiMemory';
+import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor } from '../../utils/sarthiMemory';
+import pdSchema from '../../data/sarthi/pdSchema.json';
 import { getNextAction, directiveText, checkContradictions, checkInternalConsistency, getInterviewConfig, assessIncome } from '../../utils/sarthiController';
 import { validateReport, extractRecommendation } from '../../utils/sarthiValidator';
 import { validateAadhaar, validatePan } from '../../utils/sarthiId';
 import { startFrameCapture, stopCamera, getObservations, resetObservations } from '../../utils/sarthiVideo';
 import { downscale, analysePhoto, PHOTO_ASKS } from '../../utils/sarthiPhoto';
-import { speak, stopSpeaking, listen, canListen, canSpeak } from '../../utils/voice';
+import { stopSpeaking, listen, canListen, canSpeak } from '../../utils/voice';
+import { speakStreamed } from '../../utils/sarthiStream';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { SARTHI_VOICE } from '../../utils/sarthiVoice';
 import voiceManifest from '../../data/sarthi/voiceManifest.json';
@@ -40,6 +43,8 @@ const CLAIM_FIELD = { monthly_income: 'income', existing_emi: 'existingEmi', mon
 
 /* Upstream statuses that may clear on their own, so live mode is worth trying again next turn. */
 const TRANSIENT = new Set([429, 500, 502, 503, 504]);
+/** Schema sections by id, so a controller instruction can be matched back to its field list. */
+const SECTION_BY_ID = Object.fromEntries(pdSchema.sections.map((sec) => [sec.id, sec]));
 
 const save = (key, value) => {
   try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* quota — prototype */ }
@@ -99,6 +104,13 @@ export default function SarthiInterview() {
   // Structured PD memory — what the controller reads to decide the next question. Held in a ref
   // because every read happens inside an async turn callback.
   const memory = useRef(createEmptyMemory(null));
+  /*
+    The case as it stands right now. A walk-in starts as `placeholder` and is rebuilt mid-interview
+    the moment the model learns their trade and area, which is what lets later prompts carry real
+    area and business knowledge. It lives in a ref, not state, because the startup effect keys off
+    `caseData` — giving that a new identity halfway through would restart the interview.
+  */
+  const caseRef = useRef(null);
   const demoRef = useRef(false);
   const mutedRef = useRef(false);
   const doneRef = useRef(false);
@@ -149,9 +161,14 @@ export default function SarthiInterview() {
     }
     const line = speech || text;
     // Scripted lines are pre-rendered (npm run sarthi:voice), so a demo needs no TTS call at all:
-    // no quota to run out, no venue wifi to fail, no lag before the question. Live Gemini text
-    // is generated on the fly and is not in the manifest, so it falls through to the API.
-    speak(line, { voice: SARTHI_VOICE, src: voiceManifest[line], onEnd: () => { setAvatar('idle'); (then ?? beginListening)(); } });
+    // no quota to run out, no venue wifi to fail, no lag before the question. Live model text is
+    // generated on the fly and is not in the manifest, so it falls through to the API — and is
+    // spoken sentence by sentence, so the first one starts playing while the rest still render.
+    speakStreamed(line, {
+      voice: SARTHI_VOICE,
+      src: voiceManifest[line],
+      onEnd: () => { setAvatar('idle'); (then ?? beginListening)(); },
+    });
     return undefined;
   }, [beginListening]);
 
@@ -162,6 +179,49 @@ export default function SarthiInterview() {
     stopListen.current?.();
     say(lastLine.current.text, { speech: lastLine.current.speech, again: true });
   }, [say]);
+
+  /*
+    Build (or rebuild) a walk-in's case record from what the interview has learned so far.
+
+    This is what makes a fully-live walk-in work. The interviewer prompt injects area and trade
+    knowledge looked up from `areaKey`/`businessKey`, and a walk-in has neither until they say what
+    they do and where. So the first questions run ungrounded against the placeholder, and the
+    moment the trade is known the record is rebuilt and every later prompt carries the real margin
+    ranges, trap questions and rent bands. Re-running it as more arrives is cheap and keeps the
+    record honest; nothing here is invented, every field comes from an answer.
+  */
+  const rebuildWalkIn = useCallback(() => {
+    const c = memory.current.collected;
+    if (!c.business_type) return null; // nothing to ground on yet
+
+    const a = intake.current;
+    const identity = a.panCheck?.ok ? a.panCheck : a.aadhaarCheck?.ok ? a.aadhaarCheck : a.panCheck ?? a.aadhaarCheck ?? null;
+    const area = c.business_location ?? c.residence_duration ?? '';
+    const subject = buildNewCase({
+      name: c.applicant_name ?? 'New applicant',
+      phone: '',
+      age: c.age ?? '',
+      area,
+      business: c.business_type,
+      businessKey: tradeFromWords(c.business_type) ?? '',
+      businessName: c.products_services ?? '',
+      businessVintage: c.business_age != null ? `${c.business_age} years` : '',
+      loanPurpose: c.loan_purpose ?? '',
+      loanAmountRequested: toNumber(c.loan_amount) ?? 0,
+      declaredIncome: toNumber(c.monthly_income) ?? 0,
+      identity,
+    });
+    // Keep the id stable across rebuilds so the report, photos and case list all agree.
+    if (built.current) subject.id = built.current.id;
+    subject.household = c.family_size != null ? `${c.family_size} members` : null;
+    subject.housing = c.residence_type ?? null;
+
+    built.current = subject;
+    caseRef.current = subject;
+    // The controller reads brief data off memory to decide walk-in-only sections and conditions.
+    memory.current = { ...memory.current, caseData: subject, brief: subject.brief };
+    return subject;
+  }, []);
 
   /* ---------------------------------------------------------------- one borrower answer */
   const handleAnswer = useCallback(async (text) => {
@@ -211,36 +271,125 @@ export default function SarthiInterview() {
 
     try {
       /*
-        One call does both of the model's jobs: it extracts facts from the answer just given and
-        asks the next question. The directive is therefore computed from memory as of the previous
-        extraction — one turn behind the answer in hand. That is fine and deliberate: the model can
-        see the raw answer in its own history, so it won't re-ask what was just told to it, while
-        the controller still guarantees coverage across the interview, because a section only
-        closes once its fields are genuinely filled. Splitting this into two calls would double
-        both the latency and the cost of every turn for a directive that is right either way.
+        Two model calls, in this order, and the order is the point.
+
+        First a small extractor pulls named fields out of the answer just given. Only then does
+        the controller choose the next topic — so it decides on THIS turn's facts, not the
+        previous turn's. That is what makes the directive correct rather than merely good enough,
+        and it is why the split is worth a second round trip: the extractor is a pattern task
+        routed to the SLM (~0.3s), so the pair still costs less than the single Gemini call it
+        replaces.
+
+        The question call also still emits a ```facts``` fence. That is deliberate redundancy,
+        not a leftover: if extraction fails or comes back empty, the fence fills the gap, and a
+        dropped fact is uniquely expensive here — the controller would keep re-asking the same
+        question for the rest of the interview.
       */
-      const action = getNextAction(memory.current, caseData);
+      // Snapshot BEFORE any of this turn's facts land. checkContradictions compares the new
+      // facts against the state that preceded them — most importantly income_mentions, where
+      // comparing the list against a value already appended to it would never detect coaching.
+      const before = memory.current;
+
+      let facts = {};
+      try {
+        facts = await extractFacts(text, {
+          section: memory.current.currentSection,
+          recent: transcript.current.filter((t) => t.role === 'assistant').slice(-1).map((t) => t.content),
+        });
+      } catch (e) {
+        // Not fatal: the question call's facts fence is the backstop. Never abandon the turn.
+        console.warn(`[sarthi] fact extraction failed (${e?.message}) — relying on the facts fence`);
+      }
+      if (Object.keys(facts).length) memory.current = updateMemory(memory.current, { ...facts, _verbatim: text });
+
+      /*
+        A walk-in's record is rebuilt as soon as the model knows their trade, so the controller and
+        the next prompt both see real area and business knowledge instead of the placeholder.
+      */
+      if (isIntake) rebuildWalkIn();
+      const subject = caseRef.current ?? caseData;
+
+      const action = getNextAction(memory.current, subject);
       if (action.memory) memory.current = action.memory;
 
       if (action.action === 'end_interview') { finish(); return; }
 
-      const raw = await askAgent({
-        systemPrompt: buildInterviewerPrompt(caseData, directiveText(action)),
+      // A document number must be typed: speech recognition mangles 12 digits, and a checksum
+      // that fails because of the microphone is worse than running no check at all.
+      setTypeMode(typedFieldsFor(memory.current, SECTION_BY_ID[action.section]).length > 0 || !canListen);
+
+      /*
+        Stream the turn, and speak it before it has finished arriving.
+
+        The caption types out from the first tokens, and the moment the ```speech``` fence closes
+        the voice starts — the prompt deliberately puts that block ahead of the claim/facts
+        bookkeeping, so the borrower hears the question while the rest is still on the wire.
+
+        What happens AFTER the question (ask for a photo, end the interview, or just listen) is
+        not known until the stream finishes, but the audio may well finish first. So both sides
+        latch and whichever lands last runs the follow-up exactly once.
+      */
+      let spokenYet = false;
+      let audioDone = false;
+      let streamDone = false;
+      let after = null;
+      const advance = () => {
+        if (!audioDone || !streamDone || doneRef.current) return;
+        setAvatar('idle');
+        (after ?? beginListening)();
+      };
+
+      const raw = await askTurn({
+        caseData: subject,
+        action,
+        directive: directiveText(action),
         messages: history.current,
-        temperature: INTERVIEWER_TEMP,
+        turn: borrowerTurn,
+        onChunk: (full) => {
+          const caption = peekDisplay(full);
+          if (caption) {
+            setAvatar('speaking');
+            setCaption({ who: 'ai', text: caption });
+          }
+          if (spokenYet) return;
+          const early = peekSpeech(full);
+          if (!early) return;
+          spokenYet = true;
+          lastLine.current = { text: caption, speech: early };
+          setAsked((n) => n + 1);
+          speakStreamed(early, {
+            voice: SARTHI_VOICE,
+            src: voiceManifest[early],
+            onEnd: () => { audioDone = true; advance(); },
+          });
+        },
       });
-      const { display, speech, claims: found, facts, complete, photo } = parseClaims(raw, borrowerTurn);
+      const { display, speech, claims: found, facts: fenced, complete, photo } = parseClaims(raw, borrowerTurn);
       claims.current.push(...found);
 
-      // Fold the answer into memory, then let the code-only checks look at it. The model never
-      // decides that something is a contradiction; it only reports what was said.
-      const before = memory.current;
-      memory.current = updateMemory(memory.current, { ...facts, _verbatim: text });
-      const config = getInterviewConfig(caseData);
+      // Fold in anything the extractor missed, then let the code-only checks look at the result.
+      // The model never decides that something is a contradiction; it only reports what was said.
+      const gapFill = Object.fromEntries(Object.entries(fenced).filter(([k]) => !(k in facts)));
+      memory.current = updateMemory(memory.current, { ...gapFill, _verbatim: text });
+      facts = { ...gapFill, ...facts };
+      // Check a document the moment it is given, exactly as the scripted intake does.
+      if (facts.aadhaar_number) intake.current.aadhaarCheck = validateAadhaar(String(facts.aadhaar_number));
+      if (facts.pan_number) {
+        intake.current.panCheck = validatePan(
+          String(facts.pan_number),
+          memory.current.collected.applicant_name ?? '',
+        );
+      }
+      if (isIntake && (facts.aadhaar_number || facts.pan_number)) {
+        intake.current = { ...intake.current };
+        setCollected({ ...memory.current.collected, ...intake.current });
+      }
+
+      const config = getInterviewConfig(subject);
       const found_flags = [
-        ...checkContradictions(before, facts, caseData),
+        ...checkContradictions(before, facts, subject),
         // A walk-in has nothing to check against, so their own numbers have to do the work.
-        ...(config.isNewApplicant ? checkInternalConsistency(memory.current, caseData) : []),
+        ...(config.isNewApplicant ? checkInternalConsistency(memory.current, subject) : []),
       ];
       // Only flags we have not already raised — the same contradiction resurfaces every turn.
       const fresh = found_flags.filter((f) => !memory.current.flags.some((p) => p.detail === f.detail));
@@ -253,8 +402,23 @@ export default function SarthiInterview() {
 
       history.current.push({ role: 'assistant', content: raw });
       transcript.current.push({ role: 'assistant', content: display });
-      const after = photo ? { then: () => setPhotoAsk(photo) } : complete ? { then: finish } : {};
-      say(display, { speech, ...after });
+
+      after = photo ? () => setPhotoAsk(photo) : complete ? finish : null;
+
+      if (spokenYet) {
+        // Already speaking from the stream. Settle the caption to the fully parsed text (a fence
+        // that closed late could have left a fragment) and let the latch run the follow-up.
+        setCaption({ who: 'ai', text: display });
+        lastLine.current = { text: display, speech };
+        streamDone = true;
+        advance();
+      } else {
+        // The speech block never arrived mid-stream — a non-streaming server, or a reply that put
+        // the block last anyway. Fall back to speaking the finished turn.
+        streamDone = true;
+        audioDone = true;
+        say(display, { speech, ...(after ? { then: after } : {}) });
+      }
     } catch (e) {
       /*
         askAgent has already retried the transient cases. Falling back is therefore right, but
@@ -329,8 +493,10 @@ export default function SarthiInterview() {
     const captured = claims.current;
 
     // Intake: assemble the file from what was said, then treat it like any other case.
-    let subject = caseData;
-    if (isIntake) {
+    // A live walk-in has been rebuilding its record all along, so take that and skip ahead;
+    // only the scripted fallback still has to assemble one from intake.current at the end.
+    let subject = caseRef.current ?? caseData;
+    if (isIntake && !built.current) {
       setProgress('Opening the file…');
       const a = intake.current;
       const identity = a.panCheck?.ok ? a.panCheck : a.aadhaarCheck?.ok ? a.aadhaarCheck : a.panCheck ?? a.aadhaarCheck ?? null;
@@ -444,11 +610,16 @@ export default function SarthiInterview() {
     resetObservations();
     scriptRef.current = isIntake ? buildIntakeScript() : buildScript(caseData);
     memory.current = createEmptyMemory(caseData);
+    caseRef.current = caseData;
 
     (async () => {
-      // Intake is scripted by design: the questions build a file in a fixed order, and the
-      // answers must land in named fields. Verification uses the agent once a file exists.
-      const liveOk = isIntake ? false : await probeProxy();
+      /*
+        A walk-in gets the live interview too. There is no bureau or bank record behind them, so
+        the ONLY evidence is whether their own numbers hang together — which takes follow-ups that
+        cannot be scripted in advance. The scripted intake below remains the fallback when no proxy
+        answers, so the flow still completes and still produces a report.
+      */
+      const liveOk = await probeProxy();
       if (cancelled) return;
       demoRef.current = !liveOk;
       liveRef.current = liveOk;
@@ -461,7 +632,7 @@ export default function SarthiInterview() {
         try {
           const opening = getNextAction(memory.current, caseData);
           if (opening.memory) memory.current = opening.memory;
-          const raw = await askAgent({ systemPrompt: buildInterviewerPrompt(caseData, directiveText(opening)), messages: history.current, temperature: INTERVIEWER_TEMP });
+          const raw = await askTurn({ caseData, action: opening, directive: directiveText(opening), messages: history.current, turn: 0 });
           if (cancelled) return;
           const { display, speech } = parseClaims(raw, 0);
           memory.current = recordTurn(memory.current, 'assistant', display);

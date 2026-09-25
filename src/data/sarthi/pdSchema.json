@@ -12,12 +12,48 @@
       "id": "personal",
       "label": "Personal",
       "fields": [
-        { "key": "age", "label": "Age", "type": "number" },
-        { "key": "family_size", "label": "Family members", "type": "number" },
-        { "key": "dependents", "label": "Dependents (children, elderly)", "type": "number" },
-        { "key": "residence_type", "label": "Own house or rented", "type": "enum", "options": ["owned", "rented", "family"] },
-        { "key": "residence_duration", "label": "How long at current address", "type": "years" },
-        { "key": "monthly_rent", "label": "Monthly rent", "type": "number", "condition": "residence_type === 'rented'" }
+        {
+          "key": "applicant_name",
+          "label": "Full name as on Aadhaar",
+          "type": "text",
+          "condition": "no_borrower_brief"
+        },
+        {
+          "key": "age",
+          "label": "Age",
+          "type": "number"
+        },
+        {
+          "key": "family_size",
+          "label": "Family members",
+          "type": "number"
+        },
+        {
+          "key": "dependents",
+          "label": "Dependents (children, elderly)",
+          "type": "number"
+        },
+        {
+          "key": "residence_type",
+          "label": "Own house or rented",
+          "type": "enum",
+          "options": [
+            "owned",
+            "rented",
+            "family"
+          ]
+        },
+        {
+          "key": "residence_duration",
+          "label": "How long at current address",
+          "type": "years"
+        },
+        {
+          "key": "monthly_rent",
+          "label": "Monthly rent",
+          "type": "number",
+          "condition": "residence_type === 'rented'"
+        }
       ],
       "minTurns": 2
     },
@@ -25,16 +61,61 @@
       "id": "business",
       "label": "Business",
       "fields": [
-        { "key": "business_type", "label": "Type of business", "type": "text" },
-        { "key": "business_age", "label": "Years in business", "type": "years" },
-        { "key": "business_location", "label": "Shop or office location", "type": "text" },
-        { "key": "ownership", "label": "Sole owner or partnership", "type": "enum", "options": ["sole", "partnership", "family"] },
-        { "key": "employees", "label": "Number of helpers or employees", "type": "number" },
-        { "key": "products_services", "label": "What they sell or do", "type": "text" },
-        { "key": "customers_per_day", "label": "Customers in a day", "type": "number" },
-        { "key": "monthly_sales", "label": "Monthly sales or turnover", "type": "number" },
-        { "key": "monthly_expenses", "label": "Monthly business expenses", "type": "number" },
-        { "key": "supplier_credit", "label": "Credit from suppliers", "type": "text" }
+        {
+          "key": "business_type",
+          "label": "Type of business",
+          "type": "text"
+        },
+        {
+          "key": "business_age",
+          "label": "Years in business",
+          "type": "years"
+        },
+        {
+          "key": "business_location",
+          "label": "Shop or office location",
+          "type": "text"
+        },
+        {
+          "key": "ownership",
+          "label": "Sole owner or partnership",
+          "type": "enum",
+          "options": [
+            "sole",
+            "partnership",
+            "family"
+          ]
+        },
+        {
+          "key": "employees",
+          "label": "Number of helpers or employees",
+          "type": "number"
+        },
+        {
+          "key": "products_services",
+          "label": "What they sell or do",
+          "type": "text"
+        },
+        {
+          "key": "customers_per_day",
+          "label": "Customers in a day",
+          "type": "number"
+        },
+        {
+          "key": "monthly_sales",
+          "label": "Monthly sales or turnover",
+          "type": "number"
+        },
+        {
+          "key": "monthly_expenses",
+          "label": "Monthly business expenses",
+          "type": "number"
+        },
+        {
+          "key": "supplier_credit",
+          "label": "Credit from suppliers",
+          "type": "text"
+        }
       ],
       "minTurns": 3
     },
@@ -44,14 +125,46 @@
       "condition": "no_borrower_brief",
       "note": "Extra questions for a walk-in. These numbers are what internal consistency is computed from, so without them a new applicant cannot be assessed at all.",
       "fields": [
-        { "key": "avg_bill_value", "label": "Average bill per customer", "type": "number" },
-        { "key": "monthly_purchase", "label": "Monthly stock or material purchase", "type": "number" },
-        { "key": "payment_mode", "label": "Cash, UPI or credit split", "type": "text" },
-        { "key": "peak_day_sales", "label": "Best day's sales", "type": "number" },
-        { "key": "slow_day_sales", "label": "Worst day's sales", "type": "number" },
-        { "key": "supplier_names", "label": "Main suppliers or distributors", "type": "text" },
-        { "key": "credit_given", "label": "Udhaar given to customers", "type": "number" },
-        { "key": "seasonal_variation", "label": "How income changes by season", "type": "text" }
+        {
+          "key": "avg_bill_value",
+          "label": "Average bill per customer",
+          "type": "number"
+        },
+        {
+          "key": "monthly_purchase",
+          "label": "Monthly stock or material purchase",
+          "type": "number"
+        },
+        {
+          "key": "payment_mode",
+          "label": "Cash, UPI or credit split",
+          "type": "text"
+        },
+        {
+          "key": "peak_day_sales",
+          "label": "Best day's sales",
+          "type": "number"
+        },
+        {
+          "key": "slow_day_sales",
+          "label": "Worst day's sales",
+          "type": "number"
+        },
+        {
+          "key": "supplier_names",
+          "label": "Main suppliers or distributors",
+          "type": "text"
+        },
+        {
+          "key": "credit_given",
+          "label": "Udhaar given to customers",
+          "type": "number"
+        },
+        {
+          "key": "seasonal_variation",
+          "label": "How income changes by season",
+          "type": "text"
+        }
       ],
       "minTurns": 3
     },
@@ -59,12 +172,36 @@
       "id": "financial",
       "label": "Financial",
       "fields": [
-        { "key": "monthly_income", "label": "Monthly income taken home", "type": "number" },
-        { "key": "household_expenses", "label": "Monthly household expenses", "type": "number" },
-        { "key": "existing_loans", "label": "Running loans", "type": "text" },
-        { "key": "existing_emi", "label": "Total monthly EMI", "type": "number" },
-        { "key": "bank_account", "label": "Which bank", "type": "text" },
-        { "key": "savings", "label": "Savings or FD", "type": "text" }
+        {
+          "key": "monthly_income",
+          "label": "Monthly income taken home",
+          "type": "number"
+        },
+        {
+          "key": "household_expenses",
+          "label": "Monthly household expenses",
+          "type": "number"
+        },
+        {
+          "key": "existing_loans",
+          "label": "Running loans",
+          "type": "text"
+        },
+        {
+          "key": "existing_emi",
+          "label": "Total monthly EMI",
+          "type": "number"
+        },
+        {
+          "key": "bank_account",
+          "label": "Which bank",
+          "type": "text"
+        },
+        {
+          "key": "savings",
+          "label": "Savings or FD",
+          "type": "text"
+        }
       ],
       "minTurns": 2
     },
@@ -73,10 +210,56 @@
       "label": "Document cross-check",
       "note": "Verbal cross-check only. Nothing here is eKYC and the report must not imply it is.",
       "fields": [
-        { "key": "aadhaar_address", "label": "Address on the Aadhaar", "type": "text" },
-        { "key": "aadhaar_address_match", "label": "Does it match the current residence", "type": "enum", "options": ["match", "different", "not_shared"] },
-        { "key": "pan_type", "label": "PAN personal or firm", "type": "enum", "options": ["personal", "firm", "not_shared"] },
-        { "key": "bank_account_type", "label": "Savings or current account", "type": "enum", "options": ["savings", "current", "both", "not_shared"] }
+        {
+          "key": "aadhaar_number",
+          "label": "Aadhaar number",
+          "type": "text",
+          "condition": "no_borrower_brief",
+          "typed": true
+        },
+        {
+          "key": "pan_number",
+          "label": "PAN number",
+          "type": "text",
+          "condition": "no_borrower_brief",
+          "typed": true
+        },
+        {
+          "key": "aadhaar_address",
+          "label": "Address on the Aadhaar",
+          "type": "text"
+        },
+        {
+          "key": "aadhaar_address_match",
+          "label": "Does it match the current residence",
+          "type": "enum",
+          "options": [
+            "match",
+            "different",
+            "not_shared"
+          ]
+        },
+        {
+          "key": "pan_type",
+          "label": "PAN personal or firm",
+          "type": "enum",
+          "options": [
+            "personal",
+            "firm",
+            "not_shared"
+          ]
+        },
+        {
+          "key": "bank_account_type",
+          "label": "Savings or current account",
+          "type": "enum",
+          "options": [
+            "savings",
+            "current",
+            "both",
+            "not_shared"
+          ]
+        }
       ],
       "minTurns": 1
     },
@@ -84,9 +267,21 @@
       "id": "loan_purpose",
       "label": "Loan",
       "fields": [
-        { "key": "loan_purpose", "label": "Why they need the loan", "type": "text" },
-        { "key": "loan_amount", "label": "How much they want", "type": "number" },
-        { "key": "repayment_plan", "label": "How they plan to repay", "type": "text" }
+        {
+          "key": "loan_purpose",
+          "label": "Why they need the loan",
+          "type": "text"
+        },
+        {
+          "key": "loan_amount",
+          "label": "How much they want",
+          "type": "number"
+        },
+        {
+          "key": "repayment_plan",
+          "label": "How they plan to repay",
+          "type": "text"
+        }
       ],
       "minTurns": 1
     },
@@ -95,8 +290,16 @@
       "label": "Knowledge checks",
       "type": "verification",
       "tasks": [
-        { "key": "area_knowledge", "label": "Ask about landmarks, markets or civic detail in their area", "source": "locationKnowledge" },
-        { "key": "business_domain", "label": "Ask a trade question only a real owner would know", "source": "businessKnowledge" }
+        {
+          "key": "area_knowledge",
+          "label": "Ask about landmarks, markets or civic detail in their area",
+          "source": "locationKnowledge"
+        },
+        {
+          "key": "business_domain",
+          "label": "Ask a trade question only a real owner would know",
+          "source": "businessKnowledge"
+        }
       ],
       "minTurns": 2
     },

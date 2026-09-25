@@ -20,7 +20,10 @@ export const FIELD_DEFS = Object.fromEntries(
 );
 
 /** The verification/coaching scores the controller tracks alongside the schema fields. */
-const SCORE_KEYS = ['area_knowledge_score', 'business_domain_score'];
+export const SCORE_KEYS = ['area_knowledge_score', 'business_domain_score'];
+
+/** Everything the fact extractor is allowed to return: schema fields plus the two scores. */
+export const EXTRACTABLE_KEYS = [...FIELD_KEYS, ...SCORE_KEYS];
 
 export function createEmptyMemory(caseData) {
   const collected = {};
@@ -101,14 +104,32 @@ export function enterSection(memory, sectionId) {
 }
 
 /** Fields in this section that are still null. */
+/**
+ * Is a conditional field in play for this interview?
+ * Conditions are matched literally rather than evaluated: a schema that can run arbitrary
+ * expressions is a schema that can be made to do something surprising, and there are two.
+ */
+function conditionMet(field, memory) {
+  if (!field.condition) return true;
+  if (field.condition === "residence_type === 'rented'") return memory.collected.residence_type === 'rented';
+  // Only a walk-in needs to be asked their name or document numbers; for anyone else the brief
+  // already carries them, and asking would look like the file had been lost.
+  if (field.condition === 'no_borrower_brief') return !memory.caseData?.brief?.avgMonthlyCredit;
+  return true;
+}
+
 export function getMissingFields(memory, section) {
   if (!section?.fields) return [];
-  return section.fields.filter((f) => {
-    if (memory.collected[f.key] != null) return false;
-    // A conditional field is only missing once its condition is actually met.
-    if (f.condition === "residence_type === 'rented'") return memory.collected.residence_type === 'rented';
-    return true;
-  });
+  return section.fields.filter((f) => memory.collected[f.key] == null && conditionMet(f, memory));
+}
+
+/**
+ * Fields the borrower must TYPE rather than speak. A document number has to be exact — speech
+ * recognition mangles a 12-digit Aadhaar, and a checksum that fails because of the microphone
+ * is worse than no check at all.
+ */
+export function typedFieldsFor(memory, section) {
+  return getMissingFields(memory, section).filter((f) => f.typed);
 }
 
 /** Just the facts that have a value — what the model is shown as "what we know". */
@@ -127,8 +148,7 @@ export function completeness(memory) {
   const keys = FIELD_KEYS.filter((k) => {
     const def = FIELD_DEFS[k];
     if (def.section === 'business_deep_dive' && !newApplicant) return false;
-    if (def.condition === "residence_type === 'rented'") return memory.collected.residence_type === 'rented';
-    return true;
+    return conditionMet(def, memory);
   });
   const filled = keys.filter((k) => memory.collected[k] != null).length;
   return { filled, total: keys.length, pct: keys.length ? Math.round((filled / keys.length) * 100) : 0 };

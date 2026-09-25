@@ -50,9 +50,36 @@ calls a real model (Gemini), kept separate from SAARTHI AI (`screens/ai/`, `smfg
   walks `pdSchema.json` in code and injects a "THIS TURN" directive into Agent 1's prompt each turn;
   `sarthiMemory.js` holds the extracted facts (Agent 1 returns them in a ```facts``` fence). Coverage
   is therefore a property of the program, not something the model has to remember on a long call, and
-  the interview ends when the schema is satisfied — not when the model decides it is done. The
-  directive is computed one turn behind the answer in hand (one model call does both jobs); the model
-  sees the raw answer in its own history, so it does not re-ask.
+  the interview ends when the schema is satisfied — not when the model decides it is done.
+- **A turn is two model calls, in a fixed order** (`sarthiModel.js`). First `extractFacts` pulls
+  named fields out of the answer; only then does the controller pick the next topic, so it decides
+  on *this* turn's facts. The question call still emits a ```facts``` fence as a backstop — a
+  dropped fact is uniquely expensive, because the controller would re-ask that question forever —
+  and the loop merges it in for keys the extractor missed. Snapshot memory *before* extraction:
+  `checkContradictions` compares new facts against the prior state, and coaching detection compares
+  an income figure against `income_mentions`, which would already contain it otherwise.
+- **Routing happens before the call and there is no fallback between providers.** `TASK_ROUTES` in
+  `sarthiModel.js` sends extraction and question phrasing to the SLM (Groq, Llama 3.1 8B, ~0.3s)
+  and the report, area and hyper-local questions to the LLM (Gemini, ~2.7s). Trying the SLM and
+  escalating on failure would cost SLM time *plus* LLM time — worse than going straight to Gemini —
+  so bad extraction JSON retries the **same** provider with a stricter, colder prompt. The single
+  pre-call branch is `verification_biz`: SLM when `businessKnowledge.json` covers the trade (it is
+  only rewording our data), LLM when it does not. `GROQ_API_KEY` is optional and server-side; unset,
+  `slm` is served by Gemini and nothing changes. An 8B model is the weaker bet on Sarthi's
+  multi-fence Devanagari output, so `VITE_SARTHI_QUESTION_PROVIDER=llm` sends that one task back
+  without a code change — check it against a real call before a demo.
+- **Numbers are parsed in code, never trusted to the model** (`hindiNumbers.js`). Every figure in a
+  PD is load-bearing — it feeds contradiction flags, the walk-in income rebuild and eligibility — so
+  a misread number does not look like an error, it looks like a *finding*, cited, in a report an
+  officer acts on. `extractFacts` therefore reconciles each numeric field against the borrower's own
+  words and keeps the parsed value when they disagree and the sentence holds exactly one number
+  (with none or several, the parser cannot know which field is meant, so it abstains). Measured
+  saves: "pandrah hazaar" read as 12,000, "bais hazaar" as 20,000, "saath customer" as 6. `saath`
+  is read as 60 only before a scale word or countable noun, so "mere saath partner hai" stays text.
+- **`VITE_SARTHI_MOCKS=true`** (DEV only) serves canned replies from `sarthiMocks.js` with no
+  network call, so work on the loop or the UI does not burn the free tiers the demo needs. The
+  fixtures are raw fenced text run through the real parser, so they prove the plumbing — not that
+  the model follows the prompt.
 - **Area data resolves specific → tier → rural** (`lookupLocation`). Only `source: 'specific'` areas
   have landmarks, so trap questions are gated on that; tier ranges are indicative and the verifier
   softens a rent verdict to `unverified` rather than `contradicted` on them. Always resolve with
@@ -63,10 +90,12 @@ calls a real model (Gemini), kept separate from SAARTHI AI (`screens/ai/`, `smfg
   they declared. `computeEligibility(caseData, assessed)` then reports it as rebuilt, never as verified.
 - Findings with no single turn behind them cite `(Flag: field)` or `(Fact: key)`; `sarthiValidator.js`
   checks those against the flags and collected facts the system actually produced.
-- The key never reaches the bundle: calls go to `/api/sarthi-chat` and `/api/sarthi-vision` — `api/*.js` on
-  Vercel (`GEMINI_API_KEY` env var, never `VITE_`-prefixed), `sarthi-proxy.mjs` in dev (`npm run sarthi`,
-  which loads `.env.local` itself; vite proxies :3001). Model is `gemini-3.6-flash`, overridable with
-  `GEMINI_MODEL` (server-side var — 2.5-flash is retired for new keys).
+- No key reaches the bundle: calls go to `/api/sarthi-chat` and `/api/sarthi-vision` — `api/*.js` on
+  Vercel (`GEMINI_API_KEY`, optional `GROQ_API_KEY`, never `VITE_`-prefixed), `sarthi-proxy.mjs` in dev
+  (`npm run sarthi`, which loads `.env.local` itself; vite proxies :3001). Both providers sit behind the
+  one chat endpoint, chosen by the request's `provider` field, so adding Groq did not add a Vercel
+  function. Models are `gemini-3.6-flash` and `llama-3.1-8b-instant`, overridable with `GEMINI_MODEL` /
+  `GROQ_MODEL` (server-side vars — 2.5-flash is retired for new keys).
 - **Thinking is off by default** (`thinkingConfig.thinkingBudget: 0`). Thought tokens are billed against
   `maxOutputTokens`, so a thinking model silently starves its own reply: a 1024-token interview turn
   spent ~730 thinking, and the 100-token vision call would return an empty string every time. Callers
@@ -97,6 +126,19 @@ calls a real model (Gemini), kept separate from SAARTHI AI (`screens/ai/`, `smfg
   question or the voice config**, or that line silently falls back to a live API call. The manifest only
   covers scripted lines: **live mode writes novel text every turn, so it always pays the TTS round trip.**
   `say()` sets the caption before calling the voice engine, so the question is readable while audio loads.
+- **Live speech is streamed sentence by sentence** (`sarthiStream.js`). Murf renders a whole line
+  before a word is audible, so a 3-sentence question is ~1.5s of silence. `speakStreamed` splits the
+  Devanagari at `.!?।`, `prefetch`es every chunk at once and plays the first as soon as ITS audio
+  lands (~0.8s); later chunks always finish rendering before the one ahead stops playing. Same
+  characters, so no extra quota by volume — but 2-3 Murf calls per turn against a per-minute limit.
+  Three rules the tests pin down: a `.` between digits never splits ("2.5 lakh"), a pre-rendered
+  `src` line is never split (one file is the whole point), and `onEnd` fires **exactly once** — the
+  chunks are chained through each other's `onEnd` rather than bulk-queued, because voice.js clears
+  its queue wholesale when an engine fails, which would drop the tail and strand the interview
+  waiting on a callback that never comes. voice.js itself is untouched: it is shared with SAARTHI AI.
+- **Sarthi asks for Murf, but a missing `VITE_MURF_API_KEY` silently degrades it to browser TTS**
+  (`pickEngine` falls through). That is a config problem, never a code one — if Sarthi sounds like
+  the browser, the key is absent from `.env.local` or from Vercel.
 - **Walk-ins**: `/sarthi/new` builds a case for someone with no bureau or bank record (`buildNewCase`,
   stored in `bo_sarthi_cases`). Every field on the brief stays `null` — nothing is invented. Eligibility
   then depends on what the interview collected: with footfall and average bill, `assessIncome` rebuilds

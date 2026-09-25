@@ -57,8 +57,16 @@ import { MOCKS_ON, mockExtractFacts, mockTurn } from './sarthiMocks';
      glossary unnecessary.
 */
 const TASK_ROUTES = {
-  // Set VITE_SARTHI_EXTRACT_PROVIDER=slm to trade number accuracy for ~2.5s a turn. Read (3) first.
-  extract_facts: import.meta.env.VITE_SARTHI_EXTRACT_PROVIDER || 'llm',
+  /*
+    Extraction goes to the SLM — reversed from the first cut of this table, for quota rather
+    than quality. Gemini's free tier is capped per DAY, and a separate extraction call doubled
+    every turn's Gemini spend, halving how many interviews a key survives. Two things make the
+    SLM safe here now: numerals are reconciled in code (hindiNumbers.js), which was its
+    dangerous failure, and the fields it drops are picked up by the ```facts``` fence on the
+    question call — which costs nothing extra, because that call happens either way.
+    Set VITE_SARTHI_EXTRACT_PROVIDER=llm to put it back on Gemini.
+  */
+  extract_facts: import.meta.env.VITE_SARTHI_EXTRACT_PROVIDER || 'slm',
   // Set VITE_SARTHI_QUESTION_PROVIDER=slm only with an SLM that holds the fences AND a tier whose
   // input-token-per-minute limit clears the prompt. Read (2) first.
   generate_question: import.meta.env.VITE_SARTHI_QUESTION_PROVIDER || 'llm',

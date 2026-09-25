@@ -6,7 +6,7 @@ import { IoCall, IoCamera, IoMic, IoMicOff, IoSend, IoVolumeHigh } from 'react-i
 import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { getCase, briefForCitation, buildNewCase, CUSTOM_CASES_KEY } from '../../utils/sarthiTools';
-import { parseClaims, peekSpeech, peekDisplay, probeProxy, writeReport, VISION_URL, COMPLETE_TAG } from '../../utils/sarthiAgent';
+import { parseClaims, peekSpeech, peekDisplay, writeReport, VISION_URL, COMPLETE_TAG } from '../../utils/sarthiAgent';
 import { extractFacts, askTurn } from '../../utils/sarthiModel';
 import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../utils/sarthiScript';
 import { verifyClaims, computeEligibility, toNumber } from '../../utils/sarthiVerifier';
@@ -616,39 +616,52 @@ export default function SarthiInterview() {
       /*
         A walk-in gets the live interview too. There is no bureau or bank record behind them, so
         the ONLY evidence is whether their own numbers hang together — which takes follow-ups that
-        cannot be scripted in advance. The scripted intake below remains the fallback when no proxy
-        answers, so the flow still completes and still produces a report.
-      */
-      const liveOk = await probeProxy();
-      if (cancelled) return;
-      demoRef.current = !liveOk;
-      liveRef.current = liveOk;
-      setDemoMode(!liveOk);
-      setPhase('live');
+        cannot be scripted in advance. The scripted script below remains the fallback.
 
-      if (liveOk) {
+        The opening question IS the reachability probe. A separate probe used to cost a whole
+        extra request before the borrower heard a word, which on a per-DAY quota is an interview's
+        worth of budget spent on saying hello, plus a second of dead air.
+      */
+      setPhase('live');
+      history.current = [{ role: 'user', content: '[System: the borrower has joined the call. Greet them and begin the interview.]' }];
+
+      try {
+        const opening = getNextAction(memory.current, caseData);
+        if (opening.memory) memory.current = opening.memory;
+        const raw = await askTurn({ caseData, action: opening, directive: directiveText(opening), messages: history.current, turn: 0 });
+        if (cancelled) return;
+        const { display, speech } = parseClaims(raw, 0);
+        demoRef.current = false;
+        liveRef.current = true;
         if (cameraRef.current) startFrameCapture(VISION_URL, () => {});
-        history.current = [{ role: 'user', content: '[System: the borrower has joined the call. Greet them and begin the interview.]' }];
-        try {
-          const opening = getNextAction(memory.current, caseData);
-          if (opening.memory) memory.current = opening.memory;
-          const raw = await askTurn({ caseData, action: opening, directive: directiveText(opening), messages: history.current, turn: 0 });
-          if (cancelled) return;
-          const { display, speech } = parseClaims(raw, 0);
-          memory.current = recordTurn(memory.current, 'assistant', display);
-          history.current.push({ role: 'assistant', content: raw });
-          transcript.current.push({ role: 'assistant', content: display });
-          say(display, { speech });
-          return;
-        } catch (e) {
-          console.warn('[sarthi] could not start the live agent, using scripted mode', e);
-          demoRef.current = true;
-          setDemoMode(true);
-        }
+        memory.current = recordTurn(memory.current, 'assistant', display);
+        history.current.push({ role: 'assistant', content: raw });
+        transcript.current.push({ role: 'assistant', content: display });
+        say(display, { speech });
+        return;
+      } catch (e) {
+        if (cancelled) return;
+        /*
+          Opening a scripted question is not the same as giving up on the interview. A 429 from a
+          per-minute quota, or a 503, clears in seconds — locking every remaining turn to the
+          script over one blip at hello is the worst possible trade in a demo. So only a failure
+          that cannot recover on its own (bad key, retired model, no proxy at all) sets demoRef;
+          anything transient borrows the scripted opening and lets turn two try live again, which
+          is exactly how a mid-interview stumble already behaves.
+        */
+        const permanent = e?.status != null && !TRANSIENT.has(e.status);
+        demoRef.current = permanent;
+        liveRef.current = !permanent;
+        setDemoMode(permanent);
+        console.warn(`[sarthi] opening turn failed (${e?.message}) — ${permanent ? 'scripted for the rest of the interview' : 'scripted opening, retrying live on the next turn'}`);
+        if (!permanent && cameraRef.current) startFrameCapture(VISION_URL, () => {});
       }
 
       const first = scriptRef.current[0];
+      memory.current = recordTurn(memory.current, 'assistant', first.text);
       transcript.current.push({ role: 'assistant', content: first.text });
+      // Keep the scripted cursor past the line we just used, or turn two repeats it.
+      stepRef.current = demoRef.current ? 0 : 1;
       say(first.text, { speech: first.speech });
     })();
 

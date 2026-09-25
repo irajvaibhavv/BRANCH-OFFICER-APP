@@ -38,6 +38,34 @@ const BACKOFF_MS = [700, 1800];
 
 const wait = (ms) => new Promise((r) => { setTimeout(r, ms); });
 
+/*
+  Turn a failed response into an error that says WHY.
+
+  A bare "429" is ambiguous in the one way that matters: per-minute quota clears in a minute,
+  per-day quota does not clear until the quota resets, and the two call for completely different
+  reactions. Gemini says which in the response body and often gives a retryDelay, so read it
+  rather than discarding it — otherwise the console shows a number and nothing actionable.
+*/
+async function proxyError(res) {
+  let detail = '';
+  let retryAfterMs = null;
+  try {
+    const body = await res.json();
+    detail = body?.error ?? '';
+    const m = /retryDelay[^0-9]*([0-9.]+)s/i.exec(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    if (m) retryAfterMs = Math.round(parseFloat(m[1]) * 1000);
+  } catch { /* not JSON — the status is all we have */ }
+
+  const err = new Error(detail ? `Sarthi proxy ${res.status}: ${detail}` : `Sarthi proxy ${res.status}`);
+  err.status = res.status;
+  err.detail = detail;
+  err.retryAfterMs = retryAfterMs;
+  // "per day" / "PerDay" in the quota id is the difference between "wait a moment" and
+  // "this key is finished until the quota resets".
+  err.dailyQuota = res.status === 429 && /per ?day/i.test(String(detail));
+  return err;
+}
+
 /**
  * POST one turn to the proxy, retrying the errors that are worth retrying.
  * Throws once the attempts are spent — the caller decides what that means.
@@ -45,19 +73,18 @@ const wait = (ms) => new Promise((r) => { setTimeout(r, ms); });
 export async function askAgent({ systemPrompt, messages, temperature = INTERVIEWER_TEMP, maxTokens = 1024, thinkingBudget = 0, provider = 'llm', retries = BACKOFF_MS.length }) {
   let lastError;
 
+  let nextWait = null;
+
   for (let attempt = 0; attempt <= retries; attempt += 1) {
-    if (attempt > 0) await wait(BACKOFF_MS[attempt - 1] ?? BACKOFF_MS.at(-1));
+    if (attempt > 0) await wait(nextWait ?? BACKOFF_MS[attempt - 1] ?? BACKOFF_MS.at(-1));
+    nextWait = null;
     try {
       const res = await fetch(CHAT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ systemPrompt, messages, temperature, maxTokens, thinkingBudget, provider }),
       });
-      if (!res.ok) {
-        const err = new Error(`Sarthi proxy ${res.status}`);
-        err.status = res.status;
-        throw err;
-      }
+      if (!res.ok) throw await proxyError(res);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       if (!data.reply) throw new Error('Sarthi proxy returned an empty reply');
@@ -66,8 +93,16 @@ export async function askAgent({ systemPrompt, messages, temperature = INTERVIEW
       lastError = e;
       // A network failure has no status; treat it as transient — the venue wifi may have blinked.
       const transient = e.status == null || RETRYABLE.has(e.status);
+      // A per-day quota is not transient. Retrying it burns the borrower's time to fail anyway.
+      if (e.dailyQuota) { console.warn(`[sarthi] daily quota exhausted — ${e.detail}`); break; }
       if (!transient || attempt === retries) break;
-      console.warn(`[sarthi] ${e.message} — retrying (${attempt + 1}/${retries})`);
+      /*
+        Honour the upstream's own retryDelay when it is short enough to be worth waiting out —
+        a per-minute quota says "try in 26s", and our 700ms backoff guarantees a second failure.
+        Past a few seconds the borrower is better served by a scripted question than by silence.
+      */
+      if (e.retryAfterMs && e.retryAfterMs <= 4000) nextWait = e.retryAfterMs;
+      console.warn(`[sarthi] ${e.message} — retrying in ${nextWait ?? BACKOFF_MS[attempt] ?? 1800}ms (${attempt + 1}/${retries})`);
     }
   }
 
@@ -98,11 +133,7 @@ export async function askAgentStream({ systemPrompt, messages, temperature = INT
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ systemPrompt, messages, temperature, maxTokens, thinkingBudget, provider: 'llm', stream: true }),
       });
-      if (!res.ok) {
-        const err = new Error(`Sarthi proxy ${res.status}`);
-        err.status = res.status;
-        throw err;
-      }
+      if (!res.ok) throw await proxyError(res);
       // A server that cannot stream (an older deployment) answers with JSON. Honour it rather
       // than failing: the turn is slower, not broken.
       if ((res.headers.get('content-type') || '').includes('application/json')) {
@@ -132,33 +163,13 @@ export async function askAgentStream({ systemPrompt, messages, temperature = INT
       lastError = e;
       const transient = e.status == null || RETRYABLE.has(e.status);
       // Once text has been shown or spoken, retrying would replay the turn. Keep what we have.
+      if (e.dailyQuota) { console.warn(`[sarthi] daily quota exhausted — ${e.detail}`); break; }
       if (started || !transient || attempt === retries) break;
       console.warn(`[sarthi] ${e.message} — retrying stream (${attempt + 1}/${retries})`);
     }
   }
 
   throw lastError;
-}
-
-/**
- * Is the Gemini proxy reachable? Decides live mode vs scripted demo mode at interview start.
- * Deliberately impatient: this runs while the applicant is looking at a "connecting" screen, so
- * one quick retry is worth it but a long stall is not. If this fails the whole interview is
- * scripted — mixing engines mid-interview would change Sarthi's voice and phrasing halfway
- * through, which is more jarring than simply staying scripted throughout.
- */
-export async function probeProxy() {
-  try {
-    const reply = await askAgent({
-      systemPrompt: 'Reply with the single word OK.',
-      messages: [{ role: 'user', content: 'ping' }],
-      maxTokens: 8,
-      retries: 1,
-    });
-    return !!reply;
-  } catch {
-    return false;
-  }
 }
 
 /* ============================================================ Agent 1 — interviewer */

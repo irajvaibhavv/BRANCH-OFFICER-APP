@@ -12,15 +12,20 @@
   cap — observations are a bonus layer, and they must never be the reason the interview itself
   runs out of quota. Both are tunable without touching code:
 
-    VITE_SARTHI_VISION_MS=45000   seconds between frames; 0 or "off" disables capture entirely
-    VITE_SARTHI_VISION_MAX=12     most frames one interview may ever send
+    VITE_SARTHI_VISION_MS=60000   milliseconds between frames; 0 or "off" disables capture entirely
+    VITE_SARTHI_VISION_MAX=6      most frames one interview may ever send
+
+  The cap is 6, not 12, because the binding free-tier limit is requests per DAY. At 12 frames,
+  vision alone was roughly a third of an interview's entire request budget — spent on a layer the
+  report merely cites when present. Six frames over a ten-minute call still samples the setting
+  several times, and buys back a whole extra interview per day.
 */
 
 const envMs = import.meta.env.VITE_SARTHI_VISION_MS;
 const OFF = envMs === 'off' || Number(envMs) === 0;
 // Floor of 15s: anything faster burns quota with no extra signal — the scene barely changes.
-const CAPTURE_MS = Math.max(15000, Number(envMs) || 45000);
-const MAX_FRAMES = Math.max(1, Number(import.meta.env.VITE_SARTHI_VISION_MAX) || 12);
+const CAPTURE_MS = Math.max(15000, Number(envMs) || 60000);
+const MAX_FRAMES = Math.max(1, Number(import.meta.env.VITE_SARTHI_VISION_MAX) || 6);
 const FRAME_W = 320;
 const FRAME_H = 240;
 

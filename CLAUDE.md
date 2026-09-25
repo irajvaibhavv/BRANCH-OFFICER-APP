@@ -101,17 +101,24 @@ calls a real model (Gemini), kept separate from SAARTHI AI (`screens/ai/`, `smfg
   spent ~730 thinking, and the 100-token vision call would return an empty string every time. Callers
   opt back in — only `writeReport` does (budget 4000, ceiling 12000). Always read the reply by joining
   **all** `content.parts`, never `parts[0]`.
-- **Degrading is per-turn, not permanent.** Free-tier Gemini returns 503 "model overloaded" often, so
-  `askAgent` retries 429/500/502/503/504 and network errors twice (700ms, 1800ms) while failing fast on
-  400/401/404, which retries cannot fix. A turn that still fails borrows one scripted question and tries
-  live again next turn; only a permanent status sets `demoRef`. **No reachable proxy at all → the whole
+- **Degrading is per-turn, not permanent — including at the opening.** Free-tier Gemini returns 503
+  "model overloaded" and 429 quota errors often, so `askAgent` retries 429/500/502/503/504 and network
+  errors twice (700ms, 1800ms, or the upstream's own `retryDelay` when it is ≤4s) while failing fast on
+  400/401/404, which retries cannot fix. A **per-day** 429 is not retried at all: `proxyError` reads the
+  upstream body so the reason is in the console rather than a bare status, and no amount of waiting
+  clears a daily quota. A turn that still fails borrows one scripted question and tries live again next
+  turn; only a permanent status sets `demoRef`. The opening turn behaves the same way — a 429 at hello
+  used to lock the whole interview to the script, which is the worst trade available in a demo. **No reachable proxy at all → the whole
   interview runs `sarthiScript.js` scripted mode** and still produces a full report, so a demo never dies
   on a missing key. Engines are never mixed mid-interview by design — the voice and phrasing would shift
   audibly halfway through.
-- **Vision is the biggest quota consumer**, because it bills wall-clock time whether or not anyone is
-  speaking: one frame per 45s, hard cap 12 per interview (`VITE_SARTHI_VISION_MS` / `_MAX`, `0`/`off`
-  disables). Observations are a bonus layer the report cites when present — never let them be the reason
-  the interview itself runs out of quota.
+- **The free tier's binding limit is requests per DAY, so count requests, not tokens.** A turn is one
+  Gemini call (the question); extraction goes to the SLM, and the ```facts``` fence on the question call
+  covers whatever it drops, which costs nothing extra. There is no separate reachability probe — the
+  opening question IS the probe, because a probe spent a whole request to say hello. Vision bills
+  wall-clock time whether or not anyone is speaking: one frame per 60s, hard cap 6 per interview
+  (`VITE_SARTHI_VISION_MS` / `_MAX`, `0`/`off` disables). Observations are a bonus layer the report cites
+  when present — never let them be the reason the interview itself runs out of quota.
 - Anti-hallucination is the point of the file split: the model may only use the JSON knowledge files
   (`borrowers`, `businessKnowledge`, `locationKnowledge`, `riskPatterns`, `pdSchema`),
   `sarthiVerifier.js` (plain rules) decides confirmed/contradicted/unverified, `loanCalc.js` computes every

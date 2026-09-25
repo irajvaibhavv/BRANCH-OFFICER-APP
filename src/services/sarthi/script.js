@@ -171,7 +171,10 @@ const FLAG_HEADS = {
   coaching_detected: 'Answer changed when asked again',
   internal_consistency: 'Their own numbers do not add up',
   inconsistency: 'Stated differently across the interview',
+  photo_provenance: 'Photo may not be genuine',
 };
+
+const photoSource = (p) => (p.provenance?.source === 'live_camera' ? ' (live camera)' : p.provenance ? ' (uploaded file)' : '');
 
 export function buildFallbackReport({ caseData, transcript, evidence, flags, eligibility, observations, photos = [], identity, cameraOn, mode = 'Handover' }) {
   const c = caseData;
@@ -223,7 +226,7 @@ ${identity ? `- ${identitySummary(identity)}` : '- No identity document was capt
 ${photos.length
       ? photos.map((p) => (p.skipped
         ? `- Declined to photograph ${p.label} when asked (Photo: ${p.kind})`
-        : `- Sent as ${p.label}: ${p.observation ?? 'on file, not machine-read — officer should view it'} (Photo: ${p.kind})`)).join('\n')
+        : `- Sent as ${p.label}${photoSource(p)}: ${p.observation ?? 'on file, not machine-read — officer should view it'} (Photo: ${p.kind})`)).join('\n')
       : '- No photographs were requested.'}
 ${observations?.length
       ? observations.map((o) => `- ${o.observation} (Vision: ${o.at})`).join('\n')

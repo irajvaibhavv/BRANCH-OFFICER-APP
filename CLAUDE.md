@@ -168,6 +168,14 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   ```photo shop``` fence from Agent 1). Images are downscaled in the browser and kept in
   `bo_sarthi_photos_<case>`, separate from the report record so their weight cannot break its write.
   Gemini Vision describes what is visible; with no proxy the photo is stored and flagged un-read.
+  **Photos come from the live camera, not a file picker** (`components/sarthi/PhotoCapture.jsx`), so a
+  gallery, downloaded or AI-generated image cannot simply be handed in. The interview's selfie stream is
+  paused while it is open (`pauseCamera`/`resumeCamera` — many phones cannot run two cameras). A gallery
+  upload is offered only when the camera cannot open, and `photoCheck.js` checks it in code: file date
+  and EXIF capture time vs interview start, missing camera make/model, PNG/WebP, editor software in
+  EXIF. Each doubt becomes a `photo_provenance` flag (`Flag: photo_<kind>`) in the report — never a
+  rejection. A vision description that mentions a screen, print or generated image adds a soft flag too.
+  None of this catches someone photographing a real house that is not theirs; that stays the officer's job.
 - Sarthi state is `bo_sarthi_*` in localStorage (cleared on logout like every `bo_` key); it is not part of
   the AppState seed/date-shift system.
 

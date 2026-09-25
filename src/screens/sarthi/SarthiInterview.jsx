@@ -15,8 +15,10 @@ import pdSchema from '../../data/sarthi/pdSchema.json';
 import { getNextAction, directiveText, checkContradictions, checkInternalConsistency, getInterviewConfig, assessIncome } from '../../services/sarthi/controller';
 import { validateReport, extractRecommendation } from '../../services/sarthi/validator';
 import { validateAadhaar, validatePan } from '../../services/sarthi/idChecks';
-import { startFrameCapture, stopCamera, getObservations, resetObservations } from '../../services/sarthi/video';
+import PhotoCapture from '../../components/sarthi/PhotoCapture';
+import { startFrameCapture, stopCamera, pauseCamera, resumeCamera, getObservations, resetObservations } from '../../services/sarthi/video';
 import { downscale, analysePhoto, PHOTO_ASKS } from '../../services/sarthi/photo';
+import { checkUpload, liveProvenance } from '../../services/sarthi/photoCheck';
 import { stopSpeaking, listen, canListen, canSpeak } from '../../services/voice';
 import { speakStreamed } from '../../services/sarthi/stream';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
@@ -71,6 +73,8 @@ export default function SarthiInterview() {
   const [asked, setAsked] = useState(0);
   const [photoAsk, setPhotoAsk] = useState(null); // 'shop' | 'home' while Sarthi waits for a picture
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [capture, setCapture] = useState(null); // { kind, volunteered } while the camera screen is open
+  const startedAt = useRef(0);
   const [shownPhoto, setShownPhoto] = useState(null);
   const [collected, setCollected] = useState({});
   // Schema coverage, not question count — the controller ends on coverage.
@@ -95,6 +99,7 @@ export default function SarthiInterview() {
   const liveRef = useRef(false); // proxy reachable → vision frames are worth sending
 
   useEffect(() => { mutedRef.current = muted; }, [muted]);
+  useEffect(() => { startedAt.current = Date.now(); }, []);
 
   /* ---------------------------------------------------------------- teardown */
   const teardown = useCallback(() => {
@@ -364,20 +369,32 @@ export default function SarthiInterview() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseData, say]);
 
-  /** The applicant photographs the shop or home; it is shown back to them, then described. */
-  const submitPhoto = useCallback(async (file, volunteered = false) => {
-    if (!file) return;
-    // A photo sent from the message box is filed under whatever Sarthi has not been given yet.
+  // Photos come from the live camera; a file is accepted only when the camera cannot open, and is checked.
+  const openCapture = useCallback((volunteered = false) => {
+    // A volunteered photo is filed under whatever Sarthi has not been given yet.
     const sent = photos.current.map((p) => p.kind);
     const kind = volunteered
       ? (!sent.includes('shop') ? 'shop' : !sent.includes('home') ? 'home' : 'extra')
       : photoAsk;
+    if (!kind) return;
+    pauseCamera();
+    setCapture({ kind, volunteered });
+  }, [photoAsk]);
+
+  const closeCapture = useCallback(() => {
+    setCapture(null);
+    if (cameraRef.current) resumeCamera();
+  }, []);
+
+  const submitPhoto = useCallback(async ({ dataUrl: shot, file, facing }, { kind, volunteered }) => {
+    closeCapture();
     setPhotoBusy(true);
     try {
-      const dataUrl = await downscale(file);
+      const provenance = file ? await checkUpload(file, { startedAt: startedAt.current }) : liveProvenance(facing);
+      const dataUrl = shot ?? await downscale(file);
       setShownPhoto(dataUrl);
       setPhotoAsk(null);
-      const record = await analysePhoto({ dataUrl, kind, caseData });
+      const record = await analysePhoto({ dataUrl, kind, caseData, provenance });
       photos.current.push(record);
       setPhotoBusy(false);
       setTimeout(() => setShownPhoto(null), 2600); // long enough to see it landed
@@ -391,7 +408,7 @@ export default function SarthiInterview() {
       if (!volunteered) handleAnswer('[photo nahi bhej paaye]');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [photoAsk, caseData, beginListening]);
+  }, [caseData, beginListening, closeCapture]);
 
   const skipPhoto = useCallback(() => {
     const kind = photoAsk;
@@ -447,9 +464,13 @@ export default function SarthiInterview() {
     // Rerun at the end, when every answer is in.
     const consistency = checkInternalConsistency(memory.current, subject);
 
+    const photoFlags = photos.current.flatMap((p) => (p.provenance?.flags ?? []).map((f) => ({
+      type: 'photo_provenance', field: `photo_${p.kind}`, severity: f.severity, detail: `Photo sent as ${p.label}: ${f.detail}`,
+    })));
+
     // Where verifier and controller flag the same field, keep the verifier's (it has a turn).
     const settled = new Set(claimFlags.map((f) => f.claimType).filter(Boolean));
-    const flags = [...claimFlags, ...memory.current.flags, ...consistency]
+    const flags = [...claimFlags, ...memory.current.flags, ...consistency, ...photoFlags]
       .filter((f) => !(f.type === 'contradiction' && settled.has(CLAIM_FIELD[f.field])))
       .filter((f, i, all) => all.findIndex((o) => o.detail === f.detail) === i);
 
@@ -662,20 +683,18 @@ export default function SarthiInterview() {
 
         {photoAsk && !photoBusy && (
           <div className={styles.photoAsk}>
-            <label className={styles.shoot}>
-              <IoCamera size={20} /> {PHOTO_ASKS[photoAsk].hint} bhejiye
-              <input type="file" accept="image/*" capture="environment" onChange={(e) => submitPhoto(e.target.files?.[0])} hidden />
-            </label>
+            <button className={styles.shoot} onClick={() => openCapture(false)}>
+              <IoCamera size={20} /> {PHOTO_ASKS[photoAsk].hint} lijiye
+            </button>
             <button className={styles.skip} onClick={skipPhoto}>Abhi nahi</button>
           </div>
         )}
 
         {/* Always available: they can type or send a picture at any point, not only when asked. */}
         <div className={styles.typeRow}>
-          <label className={styles.attach} title="Photo bhejein">
+          <button className={styles.attach} title="Photo lein" aria-label="Photo lein" onClick={() => openCapture(true)}>
             <IoCamera size={13} />
-            <input type="file" accept="image/*" capture="environment" onChange={(e) => submitPhoto(e.target.files?.[0], true)} hidden />
-          </label>
+          </button>
           <input
             className={styles.input}
             value={draft}
@@ -727,6 +746,16 @@ export default function SarthiInterview() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {capture && (
+        <PhotoCapture
+          title={PHOTO_ASKS[capture.kind].hint}
+          hint={PHOTO_ASKS[capture.kind].frame}
+          onCapture={(shot) => submitPhoto(shot, capture)}
+          onUpload={(file) => submitPhoto({ file }, capture)}
+          onCancel={closeCapture}
+        />
+      )}
 
       {/* end confirmation */}
       <AnimatePresence>

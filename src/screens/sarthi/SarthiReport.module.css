@@ -267,4 +267,5 @@
 .shotLabel { font-size: 13.5px; font-weight: 600; color: var(--s-ink); }
 .shotObs { font-size: 12.5px; line-height: 1.5; color: var(--s-ink-2); }
 .shotWarn { font-size: 12.5px; line-height: 1.5; color: var(--s-watch); }
+.shotOk { font-size: 12.5px; line-height: 1.5; color: var(--s-clear); }
 .shotFoot { font-size: 12px; line-height: 1.5; color: var(--s-ink-3); margin-top: 12px; }

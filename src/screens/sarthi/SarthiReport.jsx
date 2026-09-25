@@ -144,6 +144,8 @@ export default function SarthiReport() {
                 <figcaption>
                   <span className={styles.shotLabel}>Sent as {p.label}</span>
                   {p.skipped && <span className={styles.shotWarn}>Refused to photograph — worth asking why</span>}
+                  {p.provenance?.source === 'live_camera' && <span className={styles.shotOk}>Taken with the live camera during the interview</span>}
+                  {p.provenance?.flags?.map((f, j) => <span key={j} className={styles.shotWarn}>{f.detail}</span>)}
                   {p.observation && <span className={styles.shotObs}>{p.observation}</span>}
                   {!p.observation && !p.skipped && <span className={styles.shotWarn}>{p.note ?? 'Not machine-read. Look at it yourself.'}</span>}
                 </figcaption>

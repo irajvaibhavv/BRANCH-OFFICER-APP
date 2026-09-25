@@ -21,18 +21,40 @@ function stamp() {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
+const CONSTRAINTS = {
+  video: { facingMode: 'user', width: 640, height: 480 },
+  audio: false, // audio is handled separately by voice.js
+};
+
 export async function startCamera(videoElement) {
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: 640, height: 480 },
-      audio: false, // audio is handled separately by voice.js
-    });
+    stream = await navigator.mediaDevices.getUserMedia(CONSTRAINTS);
     videoElement.srcObject = stream;
     videoEl = videoElement;
     startedAt = Date.now();
     return true;
   } catch (e) {
     console.warn('[sarthi] camera not available:', e.message);
+    return false;
+  }
+}
+
+// Many phones cannot run two cameras at once, so the photo capture borrows it.
+export function pauseCamera() {
+  if (stream) stream.getTracks().forEach((t) => t.stop());
+  stream = null;
+}
+
+export async function resumeCamera() {
+  if (!videoEl || stream) return false;
+  try {
+    const next = await navigator.mediaDevices.getUserMedia(CONSTRAINTS);
+    // The interview may have ended while we waited.
+    if (!videoEl || stream) { next.getTracks().forEach((t) => t.stop()); return false; }
+    stream = next;
+    videoEl.srcObject = stream;
+    return true;
+  } catch {
     return false;
   }
 }

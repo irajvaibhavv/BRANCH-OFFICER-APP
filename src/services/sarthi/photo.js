@@ -1,8 +1,9 @@
 // Photos the applicant takes mid-interview. Vision returns observations, never verdicts.
 import { VISION_URL } from './agent';
+import { visionFlag } from './photoCheck';
 
-const MAX_EDGE = 900;   // enough for a model to read a signboard
-const QUALITY = 0.62;   // keeps a photo near 60–90KB so several fit in localStorage
+export const MAX_EDGE = 900;   // enough for a model to read a signboard
+export const QUALITY = 0.62;   // keeps a photo near 60–90KB so several fit in localStorage
 
 export const PHOTO_ASKS = {
   shop: {
@@ -10,15 +11,17 @@ export const PHOTO_ASKS = {
     ask: 'Ab apni dukaan ki ek photo bhejiye — andar ka hissa, stock ke saath.',
     speech: 'अब अपनी दुकान की एक फोटो भेजिए। अंदर का हिस्सा, स्टॉक के साथ।',
     hint: 'Dukaan ki photo',
+    frame: 'Dukaan ka andar ka hissa, stock ke saath',
   },
   home: {
     label: 'the home',
     ask: 'Aur ghar ke bahar ki ek photo bhejiye, jahan aap rehte hain.',
     speech: 'और घर के बाहर की एक फोटो भेजिए, जहाँ आप रहते हैं।',
     hint: 'Ghar ki photo',
+    frame: 'Ghar ka bahar ka hissa, jahan aap rehte hain',
   },
   // Sent on the applicant's own initiative from the message box, not because Sarthi asked.
-  extra: { label: 'an extra photo', ask: '', speech: '', hint: 'Photo' },
+  extra: { label: 'an extra photo', ask: '', speech: '', hint: 'Photo', frame: 'Jo dikhana hai, uski photo lijiye' },
 };
 
 /** Shrink and re-encode in the browser, so a 4MB camera shot does not blow the storage quota. */
@@ -54,6 +57,7 @@ Describe ONLY what is visible, in 1-2 sentences:
 - Any goods, stock, equipment, signage or shutter visible?
 - Is anyone else present?
 - Does what you see fit, or not fit, what they said they do?
+- If it looks like a photo of a screen or a print, a screenshot, a stock photo or a computer-generated image, say so plainly.
 
 Rules:
 - Report only what is in the image. Never guess at income, wealth or character.
@@ -62,9 +66,9 @@ Rules:
 }
 
 // aiChecked: false when no proxy, so the report never implies the photo was read.
-export async function analysePhoto({ dataUrl, kind, caseData }) {
+export async function analysePhoto({ dataUrl, kind, caseData, provenance = null }) {
   const at = new Date().toISOString();
-  const base = { kind, at, label: PHOTO_ASKS[kind]?.label ?? kind, dataUrl };
+  const base = { kind, at, label: PHOTO_ASKS[kind]?.label ?? kind, dataUrl, provenance };
 
   try {
     const res = await fetch(VISION_URL, {
@@ -75,7 +79,10 @@ export async function analysePhoto({ dataUrl, kind, caseData }) {
     if (!res.ok) throw new Error(`vision ${res.status}`);
     const data = await res.json();
     if (!data.observation) throw new Error('no observation');
-    return { ...base, aiChecked: true, observation: data.observation.trim() };
+    const observation = data.observation.trim();
+    const flag = visionFlag(observation);
+    const withFlag = flag && provenance ? { ...provenance, flags: [...provenance.flags, flag] } : provenance;
+    return { ...base, provenance: withFlag, aiChecked: true, observation };
   } catch {
     return {
       ...base,

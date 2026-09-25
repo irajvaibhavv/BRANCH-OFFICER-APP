@@ -427,6 +427,7 @@ Write the report in this exact format:
 - The ELIGIBILITY section numbers are calculated by the system using verified math. You MUST use these exact numbers in your report. Do NOT recalculate or adjust them. Report them exactly as given.
 - If ELIGIBILITY has "assessable": false, the file has no verified income. Write "not assessable until a bank statement or ITR is seen" and do NOT derive an eligible amount from the declared figure. Never print a null.
 - Cite a photograph as (Photo: shop) or (Photo: home), and an identity check by its name.
+- A photograph's provenance.source says how it arrived: "live_camera" was taken during the interview, "upload" was a file. Never describe an uploaded file as taken during the interview.
 - Do NOT make a loan decision. Your job is to present findings. The officer decides.
 - Be objective. Report both positive and negative findings.
 - Output plain markdown only. No preamble, no code fences around the report.`;

@@ -58,6 +58,8 @@ export default function SarthiInterview() {
     isNew: true, hi: {}, riskPatternMatch: null,
     brief: { avgMonthlyCredit: null, bureauScore: null, existingEMIs: null, runningLoans: [], gstRegistered: false, gstVintage: null, itrFiled: false, itrIncome: null, bankStatementMonths: 0, largeDeposits: [], missingDocs: [], areaDefaultRate: null, digInto: [] },
   }), []);
+  // The interview starts once, on a stable object; a walk-in rebuilt mid-call must not restart it.
+  const startCase = existing ?? placeholder;
   const caseData = existing ?? built.current ?? placeholder;
 
   const [phase, setPhase] = useState('connecting'); // connecting · live · generating · failed
@@ -161,7 +163,7 @@ export default function SarthiInterview() {
 
     const a = intake.current;
     const identity = a.panCheck?.ok ? a.panCheck : a.aadhaarCheck?.ok ? a.aadhaarCheck : a.panCheck ?? a.aadhaarCheck ?? null;
-    const area = c.business_location ?? c.residence_duration ?? '';
+    const area = c.business_location ?? c.aadhaar_address ?? '';
     const subject = buildNewCase({
       name: c.applicant_name ?? 'New applicant',
       phone: '',
@@ -370,13 +372,18 @@ export default function SarthiInterview() {
   }, [caseData, say]);
 
   // Photos come from the live camera; a file is accepted only when the camera cannot open, and is checked.
-  const openCapture = useCallback((volunteered = false) => {
-    // A volunteered photo is filed under whatever Sarthi has not been given yet.
+  const openCapture = useCallback((attached = false) => {
+    // The attach button answers a pending ask; otherwise the photo is filed under what Sarthi lacks.
+    const volunteered = attached && !photoAsk;
     const sent = photos.current.map((p) => p.kind);
     const kind = volunteered
       ? (!sent.includes('shop') ? 'shop' : !sent.includes('home') ? 'home' : 'extra')
       : photoAsk;
     if (!kind) return;
+    // Otherwise speech during the capture would answer the question behind the camera.
+    stopListen.current?.();
+    stopListen.current = null;
+    setAvatar('idle');
     pauseCamera();
     setCapture({ kind, volunteered });
   }, [photoAsk]);
@@ -386,6 +393,12 @@ export default function SarthiInterview() {
     if (cameraRef.current) resumeCamera();
   }, []);
 
+  const cancelCapture = useCallback(() => {
+    const wasVolunteered = capture?.volunteered;
+    closeCapture();
+    if (wasVolunteered) beginListening();
+  }, [capture, closeCapture, beginListening]);
+
   const submitPhoto = useCallback(async ({ dataUrl: shot, file, facing }, { kind, volunteered }) => {
     closeCapture();
     setPhotoBusy(true);
@@ -394,7 +407,7 @@ export default function SarthiInterview() {
       const dataUrl = shot ?? await downscale(file);
       setShownPhoto(dataUrl);
       setPhotoAsk(null);
-      const record = await analysePhoto({ dataUrl, kind, caseData, provenance });
+      const record = await analysePhoto({ dataUrl, kind, caseData: caseRef.current ?? caseData, provenance });
       photos.current.push(record);
       setPhotoBusy(false);
       setTimeout(() => setShownPhoto(null), 2600); // long enough to see it landed
@@ -455,8 +468,9 @@ export default function SarthiInterview() {
         a.housing ? `Home is ${a.housing}` : null,
       ].filter(Boolean);
       built.current = subject;
-      setCases((prev) => [subject, ...prev]);
     }
+    // Live walk-ins are rebuilt in memory only, so save every walk-in here or it never reaches the case list.
+    if (isIntake) setCases((prev) => [subject, ...prev.filter((c) => c.id !== subject.id)]);
 
     setProgress('Verifying claims against bureau and bank data…');
     const { evidence, flags: claimFlags } = verifyClaims(captured, subject);
@@ -527,19 +541,19 @@ export default function SarthiInterview() {
       validation,
       turns: turns.length,
     };
-    setReports((prev) => [entry, ...prev.filter((r) => r.caseId !== caseData.id)]);
+    setReports((prev) => [entry, ...prev.filter((r) => r.caseId !== subject.id)]);
     navigate(`/sarthi/report/${subject.id}`, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseData, navigate, setReports, teardown]);
 
   /* ---------------------------------------------------------------- start */
   useEffect(() => {
-    if (!caseData) return;
+    if (!startCase) return;
     let cancelled = false;
     resetObservations();
-    scriptRef.current = isIntake ? buildIntakeScript() : buildScript(caseData);
-    memory.current = createEmptyMemory(caseData);
-    caseRef.current = caseData;
+    scriptRef.current = isIntake ? buildIntakeScript() : buildScript(startCase);
+    memory.current = createEmptyMemory(startCase);
+    caseRef.current = startCase;
 
     (async () => {
       // The opening question is the reachability probe — no separate probe request.
@@ -547,9 +561,9 @@ export default function SarthiInterview() {
       history.current = [{ role: 'user', content: '[System: the borrower has joined the call. Greet them and begin the interview.]' }];
 
       try {
-        const opening = getNextAction(memory.current, caseData);
+        const opening = getNextAction(memory.current, startCase);
         if (opening.memory) memory.current = opening.memory;
-        const raw = await askTurn({ caseData, action: opening, directive: directiveText(opening), messages: history.current, turn: 0 });
+        const raw = await askTurn({ caseData: startCase, action: opening, directive: directiveText(opening), messages: history.current, turn: 0 });
         if (cancelled) return;
         const { display, speech } = parseClaims(raw, 0);
         demoRef.current = false;
@@ -580,7 +594,7 @@ export default function SarthiInterview() {
 
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [caseData]);
+  }, [startCase]);
 
   if (!caseData) {
     return (
@@ -753,7 +767,7 @@ export default function SarthiInterview() {
           hint={PHOTO_ASKS[capture.kind].frame}
           onCapture={(shot) => submitPhoto(shot, capture)}
           onUpload={(file) => submitPhoto({ file }, capture)}
-          onCancel={closeCapture}
+          onCancel={cancelCapture}
         />
       )}
 

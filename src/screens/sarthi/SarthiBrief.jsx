@@ -26,8 +26,10 @@ export default function SarthiBrief() {
   const b = c.brief;
   const pattern = c.riskPatternMatch ? lookupRiskPattern(c.riskPatternMatch.patternId) : null;
   const elig = computeEligibility(c);
-  const gap = Math.round(((c.declaredIncome - b.avgMonthlyCredit) / b.avgMonthlyCredit) * 100);
-  const short = c.loanAmountRequested - elig.maxEligible;
+  // A walk-in has no bank credits, bureau record or ITR — show that, never a figure derived from null.
+  const noBank = !b.avgMonthlyCredit;
+  const gap = noBank ? null : Math.round(((c.declaredIncome - b.avgMonthlyCredit) / b.avgMonthlyCredit) * 100);
+  const short = elig.assessable ? c.loanAmountRequested - elig.maxEligible : null;
 
   return (
     <Page mode="slide" className={`sarthi ${styles.page}`}>
@@ -37,19 +39,21 @@ export default function SarthiBrief() {
       <section className={styles.gap}>
         <div className={styles.gapPair}>
           <div>
-            <div className={styles.gapLabel}>He declares</div>
-            <div className={styles.gapSaid}>{formatINR(c.declaredIncome, { compact: false })}</div>
+            <div className={styles.gapLabel}>Declared</div>
+            <div className={styles.gapSaid}>{c.declaredIncome ? formatINR(c.declaredIncome, { compact: false }) : '—'}</div>
           </div>
           <div className={styles.gapArrow} aria-hidden="true" />
           <div>
             <div className={styles.gapLabel}>Bank has seen</div>
-            <div className={styles.gapReal}>{formatINR(b.avgMonthlyCredit, { compact: false })}</div>
+            <div className={styles.gapReal}>{noBank ? 'Nothing on file' : formatINR(b.avgMonthlyCredit, { compact: false })}</div>
           </div>
         </div>
         <p className={styles.gapLine}>
-          {gap > 0
-            ? <>Declared income runs <b>{gap}% above</b> {b.bankStatementMonths} months of bank credits. Press on where the difference comes from.</>
-            : <>Declared income sits within reach of {b.bankStatementMonths} months of bank credits.</>}
+          {noBank
+            ? <>No bank statement on file. Sarthi will rebuild income from their own answers — footfall, bill size and their trade&apos;s margin — and report it as unverified.</>
+            : gap > 0
+              ? <>Declared income runs <b>{gap}% above</b> {b.bankStatementMonths} months of bank credits. Press on where the difference comes from.</>
+              : <>Declared income sits within reach of {b.bankStatementMonths} months of bank credits.</>}
         </p>
       </section>
 
@@ -57,9 +61,11 @@ export default function SarthiBrief() {
       <section>
         <h2 className={styles.head}>On record</h2>
         <dl className={styles.record}>
-          <Row term="Bureau score" value={b.bureauScore} note={b.bureauScore >= 750 ? 'strong' : b.bureauScore >= 700 ? 'acceptable' : 'below comfort'} tone={b.bureauScore >= 750 ? 'clear' : b.bureauScore >= 700 ? 'watch' : 'stamp'} />
-          <Row term="Running EMIs" value={formatINR(b.existingEMIs, { compact: false })} note={b.runningLoans.length ? b.runningLoans.map((l) => l.type).join(', ') : 'nothing outstanding'} />
-          <Row term="Filed as income" value={`${formatINR(b.itrIncome, { compact: false })} in the ITR`} note={b.gstRegistered ? `GST registered ${b.gstVintage}` : 'not GST registered'} />
+          {b.bureauScore == null
+            ? <Row term="Bureau score" value="no record" note="new to credit — nothing to check against" />
+            : <Row term="Bureau score" value={b.bureauScore} note={b.bureauScore >= 750 ? 'strong' : b.bureauScore >= 700 ? 'acceptable' : 'below comfort'} tone={b.bureauScore >= 750 ? 'clear' : b.bureauScore >= 700 ? 'watch' : 'stamp'} />}
+          <Row term="Running EMIs" value={b.existingEMIs == null ? 'not on file' : formatINR(b.existingEMIs, { compact: false })} note={b.runningLoans.length ? b.runningLoans.map((l) => l.type).join(', ') : b.existingEMIs == null ? 'no bureau record' : 'nothing outstanding'} />
+          <Row term="Filed as income" value={b.itrIncome == null ? 'no ITR on file' : `${formatINR(b.itrIncome, { compact: false })} in the ITR`} note={b.gstRegistered ? `GST registered ${b.gstVintage}` : 'not GST registered'} />
           <Row term="Trading for" value={c.businessVintage} note={`${c.employment.toLowerCase()}, ${c.businessName}`} />
           {/* A walk-in has no locality history on file — say so rather than render NaN%. */}
           <Row
@@ -88,10 +94,12 @@ export default function SarthiBrief() {
         </div>
         <div className={styles.moneyRow}>
           <span>Supported by verified income</span>
-          <span className={styles.moneyFig}>{formatINR(elig.maxEligible, { compact: false })}</span>
+          <span className={styles.moneyFig}>{elig.assessable ? formatINR(elig.maxEligible, { compact: false }) : 'Not assessable'}</span>
         </div>
         <p className={styles.moneyNote}>
-          {short > 0
+          {!elig.assessable
+            ? <>No verified income yet, so no eligible amount. The interview can rebuild an indicative figure; a bank statement or ITR settles it.</>
+            : short > 0
             ? <><b>{formatINR(short, { compact: false })} more than the file supports.</b> Calculated from bank credits at {elig.foirPct}% FOIR, less existing EMIs.</>
             : <>Within what the file supports, on bank credits at {elig.foirPct}% FOIR, less existing EMIs.</>}
         </p>

@@ -75,7 +75,7 @@ export function startFrameCapture(visionUrl, onObservation) {
   captureInterval = setInterval(async () => {
     // Stop once the budget is spent, so a long interview cannot drain the day's quota.
     if (sent >= MAX_FRAMES) { clearInterval(captureInterval); captureInterval = null; return; }
-    if (!videoEl || videoEl.readyState < 2) return;
+    if (!stream || !videoEl || videoEl.readyState < 2) return; // no stream while photo capture has the camera
     let base64;
     try {
       const canvas = document.createElement('canvas');

@@ -86,7 +86,7 @@ export default function SarthiReport() {
       </div>
 
       {/* the ledger */}
-      <h2 className={styles.head}>What he said, against what we hold</h2>
+      <h2 className={styles.head}>What they said, against what we hold</h2>
       {r.evidence.length === 0 ? (
         <p className={styles.empty}>No checkable figures came up in this interview.</p>
       ) : (

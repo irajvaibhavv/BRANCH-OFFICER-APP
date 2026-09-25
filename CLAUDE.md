@@ -109,6 +109,9 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   they declared. `computeEligibility(caseData, assessed)` then reports it as rebuilt, never as verified.
 - Findings with no single turn behind them cite `(Flag: field)` or `(Fact: key)`; `validator.js`
   checks those against the flags and collected facts the system actually produced.
+- `vercel.json`'s SPA rewrite must exclude `/api/` (`/((?!api/).*)`), or the Sarthi endpoints return
+  index.html instead of JSON and every interview silently drops to scripted mode. The file cannot
+  carry that note itself: Vercel's schema rejects unknown keys such as `_comment`.
 - No key reaches the bundle: calls go to `/api/sarthi-chat` and `/api/sarthi-vision` — `api/*.js` on
   Vercel (`GEMINI_API_KEY`, optional `GROQ_API_KEY`, never `VITE_`-prefixed), `scripts/sarthi-proxy.mjs` in dev
   (`npm run sarthi`, which loads `.env.local` itself; vite proxies :3001). Both providers sit behind the

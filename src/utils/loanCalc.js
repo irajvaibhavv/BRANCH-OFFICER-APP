@@ -1,7 +1,4 @@
-/*
-  LOAN CALCULATOR — indicative numbers for a customer conversation. Rates are demo values per
-  product; eligibility uses a simple FOIR rule (EMIs must stay within 50% of monthly income).
-*/
+// Indicative EMI / eligibility. FOIR rule: total EMIs within 50% of monthly income.
 export const PRODUCT_RATES = {
   'Business Loan': { rate: 14, maxTenure: 60, minAmt: 100000, maxAmt: 5000000 },
   'MSME Working Capital': { rate: 13, maxTenure: 36, minAmt: 100000, maxAmt: 3000000 },

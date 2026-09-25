@@ -15,13 +15,10 @@ import { useToast } from '../../hooks/useToast';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { formatINR, formatDate } from '../../utils/formatters';
 import { PRODUCT_RATES, PRODUCTS, emi, maxLoan, BASIC_QUESTIONS, FOIR } from '../../utils/loanCalc';
-import { START, km, optimise } from './RouteResult';
+import { START, km, optimise } from '../../utils/route';
 import styles from './plan.module.css';
 
-/*
-  PLAN MY DAY · CUSTOMERS — new walk-ins, leads (file in progress) and existing borrowers (disbursed).
-  Each customer opens a prep screen: the basic questions a lender asks + a loan calculator.
-*/
+// Walk-ins, leads and existing borrowers; each opens a prep screen with questions + loan calculator.
 const KINDS = [
   { id: 'new', label: 'New', tone: 'primary', long: 'New customer', desc: 'Enquired, no file yet' },
   { id: 'lead', label: 'Leads', tone: 'warning', long: 'Lead', desc: 'File in progress' },

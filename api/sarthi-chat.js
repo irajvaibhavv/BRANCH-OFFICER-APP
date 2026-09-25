@@ -1,27 +1,10 @@
-// Vercel serverless function — Sarthi's chat endpoint (Agent 1 and Agent 2).
-// Runs on the server. GEMINI_API_KEY / GROQ_API_KEY are set in the Vercel dashboard and must
-// NEVER carry a VITE_ prefix: Vite inlines VITE_* into the client bundle, publishing the key.
-//
-// Two providers behind one endpoint:
-//   llm  Gemini — reasoning, report writing, area knowledge
-//   slm  Groq / Llama 3.1 8B — fact extraction and question phrasing (~0.3s vs ~2.7s)
-// The CLIENT decides which, before the call (see sarthiModel.js). This file never re-routes a
-// request that failed: retrying elsewhere would cost the first provider's latency on top of the
-// second's, which is slower than having gone straight to the second. The one exception is
-// configuration, not failure — with no GROQ_API_KEY set, 'slm' is served by Gemini so the app
-// behaves exactly as it did before a Groq key existed.
+// Sarthi chat endpoint (Vercel). provider 'llm' = Gemini, 'slm' = Groq; the client routes, this never re-routes.
+// Keys are server-only — never VITE_-prefixed. Without GROQ_API_KEY, 'slm' is served by Gemini.
 
 const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 const SLM_MODEL = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
 
-/*
-  Gemini 3 thinks before it answers, and those thought tokens are charged against
-  maxOutputTokens. Left alone, a 1024-token interview turn spent ~730 of them thinking and
-  returned barely 80 tokens of answer — one long reply away from being truncated mid-```speech```
-  fence, which would break caption/TTS parsing. It also costs seconds of dead air while the
-  borrower waits. So thinking is OFF by default and callers opt back in: the interviewer wants
-  speed, the report writer (which passes a budget) wants the reasoning.
-*/
+// Thinking is off by default: thought tokens count against maxOutputTokens and starve the reply.
 async function callGemini({ systemPrompt, messages, temperature, maxTokens, thinkingBudget }) {
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`,
@@ -83,18 +66,7 @@ async function callGroq({ systemPrompt, messages, temperature, maxTokens }) {
   return data.choices?.[0]?.message?.content || '';
 }
 
-/*
-  Stream Gemini straight through as newline-delimited text chunks.
-
-  The client shows the caption as it arrives and — because the prompt puts the ```speech``` block
-  before the bookkeeping blocks — can start rendering audio while claims and facts are still on
-  the wire. Plain chunks rather than SSE: there is no event type to carry, and the client already
-  has to buffer for fence parsing.
-
-  Errors before the first chunk are returned as JSON with a status, exactly like the buffered
-  path, so the client's retry logic is unchanged. Once bytes are out the status is already 200,
-  so a mid-stream failure can only end the stream — the client keeps whatever text it received.
-*/
+// Plain-text streaming. Errors before the first chunk return JSON with a status, like the buffered path.
 async function streamGemini({ systemPrompt, messages, temperature, maxTokens, thinkingBudget }, res) {
   const upstream = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`,

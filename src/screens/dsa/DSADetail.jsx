@@ -15,12 +15,11 @@ import { GroupedBarChart } from '../../components/charts/BarChart';
 import { commissionFor, approvedMonthly, productMix } from '../../utils/commission';
 import { useAppState } from '../../context/AppStateContext';
 import { useToast } from '../../hooks/useToast';
-import { formatINR, formatDate } from '../../utils/formatters';
-import { fmtTime } from '../home/Dashboard';
-import { RecordingCard } from '../recorder/MeetingRecorder';
+import { formatINR, formatDate, fmtTime } from '../../utils/formatters';
+import RecordingCard from '../../components/meeting/RecordingCard';
 import BottomSheet from '../../components/ui/BottomSheet';
-import QuestionList, { useMeetingQuestions } from '../../components/ui/MeetingPrep';
-import { TOPICS } from '../../utils/meetingPrep';
+import QuestionList, { useMeetingQuestions } from '../../components/meeting/MeetingPrep';
+import { TOPICS } from '../../services/meeting/prep';
 import styles from './dsa.module.css';
 
 const TABS = ['Overview', 'Business', 'Files', 'Meetings', 'Notes'];
@@ -330,7 +329,6 @@ export default function DSADetail() {
           )}
         </motion.div>
       </AnimatePresence>
-
 
       <BottomSheet open={qSheet} onClose={() => setQSheet(false)} title={qTopic ? `${TOPICS[qTopic].label} · ${dsa.name.split(' ')[0]}` : `Questions for ${dsa.name.split(' ')[0]}`}>
         <p className="hint" style={{ marginBottom: 12 }}>Built from {dsa.name.split(' ')[0]}'s approval rate, product mix, pending files, visit gap and open commitments. Tap a question to see why it matters.</p>

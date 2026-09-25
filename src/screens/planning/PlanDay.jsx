@@ -11,19 +11,12 @@ import Badge, { QualityBadge } from '../../components/ui/Badge';
 import { useAppState } from '../../context/AppStateContext';
 import { useToast } from '../../hooks/useToast';
 import { formatINR, toISODate } from '../../utils/formatters';
-import { km, optimise } from './RouteResult';
+import { km, optimise } from '../../utils/route';
 import RouteMap from '../../components/charts/RouteMap';
 import { useLivePosition } from '../../hooks/useGeolocation';
 import styles from './plan.module.css';
 
-/*
-  PLAN MY DAY · DSAs — Zomato-style: filter chips in the top bar narrow the list. DSAs that fit
-  the filters are shown big ("Best matches"), the rest shrink to compact rows so the officer can
-  still pick any DSA directly. Customers sit below (or alone, with the "Customers" chip) so a
-  borrower in a picked DSA's circle can be slotted into the same trip. Then: fastest route, or
-  drag to set their own priority → "Start my day".
-  ?edit=1 reopens today's plan pre-filled so stops can be removed or added; ?picks=a,b pre-selects stops.
-*/
+// ?edit=1 reopens today's plan pre-filled; ?picks=a,b pre-selects stops.
 export const CRITERIA = [
   { id: 'near', label: 'Nearest', sub: 'Least travel', icon: FiMapPin, tone: '#4c1d95' },
   { id: 'rated', label: 'Top rated', sub: 'Best reviews', icon: FiStar, tone: '#f59e0b' },

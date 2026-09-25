@@ -14,7 +14,7 @@ import { useAppState } from '../../context/AppStateContext';
 import { useOffline } from '../../context/OfflineContext';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import { useToast } from '../../hooks/useToast';
-import { summaryToText, fmtClock } from '../../utils/meetingAI';
+import { summaryToText, fmtClock } from '../../services/meeting/transcript';
 import styles from './visits.module.css';
 
 const VISIT_TYPES = ['Scheduled Visit', 'Walk-in', 'Follow-up'];

@@ -2,23 +2,8 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import { useOfflineDetect } from '../hooks/useOfflineDetect';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
-/*
-  OFFLINE MODE (prototype)
-  ------------------------
-  - `isOnline` = browser online status AND NOT the demo "simulate offline" toggle.
-  - Any action performed while offline is pushed onto `queue` (persisted in localStorage).
-  - When we go back online we show "Syncing…" for ~1.5s, then "All data synced" for 3s.
-
-  PRODUCTION NOTES
-  ----------------
-  - Replace localStorage queue with IndexedDB (Dexie/idb) — photos as Blobs, not base64.
-  - Register a Service Worker (Workbox) with:
-      • precache of the app shell so it opens offline
-      • NetworkFirst for API GETs with a cache fallback
-      • Background Sync (`sync` event) that drains the IndexedDB queue and POSTs to the API
-  - Conflict resolution: each queued mutation carries a client UUID + timestamp; server
-    dedupes on UUID so retries are idempotent.
-*/
+// isOnline = browser online && !simulated offline. Offline actions queue in localStorage and "sync" on reconnect.
+// Production: IndexedDB queue + service worker Background Sync, with client UUIDs for idempotent retries.
 const OfflineContext = createContext(null);
 
 export function OfflineProvider({ children }) {

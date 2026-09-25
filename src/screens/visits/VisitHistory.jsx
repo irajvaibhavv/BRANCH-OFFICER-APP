@@ -11,8 +11,7 @@ import StarRating from '../../components/ui/StarRating';
 import FAB from '../../components/ui/FAB';
 import EmptyState from '../../components/ui/EmptyState';
 import { useAppState } from '../../context/AppStateContext';
-import { formatDate, toISODate } from '../../utils/formatters';
-import { fmtTime } from '../home/Dashboard';
+import { formatDate, toISODate, fmtTime } from '../../utils/formatters';
 import styles from './visits.module.css';
 
 const RANGES = ['This week', 'This month', 'All'];

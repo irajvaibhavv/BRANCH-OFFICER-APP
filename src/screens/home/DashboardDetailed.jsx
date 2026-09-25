@@ -8,15 +8,11 @@ import { StatusBadge } from '../../components/ui/Badge';
 import ProgressRing from '../../components/charts/ProgressRing';
 import { listContainer, listItem } from '../../components/layout/Page';
 import { useAppState } from '../../context/AppStateContext';
-import { formatINR, pct } from '../../utils/formatters';
+import { formatINR, pct, fmtTime } from '../../utils/formatters';
 import news from '../../data/mock/news.json';
-import { fmtTime } from './Dashboard';
 import styles from './DashboardDetailed.module.css';
 
-/**
- * HOME — "Detailed" variant (the original layout). Kept alongside the focused version so
- * both can be shown side by side in reviews. Switch via the layout icon on Home or Profile.
- */
+// Original detailed Home layout, kept for side-by-side review.
 export default function DashboardDetailed() {
   const navigate = useNavigate();
   const { stats, todayVisits, getDsa, loanFiles } = useAppState();

@@ -5,45 +5,33 @@ import { FiX } from 'react-icons/fi';
 import { IoCall, IoCamera, IoMic, IoMicOff, IoSend, IoVolumeHigh } from 'react-icons/io5';
 import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
 import AiAvatar from '../../components/sarthi/AiAvatar';
-import { getCase, briefForCitation, buildNewCase, CUSTOM_CASES_KEY } from '../../utils/sarthiTools';
-import { parseClaims, peekSpeech, peekDisplay, writeReport, VISION_URL, COMPLETE_TAG } from '../../utils/sarthiAgent';
-import { extractFacts, askTurn } from '../../utils/sarthiModel';
-import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../utils/sarthiScript';
-import { verifyClaims, computeEligibility, toNumber } from '../../utils/sarthiVerifier';
-import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor } from '../../utils/sarthiMemory';
+import { getCase, briefForCitation, buildNewCase, CUSTOM_CASES_KEY } from '../../services/sarthi/knowledge';
+import { parseClaims, peekSpeech, peekDisplay, writeReport, VISION_URL, COMPLETE_TAG } from '../../services/sarthi/agent';
+import { extractFacts, askTurn } from '../../services/sarthi/model';
+import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../services/sarthi/script';
+import { verifyClaims, computeEligibility, toNumber } from '../../services/sarthi/verifier';
+import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor } from '../../services/sarthi/memory';
 import pdSchema from '../../data/sarthi/pdSchema.json';
-import { getNextAction, directiveText, checkContradictions, checkInternalConsistency, getInterviewConfig, assessIncome } from '../../utils/sarthiController';
-import { validateReport, extractRecommendation } from '../../utils/sarthiValidator';
-import { validateAadhaar, validatePan } from '../../utils/sarthiId';
-import { startFrameCapture, stopCamera, getObservations, resetObservations } from '../../utils/sarthiVideo';
-import { downscale, analysePhoto, PHOTO_ASKS } from '../../utils/sarthiPhoto';
-import { stopSpeaking, listen, canListen, canSpeak } from '../../utils/voice';
-import { speakStreamed } from '../../utils/sarthiStream';
+import { getNextAction, directiveText, checkContradictions, checkInternalConsistency, getInterviewConfig, assessIncome } from '../../services/sarthi/controller';
+import { validateReport, extractRecommendation } from '../../services/sarthi/validator';
+import { validateAadhaar, validatePan } from '../../services/sarthi/idChecks';
+import { startFrameCapture, stopCamera, getObservations, resetObservations } from '../../services/sarthi/video';
+import { downscale, analysePhoto, PHOTO_ASKS } from '../../services/sarthi/photo';
+import { stopSpeaking, listen, canListen, canSpeak } from '../../services/voice';
+import { speakStreamed } from '../../services/sarthi/stream';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { SARTHI_VOICE } from '../../utils/sarthiVoice';
+import { SARTHI_VOICE } from '../../services/sarthi/voice';
 import voiceManifest from '../../data/sarthi/voiceManifest.json';
-import { useSarthiReports } from './SarthiHome';
+import { useSarthiReports } from '../../hooks/useSarthiReports';
 import styles from './SarthiInterview.module.css';
 
-/*
-  The interview. A one-way video call: the borrower's camera fills the screen, Sarthi is the
-  avatar PIP, and the only text on screen is the live caption. The phone is in the borrower's
-  hands here, so the tab bar is hidden (see PersistentTabBar in app/router.jsx) and there is no
-  way out except "End".
+// One-way video interview. Live (Gemini via proxy) or scripted when no proxy is reachable;
+// everything after the interview is identical either way. Tab bar is hidden: the borrower holds the phone.
 
-  Two engines behind the same UI:
-   - live      — Gemini through the proxy (Agent 1), claims captured from ```claim``` blocks
-   - scripted  — sarthiScript.js, used when the proxy is unreachable so a demo always completes
-  Everything after the interview (verification, eligibility, validation) is identical either way.
-*/
-
-/* Controller field names → the verifier's claim types, so the same finding from both can be
-   recognised as one. Only fields both sides actually check appear here. */
+// Controller field → verifier claim type, so one finding from both sides is recognised as one.
 const CLAIM_FIELD = { monthly_income: 'income', existing_emi: 'existingEmi', monthly_rent: 'rent' };
 
-/* Upstream statuses that may clear on their own, so live mode is worth trying again next turn. */
 const TRANSIENT = new Set([429, 500, 502, 503, 504]);
-/** Schema sections by id, so a controller instruction can be matched back to its field list. */
 const SECTION_BY_ID = Object.fromEntries(pdSchema.sections.map((sec) => [sec.id, sec]));
 
 const save = (key, value) => {
@@ -56,12 +44,8 @@ export default function SarthiInterview() {
   const isIntake = id === 'new';
   const [, setReports] = useSarthiReports();
   const [, setCases] = useLocalStorage(CUSTOM_CASES_KEY, []);
-  // Both of these must keep the same identity across renders: the startup effect below depends on
-  // caseData, and a fresh object each render would restart the interview on every keystroke.
-  // getCase() re-parses localStorage, so a walk-in would otherwise come back as a new object.
+  // Stable identities: the startup effect keys off caseData, and getCase() re-parses localStorage.
   const existing = useMemo(() => (isIntake ? null : getCase(id)), [id, isIntake]);
-  // In intake the record is assembled answer by answer; until then it is a placeholder so the
-  // screen has a name to show and the report writer has something to attach to.
   const intake = useRef({});
   const built = useRef(null);
   const placeholder = useMemo(() => ({
@@ -89,8 +73,7 @@ export default function SarthiInterview() {
   const [photoBusy, setPhotoBusy] = useState(false);
   const [shownPhoto, setShownPhoto] = useState(null);
   const [collected, setCollected] = useState({});
-  // How much of the PD schema is actually filled — a truer progress bar than counting questions,
-  // because the controller ends on coverage, not on a question count.
+  // Schema coverage, not question count — the controller ends on coverage.
   const [covered, setCovered] = useState(null);
   const lastLine = useRef({ text: '', speech: '' });
   const photos = useRef([]);
@@ -101,15 +84,8 @@ export default function SarthiInterview() {
   const claims = useRef([]);
   const scriptRef = useRef([]);
   const stepRef = useRef(0);
-  // Structured PD memory — what the controller reads to decide the next question. Held in a ref
-  // because every read happens inside an async turn callback.
   const memory = useRef(createEmptyMemory(null));
-  /*
-    The case as it stands right now. A walk-in starts as `placeholder` and is rebuilt mid-interview
-    the moment the model learns their trade and area, which is what lets later prompts carry real
-    area and business knowledge. It lives in a ref, not state, because the startup effect keys off
-    `caseData` — giving that a new identity halfway through would restart the interview.
-  */
+  // A walk-in's case is rebuilt mid-interview; a ref, because a new caseData identity would restart it.
   const caseRef = useRef(null);
   const demoRef = useRef(false);
   const mutedRef = useRef(false);
@@ -145,10 +121,6 @@ export default function SarthiInterview() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeMode]);
 
-  /**
-   * `text` is the Hinglish caption on screen; `speech` is the Devanagari the voice reads, because
-   * a Hindi voice pronounces romanized Hindi as English spelling. Falls back to the caption.
-   */
   const say = useCallback((text, { then, speech, again } = {}) => {
     lastLine.current = { text, speech };
     if (!again) setAsked((n) => n + 1);
@@ -160,10 +132,7 @@ export default function SarthiInterview() {
       return () => clearTimeout(t);
     }
     const line = speech || text;
-    // Scripted lines are pre-rendered (npm run sarthi:voice), so a demo needs no TTS call at all:
-    // no quota to run out, no venue wifi to fail, no lag before the question. Live model text is
-    // generated on the fly and is not in the manifest, so it falls through to the API — and is
-    // spoken sentence by sentence, so the first one starts playing while the rest still render.
+    // Scripted lines play pre-rendered audio; live text is streamed sentence by sentence.
     speakStreamed(line, {
       voice: SARTHI_VOICE,
       src: voiceManifest[line],
@@ -180,16 +149,7 @@ export default function SarthiInterview() {
     say(lastLine.current.text, { speech: lastLine.current.speech, again: true });
   }, [say]);
 
-  /*
-    Build (or rebuild) a walk-in's case record from what the interview has learned so far.
-
-    This is what makes a fully-live walk-in work. The interviewer prompt injects area and trade
-    knowledge looked up from `areaKey`/`businessKey`, and a walk-in has neither until they say what
-    they do and where. So the first questions run ungrounded against the placeholder, and the
-    moment the trade is known the record is rebuilt and every later prompt carries the real margin
-    ranges, trap questions and rent bands. Re-running it as more arrives is cheap and keeps the
-    record honest; nothing here is invented, every field comes from an answer.
-  */
+  // Rebuilds a walk-in's case from answers so far, so later prompts get real area and trade knowledge.
   const rebuildWalkIn = useCallback(() => {
     const c = memory.current.collected;
     if (!c.business_type) return null; // nothing to ground on yet
@@ -270,24 +230,8 @@ export default function SarthiInterview() {
     memory.current = recordTurn(memory.current, 'user', text);
 
     try {
-      /*
-        Two model calls, in this order, and the order is the point.
-
-        First a small extractor pulls named fields out of the answer just given. Only then does
-        the controller choose the next topic — so it decides on THIS turn's facts, not the
-        previous turn's. That is what makes the directive correct rather than merely good enough,
-        and it is why the split is worth a second round trip: the extractor is a pattern task
-        routed to the SLM (~0.3s), so the pair still costs less than the single Gemini call it
-        replaces.
-
-        The question call also still emits a ```facts``` fence. That is deliberate redundancy,
-        not a leftover: if extraction fails or comes back empty, the fence fills the gap, and a
-        dropped fact is uniquely expensive here — the controller would keep re-asking the same
-        question for the rest of the interview.
-      */
-      // Snapshot BEFORE any of this turn's facts land. checkContradictions compares the new
-      // facts against the state that preceded them — most importantly income_mentions, where
-      // comparing the list against a value already appended to it would never detect coaching.
+      // Extract first, then pick the next topic, so the controller decides on THIS turn's facts.
+      // Snapshot before merging: checkContradictions and coaching detection compare against prior state.
       const before = memory.current;
 
       let facts = {};
@@ -302,10 +246,6 @@ export default function SarthiInterview() {
       }
       if (Object.keys(facts).length) memory.current = updateMemory(memory.current, { ...facts, _verbatim: text });
 
-      /*
-        A walk-in's record is rebuilt as soon as the model knows their trade, so the controller and
-        the next prompt both see real area and business knowledge instead of the placeholder.
-      */
       if (isIntake) rebuildWalkIn();
       const subject = caseRef.current ?? caseData;
 
@@ -314,21 +254,11 @@ export default function SarthiInterview() {
 
       if (action.action === 'end_interview') { finish(); return; }
 
-      // A document number must be typed: speech recognition mangles 12 digits, and a checksum
-      // that fails because of the microphone is worse than running no check at all.
+      // Document numbers are typed — speech recognition mangles them.
       setTypeMode(typedFieldsFor(memory.current, SECTION_BY_ID[action.section]).length > 0 || !canListen);
 
-      /*
-        Stream the turn, and speak it before it has finished arriving.
-
-        The caption types out from the first tokens, and the moment the ```speech``` fence closes
-        the voice starts — the prompt deliberately puts that block ahead of the claim/facts
-        bookkeeping, so the borrower hears the question while the rest is still on the wire.
-
-        What happens AFTER the question (ask for a photo, end the interview, or just listen) is
-        not known until the stream finishes, but the audio may well finish first. So both sides
-        latch and whichever lands last runs the follow-up exactly once.
-      */
+      // Speak as soon as the speech fence closes. The follow-up (photo / end / listen) runs once,
+      // after whichever of audio or stream finishes last.
       let spokenYet = false;
       let audioDone = false;
       let streamDone = false;
@@ -367,8 +297,7 @@ export default function SarthiInterview() {
       const { display, speech, claims: found, facts: fenced, complete, photo } = parseClaims(raw, borrowerTurn);
       claims.current.push(...found);
 
-      // Fold in anything the extractor missed, then let the code-only checks look at the result.
-      // The model never decides that something is a contradiction; it only reports what was said.
+      // Gap-fill from the question call's facts fence, then run the code-only checks.
       const gapFill = Object.fromEntries(Object.entries(fenced).filter(([k]) => !(k in facts)));
       memory.current = updateMemory(memory.current, { ...gapFill, _verbatim: text });
       facts = { ...gapFill, ...facts };
@@ -406,28 +335,18 @@ export default function SarthiInterview() {
       after = photo ? () => setPhotoAsk(photo) : complete ? finish : null;
 
       if (spokenYet) {
-        // Already speaking from the stream. Settle the caption to the fully parsed text (a fence
-        // that closed late could have left a fragment) and let the latch run the follow-up.
         setCaption({ who: 'ai', text: display });
         lastLine.current = { text: display, speech };
         streamDone = true;
         advance();
       } else {
-        // The speech block never arrived mid-stream — a non-streaming server, or a reply that put
-        // the block last anyway. Fall back to speaking the finished turn.
+        // No speech fence arrived mid-stream — speak the finished turn.
         streamDone = true;
         audioDone = true;
         say(display, { speech, ...(after ? { then: after } : {}) });
       }
     } catch (e) {
-      /*
-        askAgent has already retried the transient cases. Falling back is therefore right, but
-        making it permanent is not: a 503 means Google was busy for a moment, and locking the
-        rest of the interview to the script over one blip is the worst outcome in a demo. So we
-        borrow one scripted question to keep the conversation moving and let the NEXT turn try
-        live again. Only a hard failure — bad key, retired model, no proxy at all — sticks,
-        because that one will never recover on its own.
-      */
+      // Borrow one scripted question and retry live next turn; only a permanent error locks to the script.
       const permanent = e?.status != null && !TRANSIENT.has(e.status);
       console.warn(`[sarthi] live turn failed (${e?.message}) — ${permanent ? 'switching to scripted mode' : 'using a scripted question, will retry live next turn'}`);
       if (permanent) {
@@ -492,9 +411,7 @@ export default function SarthiInterview() {
     const turns = transcript.current;
     const captured = claims.current;
 
-    // Intake: assemble the file from what was said, then treat it like any other case.
-    // A live walk-in has been rebuilding its record all along, so take that and skip ahead;
-    // only the scripted fallback still has to assemble one from intake.current at the end.
+    // A live walk-in has been rebuilt all along; the scripted fallback assembles one from intake.
     let subject = caseRef.current ?? caseData;
     if (isIntake && !built.current) {
       setProgress('Opening the file…');
@@ -527,19 +444,10 @@ export default function SarthiInterview() {
     setProgress('Verifying claims against bureau and bank data…');
     const { evidence, flags: claimFlags } = verifyClaims(captured, subject);
 
-    /*
-      Two independent sources of doubt, both decided in code:
-       - verifyClaims  — what they said against the bureau, the bank and the area data
-       - the controller's flags — contradictions caught live, plus, for a walk-in with nothing on
-         file, their own numbers checked against each other and against their trade's real margins
-      The second is the only thing standing behind a walk-in's file, so it runs once more at the
-      end, when every answer is in and the arithmetic finally has all its inputs.
-    */
+    // Rerun at the end, when every answer is in.
     const consistency = checkInternalConsistency(memory.current, subject);
 
-    // The verifier and the controller both catch a bad income figure, by different routes. The
-    // verifier's version is the one with a turn number and a verdict behind it, so where both
-    // fired on the same field the controller's duplicate is dropped rather than printed twice.
+    // Where verifier and controller flag the same field, keep the verifier's (it has a turn).
     const settled = new Set(claimFlags.map((f) => f.claimType).filter(Boolean));
     const flags = [...claimFlags, ...memory.current.flags, ...consistency]
       .filter((f) => !(f.type === 'contradiction' && settled.has(CLAIM_FIELD[f.field])))
@@ -613,15 +521,7 @@ export default function SarthiInterview() {
     caseRef.current = caseData;
 
     (async () => {
-      /*
-        A walk-in gets the live interview too. There is no bureau or bank record behind them, so
-        the ONLY evidence is whether their own numbers hang together — which takes follow-ups that
-        cannot be scripted in advance. The scripted script below remains the fallback.
-
-        The opening question IS the reachability probe. A separate probe used to cost a whole
-        extra request before the borrower heard a word, which on a per-DAY quota is an interview's
-        worth of budget spent on saying hello, plus a second of dead air.
-      */
+      // The opening question is the reachability probe — no separate probe request.
       setPhase('live');
       history.current = [{ role: 'user', content: '[System: the borrower has joined the call. Greet them and begin the interview.]' }];
 
@@ -641,14 +541,6 @@ export default function SarthiInterview() {
         return;
       } catch (e) {
         if (cancelled) return;
-        /*
-          Opening a scripted question is not the same as giving up on the interview. A 429 from a
-          per-minute quota, or a 503, clears in seconds — locking every remaining turn to the
-          script over one blip at hello is the worst possible trade in a demo. So only a failure
-          that cannot recover on its own (bad key, retired model, no proxy at all) sets demoRef;
-          anything transient borrows the scripted opening and lets turn two try live again, which
-          is exactly how a mid-interview stumble already behaves.
-        */
         const permanent = e?.status != null && !TRANSIENT.has(e.status);
         demoRef.current = permanent;
         liveRef.current = !permanent;
@@ -712,8 +604,7 @@ export default function SarthiInterview() {
 
   return (
     <div className={styles.call}>
-      {/* The band: whoever is on camera, with Sarthi alongside. Everything the applicant has to
-          read lives on the sheet below, where dark text on paper survives direct sunlight. */}
+      {/* Everything the applicant reads is on the sheet below, for legibility in sunlight. */}
       <header className={styles.band}>
         <VideoFeed onCameraReady={onCameraReady} onDenied={() => setCameraOn(false)} />
         <div className={styles.bandTop}>
@@ -729,8 +620,6 @@ export default function SarthiInterview() {
         <div className={styles.sheetHead}>
           <span className={styles.step}>{asked > 0 ? `Sawaal ${Math.min(asked, total)} / ${total}` : 'Shuru ho raha hai'}</span>
           <span className={styles.progress} aria-hidden="true">
-            {/* Coverage of the PD schema once anything has been collected — that is what actually
-                ends the interview. Falls back to the question count before the first answer. */}
             <span className={styles.progressFill} style={{ width: `${Math.min(96, covered?.filled ? covered.pct : (asked / total) * 100)}%` }} />
           </span>
         </div>

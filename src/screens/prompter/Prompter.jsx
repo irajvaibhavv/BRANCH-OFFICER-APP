@@ -4,16 +4,11 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { FiX, FiChevronLeft, FiChevronRight, FiCheck, FiPhone, FiMic, FiHelpCircle, FiSquare } from 'react-icons/fi';
 import Avatar from '../../components/ui/Avatar';
 import { useAppState } from '../../context/AppStateContext';
-import { useMeetingQuestions } from '../../components/ui/MeetingPrep';
-import { TOPICS } from '../../utils/meetingPrep';
+import { useMeetingQuestions } from '../../components/meeting/MeetingPrep';
+import { TOPICS } from '../../services/meeting/prep';
 import styles from './prompter.module.css';
 
-/*
-  TELEPROMPTER — /prompter?dsa=…&mode=call|record
-  One question at a time, full screen, so the officer can glance and ask while on a call or
-  in the room. Swipe / Next moves on; "Covered" ticks it. Record mode keeps the meeting clock
-  and hands off to the recorder's processing step when stopped, so the summary flow is unchanged.
-*/
+// /prompter?dsa=…&mode=call|record — one question at a time. Record mode hands off to the recorder.
 const fmtClock = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
 export default function Prompter() {

@@ -75,12 +75,6 @@
 .miniOn { background: color-mix(in srgb, var(--primary) 4%, var(--card)); }
 .miniName { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ---------- Plan chooser (3 modes) ---------- */
-.modes { display: flex; flex-direction: column; gap: 10px; }
-.mode { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 14px; border-radius: 16px; background: var(--card); border: 1.5px solid var(--hairline); box-shadow: var(--card-shadow); }
-.mode:active { transform: scale(0.99); }
-.modeTitle { font-weight: 700; font-size: 16px; }
-
 /* ---------- Customers ---------- */
 .kindSeg { display: flex; gap: 4px; background: var(--card); padding: 4px; border-radius: 14px; border: var(--card-border); box-shadow: var(--card-shadow); margin-bottom: 14px; }
 .kindBtn { flex: 1; height: 38px; border-radius: 10px; font-weight: 600; font-size: 13px; color: var(--text-2); display: inline-flex; align-items: center; justify-content: center; gap: 6px; }

@@ -1,14 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { FiVideoOff } from 'react-icons/fi';
-import { startCamera } from '../../utils/sarthiVideo';
+import { startCamera } from '../../services/sarthi/video';
 import styles from './VideoFeed.module.css';
 
-/*
-  The applicant's camera, filling the screen like a real video call with Sarthi in the corner.
-  A denied or missing camera is not an error: this layer goes transparent, Sarthi moves to the
-  centre of the screen instead, and the interview carries on — voice and typing are the real
-  channels here, the camera only adds context for the officer.
-*/
+// A denied or missing camera is not an error: the layer goes transparent and the interview carries on.
 export default function VideoFeed({ onCameraReady, onDenied }) {
   const ref = useRef(null);
   const started = useRef(false);

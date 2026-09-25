@@ -16,12 +16,12 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { useToast } from '../../hooks/useToast';
 import DashboardDetailed from './DashboardDetailed';
-import PlanChooser from '../planning/PlanChooser';
+import PlanChooser from '../../components/planning/PlanChooser';
 import { useAuth } from '../../context/AuthContext';
 import { useAppState } from '../../context/AppStateContext';
 import { getGreeting } from '../../utils/greetings';
-import { formatINR, formatDate, pct, toISODate } from '../../utils/formatters';
-import { weatherAt } from '../../utils/weather';
+import { formatINR, formatDate, pct, toISODate, fmtTime } from '../../utils/formatters';
+import { weatherAt } from '../../services/weather';
 import { pendingItems } from '../../utils/pending';
 import news from '../../data/mock/news.json';
 import styles from './Dashboard.module.css';
@@ -37,13 +37,7 @@ const QUICK_ACTIONS = [
   { label: 'Generate Report', desc: 'Daily / weekly summary', icon: FiFileText, to: '/reports', tone: '#16a34a' },
 ];
 
-/**
- * HOME — deliberately minimal. Answers two questions, in order:
- *   1. What do I do next?       → "Up next" visit card with one-tap actions
- *   2. How am I doing today?    → target ring + incentive progress, one row each
- * Needs-attention alerts live at the top of Notifications (counted in the bell badge);
- * everything else (full schedule, stats) lives on Activity / Route.
- */
+// Home answers two things: what next (up-next visit) and how am I doing (target + incentive).
 export default function Dashboard() {
   const navigate = useNavigate();
   const { officer } = useAuth();
@@ -292,11 +286,4 @@ export default function Dashboard() {
       </BottomSheet>
     </Page>
   );
-}
-
-export function fmtTime(t) {
-  if (!t) return '';
-  const [h, m] = t.split(':').map(Number);
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
 }

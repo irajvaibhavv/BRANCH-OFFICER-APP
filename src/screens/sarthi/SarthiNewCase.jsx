@@ -4,21 +4,13 @@ import { FiArrowRight, FiCheck, FiX } from 'react-icons/fi';
 import Page from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { buildNewCase, CUSTOM_CASES_KEY, matchPattern } from '../../utils/sarthiTools';
-import { validateId, PAN_HOLDER } from '../../utils/sarthiId';
+import { buildNewCase, CUSTOM_CASES_KEY, matchPattern } from '../../services/sarthi/knowledge';
+import { validateId, PAN_HOLDER } from '../../services/sarthi/idChecks';
 import businessKnowledge from '../../data/sarthi/businessKnowledge.json';
 import locationKnowledge from '../../data/sarthi/locationKnowledge.json';
 import styles from './SarthiNewCase.module.css';
 
-/*
-  Taking on a walk-in.
-
-  We hold nothing on this person: no bureau record, no bank statements. So the intake captures
-  only what the officer can actually see — who they say they are, what they say they earn, and an
-  identity document that can be checked offline. The interview and the photographs do the rest.
-
-  Nothing here invents a financial figure. An empty file stays empty, and the report says so.
-*/
+// Walk-in intake. No financial figure is invented — an empty file stays empty.
 
 const TRADES = Object.entries(businessKnowledge).map(([key, v]) => ({ key, label: v.label }));
 const VINTAGES = ['Under 1 year', '1–3 years', '3–5 years', '5+ years'];

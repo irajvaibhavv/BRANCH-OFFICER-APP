@@ -1,9 +1,6 @@
 import styles from './AiAvatar.module.css';
 
-/*
-  Sarthi's face on the call. Pure CSS animation — the state prop is the only input:
-  idle (waiting) · speaking (ripples) · listening (green ring + mic) · thinking (shimmer dots).
-*/
+// state: idle | speaking | listening | thinking
 // Read by the applicant holding the phone, so these are in the language being spoken.
 const STATE_TEXT = {
   idle: 'taiyaar',

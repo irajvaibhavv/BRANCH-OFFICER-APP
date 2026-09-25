@@ -3,22 +3,10 @@ import { motion } from 'framer-motion';
 import Page from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
+import { useSarthiReports } from '../../hooks/useSarthiReports';
 import { formatINR, timeAgo } from '../../utils/formatters';
-import { CASES, CUSTOM_CASES_KEY } from '../../utils/sarthiTools';
+import { CASES, CUSTOM_CASES_KEY } from '../../services/sarthi/knowledge';
 import styles from './SarthiHome.module.css';
-
-/*
-  SARTHI AI — the case queue.
-
-  Each row leads with the one number that matters before an interview: how far the applicant's
-  declared income sits from the money their bank account has actually seen. The officer should be
-  able to tell which file is trouble without opening anything.
-
-  Four screens: SarthiHome (/sarthi) · SarthiBrief (/sarthi/brief/:id)
-  · SarthiInterview (/sarthi/interview/:id) · SarthiReport (/sarthi/report/:id)
-*/
-
-export const useSarthiReports = () => useLocalStorage('bo_sarthi_reports', []);
 
 const RISK_WORD = { high: 'High risk', medium: 'Medium risk', low: 'Low risk' };
 

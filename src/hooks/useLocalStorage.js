@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 
-// Persist a piece of state in localStorage. All prototype "backend" state lives here.
-// In production this layer would be replaced by IndexedDB (via idb/Dexie) for larger
-// payloads like photos and a sync queue consumed by a service worker.
 export function useLocalStorage(key, initialValue) {
   const [value, setValue] = useState(() => {
     try {

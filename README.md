@@ -26,35 +26,37 @@ On a desktop browser the app renders inside a phone frame. On a real phone (or D
 ## Project structure
 
 ```
+api/                       Vercel serverless functions (Sarthi chat + vision proxy; keys stay server-side)
+scripts/
+  sarthi-proxy.mjs         Local stand-in for api/ (npm run sarthi)
+  prerender-voice.mjs      Pre-renders scripted Sarthi audio to public/sarthi-audio (npm run sarthi:voice)
 src/
-  main.jsx                 Entry point — mounts <App/> and loads global CSS
-  app/
-    App.jsx                Root: global providers → PhoneFrame → routed screens
-    router.jsx             Route table + auth guards (RequireAuth, GuestOnly) + persistent tab bar
-  screens/                 One folder per feature. Each has its screen(s) + a *.module.css
-    auth/                  Login (OTP), PIN set/unlock
-    home/                  Dashboard (Plan your day, Up next, stats, alerts)
-    planning/              Plan my day: DSA route (PlanDay), customers (CustomerPlan), branch (BranchPlan), RoutePlanner/RouteResult
-    dsa/                   DSA directory, profile, compare, add
-    visits/                Visit history, log a visit
-    recorder/              AI meeting recorder + summaries
-    ai/                    SAARTHI AI — handover voice interviews + reports
-    scheduler/ calendar/   Meetings and calendar
-    documents/             Loan file tracker, document checklist
-    incentive/ leaderboard/ reports/ notifications/ help/ profile/ more/
+  main.jsx                 Entry point
+  app/                     App.jsx (provider stack), router.jsx (routes + auth guards + tab bar)
+  screens/                 One folder per feature, each with its own *.module.css
+    auth/ home/ planning/ dsa/ visits/ recorder/ prompter/ scheduler/ calendar/
+    documents/ incentive/ leaderboard/ reports/ notifications/ help/ profile/ more/
+    assistant/             SAARTHI AI — scripted handover interviews (/ai)
+    sarthi/                Sarthi AI — live PD interviews (/sarthi)
   components/
-    ui/                    Reusable primitives: Button, Card, Badge, Avatar, Input, BottomSheet, Toast, EmptyState, …
-    layout/                App chrome: PhoneFrame, TopBar, BottomTabBar, Page (transitions), OfflineBanner
-    charts/                ProgressRing, BarChart, MiniMetric
-  context/                 Global state via React context
-    AppStateContext.jsx    The in-memory "database": DSAs, visits, loan files, day plan, notifications (+ demo seeding)
-    AuthContext.jsx        Session, PIN, logout (wipes all bo_* localStorage keys)
-    OfflineContext.jsx     Offline simulation + sync queue
-    ThemeContext.jsx       Light/dark
-  hooks/                   useLocalStorage, useToast, useGeolocation, useOfflineDetect
-  utils/                   Pure logic, no React: formatters, loanCalc (EMI/eligibility), smfgAI (interview flows), voice (TTS/STT), meetingAI, meetingPrep, commission
-  data/mock/               Seed JSON (dsas, customers, visits, loanFiles, …). Dates are shifted to "today" on load
-  styles/                  variables.css (design tokens), global.css, animations.css
+    ui/                    Primitives: Button, Card, Badge, Avatar, Input, BottomSheet, Toast, …
+    layout/                PhoneFrame, TopBar, BottomTabBar, Page, OfflineBanner
+    charts/                ProgressRing, BarChart, MiniMetric, RouteMap
+    meeting/               MeetingPrep question list
+    sarthi/                AiAvatar, VideoFeed
+  context/                 AppState (the local "database"), Auth, Offline, Theme
+  hooks/                   useLocalStorage, useToast, useGeolocation, useOfflineDetect, useSarthiReports
+  services/                Side-effecting or simulated-AI logic, no React
+    voice.js               TTS (ElevenLabs / Murf / browser) + browser STT
+    weather.js
+    assistant/flows.js     SAARTHI AI interview flows
+    meeting/               transcript.js (meeting summaries), prep.js (meeting questions)
+    sarthi/                agent, controller, memory, model, verifier, validator, script, stream, …
+  utils/                   Pure helpers: formatters, loanCalc, commission, colors, greetings, pending, qualityTags
+  data/
+    mock/                  Seed JSON; dates shifted to "today" on load
+    sarthi/                Sarthi knowledge files + PD schema + voice manifest
+  styles/                  variables.css (tokens), global.css, animations.css, sarthi.css
 ```
 
 Conventions

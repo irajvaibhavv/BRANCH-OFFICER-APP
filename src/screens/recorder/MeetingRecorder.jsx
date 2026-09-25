@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FiMic, FiSquare, FiPause, FiPlay, FiCheck, FiCpu, FiShield, FiWifiOff, FiFileText, FiShare2, FiCopy, FiCalendar, FiMapPin, FiChevronRight, FiClock, FiUser, FiBriefcase } from 'react-icons/fi';
+import { FiMic, FiSquare, FiPause, FiPlay, FiCheck, FiCpu, FiShield, FiWifiOff, FiFileText, FiShare2, FiCopy, FiCalendar, FiMapPin, FiChevronRight, FiUser, FiBriefcase } from 'react-icons/fi';
 import { IoLogoWhatsapp } from 'react-icons/io5';
 import Page from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
@@ -11,27 +11,25 @@ import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
 import EmptyState from '../../components/ui/EmptyState';
 import { Select } from '../../components/ui/Input';
-import QuestionList, { useMeetingQuestions } from '../../components/ui/MeetingPrep';
+import QuestionList, { useMeetingQuestions } from '../../components/meeting/MeetingPrep';
+import RecordingCard, { SENTIMENT_TONE } from '../../components/meeting/RecordingCard';
 import { useAppState } from '../../context/AppStateContext';
 import { useOffline } from '../../context/OfflineContext';
 import { useToast } from '../../hooks/useToast';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { formatDate } from '../../utils/formatters';
-import { buildTranscript, buildSummary, buildEngagementTranscript, summaryToText, fmtClock } from '../../utils/meetingAI';
-import { fmtTime } from '../home/Dashboard';
+import { formatDate, fmtTime, capitalize } from '../../utils/formatters';
+import { buildTranscript, buildSummary, buildEngagementTranscript, summaryToText, fmtClock } from '../../services/meeting/transcript';
 import styles from './recorder.module.css';
 
 const CAPTION_START = 2; // seconds before the first live caption appears
 const CAPTION_EVERY = 5; // seconds between captions while recording
 const PROC_STEPS = ['Saving audio securely', 'Transcribing speech', 'Identifying speakers', 'Summarising key points'];
 
-const SENTIMENT_TONE = { positive: 'success', neutral: 'neutral', 'needs follow-up': 'warning' };
 
 /* =====================================================================================
    /record?dsa=…  — record a DSA meeting → live captions → AI summary
    ===================================================================================== */
 export default function MeetingRecorder() {
-  const navigate = useNavigate();
   const [params] = useSearchParams();
   const { dsas, getDsa, addRecording } = useAppState();
   const { isOnline } = useOffline();
@@ -304,25 +302,6 @@ export function RecordingsList() {
   );
 }
 
-/** Compact list card used on the DSA page and the recordings list. */
-export function RecordingCard({ rec, dsa, showDsa = false }) {
-  const navigate = useNavigate();
-  return (
-    <Card padding={16} onClick={() => navigate(`/recordings/${rec.id}`)}>
-      <div className={styles.recRow}>
-        <div className={styles.recIcon}><FiMic size={20} /></div>
-        <div className="grow" style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 600 }} className="truncate">{showDsa ? dsa?.name : rec.summary.headline}</div>
-          <div className="hint row" style={{ gap: 6 }}>
-            <FiClock size={12} /> {formatDate(rec.date, { day: 'numeric', month: 'short' })} · {fmtTime(rec.time)} · {fmtClock(rec.durationSecs)}
-          </div>
-        </div>
-        <Badge tone={SENTIMENT_TONE[rec.summary.sentiment]} soft>{cap(rec.summary.sentiment)}</Badge>
-      </div>
-    </Card>
-  );
-}
-
 /* ---------- Summary + transcript view (shared by fresh result and saved detail) ---------- */
 function RecordingResult({ rec, dsa, fresh = false, readOnly = false }) {
   const navigate = useNavigate();
@@ -368,7 +347,7 @@ function RecordingResult({ rec, dsa, fresh = false, readOnly = false }) {
             <Card className="tint-primary">
               <div className="row-between" style={{ marginBottom: 8 }}>
                 <span className="hint" style={{ color: 'var(--primary)', fontWeight: 600 }}>AI summary</span>
-                <Badge tone={SENTIMENT_TONE[s.sentiment]} soft>{cap(s.sentiment)}</Badge>
+                <Badge tone={SENTIMENT_TONE[s.sentiment]} soft>{capitalize(s.sentiment)}</Badge>
               </div>
               <div className={styles.headline}>{s.headline}</div>
               <div className={styles.hl} style={{ marginTop: 14 }}>
@@ -513,4 +492,3 @@ function AutoScroll({ dep }) {
 }
 
 const initials = (n = '') => n.split(' ').map((x) => x[0]).slice(0, 2).join('').toUpperCase();
-const cap = (s = '') => s.charAt(0).toUpperCase() + s.slice(1);

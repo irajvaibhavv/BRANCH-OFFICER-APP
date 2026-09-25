@@ -1,6 +1,4 @@
-// Vercel serverless function — Sarthi's vision endpoint.
-// Takes one base64 JPEG frame from the interview and returns a short, factual observation.
-// Observations are advisory context for the officer, never shown to the borrower.
+// Sarthi vision endpoint (Vercel): one JPEG frame in, a short factual observation out.
 
 const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
@@ -39,9 +37,7 @@ export default async function handler(req, res) {
           generationConfig: {
             temperature: 0.3,
             maxOutputTokens: prompt ? 200 : 100,
-            // Mandatory here, not an optimisation: thought tokens count against maxOutputTokens,
-            // and a thinking model given a 100-token ceiling spends the lot thinking and returns
-            // an empty string. Every observation would silently come back blank.
+            // Required: with thinking on, a 100-token ceiling returns an empty string.
             thinkingConfig: { thinkingBudget: 0 },
           },
         }),

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FiSun, FiMoon, FiGlobe, FiBell, FiLock, FiShield, FiFileText, FiLogOut, FiChevronRight, FiWifiOff, FiRefreshCw, FiLayout, FiType } from 'react-icons/fi';
 import Page from '../../components/layout/Page';
@@ -18,7 +17,6 @@ import { useToast } from '../../hooks/useToast';
 import styles from './profile.module.css';
 
 export default function ProfileSettings() {
-  const navigate = useNavigate();
   const { officer, session, logout, setPin, hasPin } = useAuth();
   const { isDark, toggleTheme, isLargeText, toggleTextSize } = useTheme();
   const { simulateOffline, setSimulateOffline, queue } = useOffline();

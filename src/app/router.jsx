@@ -3,11 +3,6 @@ import { AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import BottomTabBar from '../components/layout/BottomTabBar';
 
-/*
-  Route table + auth guards. Add a screen here and it is reachable; the bottom tab bar
-  lives in components/layout and maps paths to tabs.
-*/
-
 // Auth
 import LoginScreen from '../screens/auth/LoginScreen';
 import OTPScreen from '../screens/auth/OTPScreen';
@@ -26,7 +21,7 @@ import RouteResult from '../screens/planning/RouteResult';
 import PlanDay from '../screens/planning/PlanDay';
 import CustomerPlan, { CustomerDetail } from '../screens/planning/CustomerPlan';
 import BranchPlan from '../screens/planning/BranchPlan';
-import AIHome, { AISession, AIReport } from '../screens/ai/SMFGAI';
+import AIHome, { AISession, AIReport } from '../screens/assistant/Assistant';
 import VisitLogger from '../screens/visits/VisitLogger';
 import IncentiveTracker from '../screens/incentive/IncentiveTracker';
 import DocumentChecklist from '../screens/documents/DocumentChecklist';
@@ -40,7 +35,11 @@ import HelpFAQ from '../screens/help/HelpFAQ';
 import ProfileSettings from '../screens/profile/ProfileSettings';
 import Prompter from '../screens/prompter/Prompter';
 import MeetingRecorder, { RecordingDetail, RecordingsList, EngagementDetail } from '../screens/recorder/MeetingRecorder';
-import { SarthiHome, SarthiNewCase, SarthiBrief, SarthiInterview, SarthiReport } from '../screens/sarthi';
+import SarthiHome from '../screens/sarthi/SarthiHome';
+import SarthiNewCase from '../screens/sarthi/SarthiNewCase';
+import SarthiBrief from '../screens/sarthi/SarthiBrief';
+import SarthiInterview from '../screens/sarthi/SarthiInterview';
+import SarthiReport from '../screens/sarthi/SarthiReport';
 
 /** Persistent tab bar — on every screen after login (hidden only during auth). */
 export function PersistentTabBar() {
@@ -52,11 +51,7 @@ export function PersistentTabBar() {
   return <BottomTabBar />;
 }
 
-/**
- * Auth gate:
- *  - no session            → /login (OTP)
- *  - session + PIN, locked → /login/pin (quick login)
- */
+// No session → /login; session + PIN but locked → /login/pin.
 function RequireAuth() {
   const { isAuthed, session, hasPin } = useAuth();
   const location = useLocation();

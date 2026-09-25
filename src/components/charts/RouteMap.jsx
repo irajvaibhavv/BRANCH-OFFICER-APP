@@ -4,16 +4,10 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useOffline } from '../../context/OfflineContext';
 import { useTheme } from '../../context/ThemeContext';
+import { START } from '../../utils/route';
 import styles from './RouteMap.module.css';
 
-/**
- * Live route map: you / branch → stops in the given order, on real map tiles (Leaflet + CARTO,
- * no API key). Markers and the route line are re-rendered from props, so the map updates the
- * moment stops are added, removed or reordered, and the viewport re-fits to the new route.
- * Offline (or tiles blocked) it degrades to the flat SVG preview so demos never show a grey box.
- * Production: swap the tile layer for Google Maps / Mapbox with the same marker logic.
- */
-export const START = { id: 'branch', lat: 18.5308, lng: 73.8475 };
+// Leaflet + CARTO tiles; falls back to the SVG preview when offline.
 
 const TILES = {
   light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',

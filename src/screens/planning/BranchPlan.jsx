@@ -12,10 +12,7 @@ import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { toISODate } from '../../utils/formatters';
 import styles from './plan.module.css';
 
-/*
-  PLAN MY DAY · BRANCH — a no-travel day. The task list is built from live data: files stuck on
-  documents, files under review, quiet DSAs to call, meetings to confirm. Ticks persist for the day.
-*/
+// No-travel day: tasks built from live data. Ticks persist for the day.
 const daysSince = (iso) => (iso ? Math.floor((Date.now() - new Date(iso)) / 86400000) : 999);
 
 export default function BranchPlan() {

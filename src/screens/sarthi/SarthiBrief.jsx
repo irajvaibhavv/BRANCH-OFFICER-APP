@@ -5,17 +5,10 @@ import Page from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import EmptyState from '../../components/ui/EmptyState';
 import { formatINR } from '../../utils/formatters';
-import { getCase, lookupRiskPattern } from '../../utils/sarthiTools';
-import { computeEligibility } from '../../utils/sarthiVerifier';
+import { getCase, lookupRiskPattern } from '../../services/sarthi/knowledge';
+import { computeEligibility } from '../../services/sarthi/verifier';
 import styles from './SarthiBrief.module.css';
 
-/*
-  What the officer reads before handing the phone over.
-
-  The screen opens on the disagreement in the file — declared income against money the bank has
-  actually seen — because that single gap decides how the interview should be run. Everything
-  after it is supporting evidence, kept deliberately quiet so the gap stays loud.
-*/
 export default function SarthiBrief() {
   const { id } = useParams();
   const navigate = useNavigate();

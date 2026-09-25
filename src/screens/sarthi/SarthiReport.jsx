@@ -7,19 +7,10 @@ import TopBar from '../../components/layout/TopBar';
 import EmptyState from '../../components/ui/EmptyState';
 import { useToast } from '../../hooks/useToast';
 import { formatDate } from '../../utils/formatters';
-import { getCase } from '../../utils/sarthiTools';
-import { identitySummary } from '../../utils/sarthiId';
-import { useSarthiReports } from './SarthiHome';
+import { getCase } from '../../services/sarthi/knowledge';
+import { identitySummary } from '../../services/sarthi/idChecks';
+import { useSarthiReports } from '../../hooks/useSarthiReports';
 import styles from './SarthiReport.module.css';
-
-/*
-  The officer's report.
-
-  The verdict is stamped, the way an underwriter marks a file, and it is the one loud element on
-  the screen. Under it the claims are set as a ledger: what was said on the left, what the data
-  says on the right, with the applicant's own words kept underneath so the officer can judge the
-  verdict rather than take it. The written report and the citation audit sit below, quiet.
-*/
 
 const VERDICT = {
   green: { word: 'Cleared', line: 'Nothing in the interview contradicts the file. Move it forward.' },

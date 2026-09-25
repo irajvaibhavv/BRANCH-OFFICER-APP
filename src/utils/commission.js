@@ -1,8 +1,4 @@
-/*
-  DSA commission (payout) — derived deterministically from the DSA record for the POC.
-  Payout is a % of disbursed loan amount, differs by product and by the DSA's slab.
-  In production this comes from the payout master / finance API.
-*/
+// DSA payout: % of disbursed amount by product and slab.
 const TIER_ADJ = { high: 0.15, average: 0, low: -0.1 }; // percentage points added to base payout
 const PRODUCTS = [
   { product: 'Home Loan', base: 0.5 },
@@ -32,10 +28,7 @@ export function approvedMonthly(dsa) {
   });
 }
 
-/*
-  Product mix — how the DSA's files and disbursals split across products, with approval per product.
-  Weights depend on the DSA (stable), so each DSA has a distinct profile. Sums match the DSA totals.
-*/
+// Per-DSA product split (stable weights); sums match the DSA totals.
 const PRODUCT_META = [
   { product: 'Home Loan', short: 'HL', color: '#2563eb', ticket: 3200000 },
   { product: 'LAP', short: 'LAP', color: '#7c3aed', ticket: 4500000 },

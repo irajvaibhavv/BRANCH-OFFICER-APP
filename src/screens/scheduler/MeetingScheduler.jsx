@@ -13,8 +13,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import { Input, PillSelect } from '../../components/ui/Input';
 import { useAppState } from '../../context/AppStateContext';
 import { useToast } from '../../hooks/useToast';
-import { toISODate, formatDate } from '../../utils/formatters';
-import { fmtTime } from '../home/Dashboard';
+import { toISODate, formatDate, fmtTime } from '../../utils/formatters';
 import styles from './scheduler.module.css';
 
 const PRIORITIES = [

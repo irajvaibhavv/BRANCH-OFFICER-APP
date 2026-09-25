@@ -109,5 +109,3 @@
 .share > * { flex: 1; }
 
 /* ---- Recording list card ---- */
-.recRow { display: flex; gap: 12px; align-items: center; }
-.recIcon { width: 44px; height: 44px; border-radius: 13px; background: linear-gradient(135deg, #f87171, #dc2626); color: #fff; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }

@@ -39,3 +39,13 @@ export function pct(part, total) {
   if (!total) return 0;
   return Math.min(100, Math.round((part / total) * 100));
 }
+
+// "14:30" → "2:30 PM"
+export function fmtTime(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+export const capitalize = (s = '') => s.charAt(0).toUpperCase() + s.slice(1);

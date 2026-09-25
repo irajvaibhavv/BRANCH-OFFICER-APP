@@ -9,8 +9,7 @@ import Avatar from '../../components/ui/Avatar';
 import { StatusBadge } from '../../components/ui/Badge';
 import { ProgressBar } from '../../components/charts/MiniMetric';
 import { useAppState } from '../../context/AppStateContext';
-import { toISODate, formatDate } from '../../utils/formatters';
-import { fmtTime } from '../home/Dashboard';
+import { toISODate, formatDate, fmtTime } from '../../utils/formatters';
 import styles from './calendar.module.css';
 
 const DOW = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];

@@ -1,9 +1,4 @@
-/*
-  "Pending" — things carried over that still need the officer's hand today:
-  visits missed, follow-ups flagged on recent visits, and the officer's own to-dos from recorded
-  meetings that are due now. Newest / most urgent first. Documents pending are deliberately left
-  out — they already sit under Needs attention in Notifications.
-*/
+// Carried-over work for today: missed visits, flagged follow-ups, due meeting to-dos.
 import { toISODate } from './formatters';
 
 const DUE_NOW = ['today', 'tomorrow', 'yesterday', 'overdue'];

@@ -11,10 +11,10 @@ import BottomSheet from '../../components/ui/BottomSheet';
 import EmptyState from '../../components/ui/EmptyState';
 import { StatusBadge } from '../../components/ui/Badge';
 import { useAppState } from '../../context/AppStateContext';
-import { fmtTime } from '../home/Dashboard';
 import RouteMap from '../../components/charts/RouteMap';
 import { useLivePosition } from '../../hooks/useGeolocation';
-import PlanChooser from './PlanChooser';
+import PlanChooser from '../../components/planning/PlanChooser';
+import { fmtTime } from '../../utils/formatters';
 import styles from './route.module.css';
 
 export default function RoutePlanner() {

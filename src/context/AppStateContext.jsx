@@ -8,14 +8,9 @@ import notificationsSeed from '../data/mock/notifications.json';
 import engagementsSeed from '../data/mock/engagements.json';
 import customersRaw from '../data/mock/customers.json';
 import { toISODate } from '../utils/formatters';
-import { buildTranscript, buildSummary } from '../utils/meetingAI';
+import { buildTranscript, buildSummary } from '../services/meeting/transcript';
 
-/*
-  The dummy JSON is written around SEED_TODAY. On load we shift every date so that day
-  becomes the real today — so "Today's schedule", the calendar and reports always have data.
-  Demo data re-seeds automatically when the calendar day changes (user-added records are
-  kept only within the same day — fine for a POC; a backend would own this in production).
-*/
+// Seed JSON is dated around SEED_TODAY and shifted so that day becomes today. Re-seeds daily.
 const SEED_TODAY = new Date('2026-09-17');
 const dayDelta = Math.round((new Date(toISODate()) - SEED_TODAY) / 86400000);
 const shiftDate = (iso) => {
@@ -59,11 +54,7 @@ const seedRecordings = (() => {
   }];
 })();
 
-/*
-  APP STATE — the prototype's in-memory "database", seeded from the dummy JSON files
-  and persisted in localStorage so demo actions (log visit, add DSA, etc.) survive reloads.
-  In production each slice maps to an API resource + IndexedDB cache.
-*/
+// The prototype's "database": seeded slices persisted in localStorage.
 const AppStateContext = createContext(null);
 
 const DAILY_TARGET = 5; // fallback for days without a plan (calendar history, before planning)

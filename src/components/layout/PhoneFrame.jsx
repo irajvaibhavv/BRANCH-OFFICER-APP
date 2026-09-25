@@ -3,13 +3,8 @@ import { IoCellular, IoWifi, IoBatteryFull } from 'react-icons/io5';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './PhoneFrame.module.css';
 
-/**
- * On desktop (>= 560px) the whole app renders inside a phone bezel so the demo reads
- * as a real handset. On an actual phone the frame collapses and the app is full-screen.
- *
- * `position: fixed` children (tab bar, FAB, sheets, toasts) stay inside the screen because
- * `.screenArea` has a transform, which makes it their containing block.
- */
+// Phone bezel on desktop (>= 560px), full-screen on phones.
+// .screenArea has a transform, so position: fixed children stay inside the screen.
 const SCREEN_W = 390; // 6.1" phone at 1:1 CSS pixels — text stays full size
 const BEZEL = 12;
 // Desktop stage is rendered at 67% so the phone reads at a natural size on a laptop at 100% browser zoom.

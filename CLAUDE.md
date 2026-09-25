@@ -56,6 +56,16 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   `memory.js` holds the extracted facts (Agent 1 returns them in a ```facts``` fence). Coverage
   is therefore a property of the program, not something the model has to remember on a long call, and
   the interview ends when the schema is satisfied — not when the model decides it is done.
+- **Applicants are mostly tier 2/3 small traders**, so every schema field carries an `ask` — a
+  plain-Hinglish example question ("Mahine mein kul bikri kitni ho jaati hai?") that the directive
+  passes to the model, and the interviewer prompt bans banking jargon (kisht, not EMI; bikri, not
+  turnover). Add a field = add its `ask`. The allowed-key lists in both prompts are generated from the
+  schema (`KEY_GUIDE`, `ENUM_GUIDE`), so never hand-type keys into a prompt. Conditions stay literal:
+  `"key === 'value'"` or `"key > n"`, parsed in `memory.js`, never evaluated.
+- **`monthly_rent` is house rent; `shop_rent` is the premises.** Only shop rent is checked against the
+  area's `avgShopRent` — comparing a room's rent with shop ranges produced false contradictions.
+  Every field is roughly one more turn, and turns are Gemini requests against a per-day quota, so
+  weigh a new field against that.
 - **A turn is two model calls, in a fixed order** (`model.js`). First `extractFacts` pulls
   named fields out of the answer; only then does the controller pick the next topic, so it decides
   on *this* turn's facts. The question call still emits a ```facts``` fence as a backstop — a

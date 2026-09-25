@@ -92,7 +92,10 @@ function buildInstruction(memory, section, caseData, config) {
     const missing = getMissingFields(memory, section);
     // Naming the next two fields lets the model bridge naturally; it still asks one.
     instruction.missingFields = missing.map((f) => f.key);
-    instruction.directive = `Ask about: ${missing.slice(0, 2).map((f) => f.label).join(', then ')}. Ask ONE at a time.`;
+    const [first, second] = missing;
+    instruction.directive = `Ask about: ${first.label}. Plain-words example: "${first.ask}"`
+      + (second ? ` Next after that: ${second.label}.` : '')
+      + ' Ask ONE thing at a time, in your own words, as simply as the example.';
     if (section.id === 'documents') {
       instruction.directive += ' These are verbal cross-checks only — never say or imply the document is being verified.';
     }
@@ -148,15 +151,16 @@ export function checkContradictions(memory, facts, caseData) {
     }
   }
 
-  const rent = toNumber(facts.monthly_rent);
+  // Shop rent only: house rent is never compared with shop rent ranges.
+  const rent = toNumber(facts.shop_rent);
   if (rent != null) {
     const area = lookupLocation(caseData?.areaKey || caseData?.area);
     if (area?.avgShopRent && rent < area.avgShopRent.min * 0.5) {
       flags.push({
-        type: 'contradiction', field: 'monthly_rent',
+        type: 'contradiction', field: 'shop_rent',
         declared: rent, known: area.avgShopRent.min,
         severity: area.source === 'specific' ? 'medium' : 'low',
-        detail: `Declared rent ${rent} is below the ${area.source === 'specific' ? 'area' : 'tier'} minimum ${area.avgShopRent.min}`,
+        detail: `Declared shop rent ${rent} is below the ${area.source === 'specific' ? 'area' : 'tier'} minimum ${area.avgShopRent.min}`,
         turn: memory.turnCount,
       });
     }
@@ -229,11 +233,13 @@ export function checkInternalConsistency(memory, caseData) {
   }
 
   if (income != null) {
+    // Other earners' money feeds the same household.
+    const household = income + (toNumber(c.other_household_income) ?? 0);
     const outgo = (toNumber(c.household_expenses) ?? 0) + (toNumber(c.monthly_rent) ?? 0) + (toNumber(c.existing_emi) ?? 0);
-    if (outgo > 0 && outgo > income * 0.95) {
+    if (outgo > 0 && outgo > household * 0.95) {
       flags.push({
         type: 'internal_consistency', field: 'expenses_vs_income', severity: 'medium',
-        detail: `Stated outgoings (${outgo}) take up nearly all of the stated income (${income}). Ask how the household is managing.`,
+        detail: `Stated outgoings (${outgo}) take up nearly all of the stated household income (${household}). Ask how the household is managing.`,
       });
     }
   }
@@ -252,7 +258,7 @@ export function checkInternalConsistency(memory, caseData) {
     if (pct > 40) {
       flags.push({
         type: 'internal_consistency', field: 'rent_vs_income', severity: 'medium',
-        detail: `Rent ${rent} is ${Math.round(pct)}% of income ${income}. Above 40% is unusual and squeezes any EMI.`,
+        detail: `House rent ${rent} is ${Math.round(pct)}% of income ${income}. Above 40% is unusual and squeezes any EMI.`,
       });
     }
   }

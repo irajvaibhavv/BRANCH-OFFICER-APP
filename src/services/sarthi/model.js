@@ -37,6 +37,11 @@ export function taskForAction(action) {
 
 // ---- fact extraction ----
 
+const ENUM_GUIDE = Object.entries(FIELD_DEFS)
+  .filter(([, d]) => d.options)
+  .map(([k, d]) => `  ${k}: ${d.options.join(' | ')}`)
+  .join('\n');
+
 const EXTRACTOR_SYSTEM = `You extract structured facts from one answer in a loan interview. You are not part of the conversation and you never reply to the borrower.
 
 Return ONLY a JSON object. No prose, no markdown fences, no explanation.
@@ -51,11 +56,9 @@ Rules:
   "dedh lakh" -> 150000, "pachas" -> 50.
 - Money is a plain number of rupees: 300000, not "3 lakh".
 - Enum fields take exactly one of their options:
-  residence_type: owned | rented | family
-  ownership: sole | partnership | family
-  aadhaar_address_match: match | different | not_shared
-  pan_type: personal | firm | not_shared
-  bank_account_type: savings | current | both | not_shared
+${ENUM_GUIDE}
+- monthly_rent is HOUSE rent; shop_rent is the rent of the shop or business premises.
+- informal_loans, repayment_history and assets are short text in their words, e.g. "committee 2000 mahina".
 - area_knowledge_score and business_domain_score are "high", "medium" or "low", and rate how
   CONFIDENTLY the borrower answered a knowledge question — not whether they were factually right.
   An instant specific answer is high; hesitation or "pata nahi" is low.

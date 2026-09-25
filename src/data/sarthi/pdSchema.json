@@ -16,22 +16,39 @@
           "key": "applicant_name",
           "label": "Full name as on Aadhaar",
           "type": "text",
-          "condition": "no_borrower_brief"
+          "condition": "no_borrower_brief",
+          "ask": "Aapka poora naam kya hai?"
         },
         {
           "key": "age",
           "label": "Age",
-          "type": "number"
+          "type": "number",
+          "ask": "Aapki umar kitni hai?"
         },
         {
           "key": "family_size",
           "label": "Family members",
-          "type": "number"
+          "type": "number",
+          "ask": "Ghar mein kul kitne log hain?"
         },
         {
           "key": "dependents",
           "label": "Dependents (children, elderly)",
-          "type": "number"
+          "type": "number",
+          "ask": "Inmein se kitne bachche ya buzurg aap par nirbhar hain?"
+        },
+        {
+          "key": "earning_members",
+          "label": "Earning members in the household",
+          "type": "number",
+          "ask": "Ghar mein aapke alawa aur kaun kamata hai?"
+        },
+        {
+          "key": "other_household_income",
+          "label": "Monthly income of the other earners",
+          "type": "number",
+          "condition": "earning_members > 1",
+          "ask": "Unki mahine ki kamai lagbhag kitni hai?"
         },
         {
           "key": "residence_type",
@@ -41,18 +58,21 @@
             "owned",
             "rented",
             "family"
-          ]
+          ],
+          "ask": "Ghar apna hai ya kiraye ka?"
         },
         {
           "key": "residence_duration",
           "label": "How long at current address",
-          "type": "years"
+          "type": "years",
+          "ask": "Is ghar mein kitne saal se reh rahe hain?"
         },
         {
           "key": "monthly_rent",
           "label": "Monthly rent",
           "type": "number",
-          "condition": "residence_type === 'rented'"
+          "condition": "residence_type === 'rented'",
+          "ask": "Ghar ka kiraya mahine ka kitna dete hain?"
         }
       ],
       "minTurns": 2
@@ -64,17 +84,39 @@
         {
           "key": "business_type",
           "label": "Type of business",
-          "type": "text"
+          "type": "text",
+          "ask": "Aap kya kaam karte hain?"
         },
         {
           "key": "business_age",
           "label": "Years in business",
-          "type": "years"
+          "type": "years",
+          "ask": "Yeh kaam kitne saal se kar rahe hain?"
         },
         {
           "key": "business_location",
           "label": "Shop or office location",
-          "type": "text"
+          "type": "text",
+          "ask": "Aapki dukaan ya kaam ki jagah kahan hai?"
+        },
+        {
+          "key": "shop_ownership",
+          "label": "Business premises owned or rented",
+          "type": "enum",
+          "options": [
+            "owned",
+            "rented",
+            "family",
+            "none"
+          ],
+          "ask": "Dukaan apni hai ya kiraye ki?"
+        },
+        {
+          "key": "shop_rent",
+          "label": "Monthly rent of the business premises",
+          "type": "number",
+          "condition": "shop_ownership === 'rented'",
+          "ask": "Dukaan ka kiraya mahine ka kitna hai?"
         },
         {
           "key": "ownership",
@@ -84,37 +126,44 @@
             "sole",
             "partnership",
             "family"
-          ]
+          ],
+          "ask": "Kaam aap akele chalate hain ya kisi ke saath milkar?"
         },
         {
           "key": "employees",
           "label": "Number of helpers or employees",
-          "type": "number"
+          "type": "number",
+          "ask": "Kaam mein kitne log madad karte hain?"
         },
         {
           "key": "products_services",
           "label": "What they sell or do",
-          "type": "text"
+          "type": "text",
+          "ask": "Aap kya-kya bechte ya banate hain?"
         },
         {
           "key": "customers_per_day",
           "label": "Customers in a day",
-          "type": "number"
+          "type": "number",
+          "ask": "Roz lagbhag kitne grahak aate hain?"
         },
         {
           "key": "monthly_sales",
           "label": "Monthly sales or turnover",
-          "type": "number"
+          "type": "number",
+          "ask": "Mahine mein kul bikri kitni ho jaati hai?"
         },
         {
           "key": "monthly_expenses",
           "label": "Monthly business expenses",
-          "type": "number"
+          "type": "number",
+          "ask": "Dukaan ka mahine ka kharcha kitna hai — kiraya, bijli, madadgar ki tankhwah milakar?"
         },
         {
           "key": "supplier_credit",
           "label": "Credit from suppliers",
-          "type": "text"
+          "type": "text",
+          "ask": "Maal udhaar par milta hai ya nakad dena padta hai?"
         }
       ],
       "minTurns": 3
@@ -128,42 +177,56 @@
         {
           "key": "avg_bill_value",
           "label": "Average bill per customer",
-          "type": "number"
+          "type": "number",
+          "ask": "Ek grahak aam taur par kitne ka saamaan leta hai?"
         },
         {
           "key": "monthly_purchase",
           "label": "Monthly stock or material purchase",
-          "type": "number"
+          "type": "number",
+          "ask": "Mahine mein kitne ka maal kharidte hain?"
         },
         {
           "key": "payment_mode",
           "label": "Cash, UPI or credit split",
-          "type": "text"
+          "type": "text",
+          "ask": "Grahak zyada nakad dete hain ya UPI se?"
         },
         {
           "key": "peak_day_sales",
           "label": "Best day's sales",
-          "type": "number"
+          "type": "number",
+          "ask": "Sabse achhe din kitni bikri hoti hai?"
         },
         {
           "key": "slow_day_sales",
           "label": "Worst day's sales",
-          "type": "number"
+          "type": "number",
+          "ask": "Sabse halke din kitni bikri hoti hai?"
         },
         {
           "key": "supplier_names",
           "label": "Main suppliers or distributors",
-          "type": "text"
+          "type": "text",
+          "ask": "Maal kahan se ya kis se lete hain?"
         },
         {
           "key": "credit_given",
           "label": "Udhaar given to customers",
-          "type": "number"
+          "type": "number",
+          "ask": "Grahakon ka kitna udhaar baaki hai abhi?"
+        },
+        {
+          "key": "stock_value",
+          "label": "Value of stock in the shop now",
+          "type": "number",
+          "ask": "Abhi dukaan mein lagbhag kitne ka maal pada hai?"
         },
         {
           "key": "seasonal_variation",
           "label": "How income changes by season",
-          "type": "text"
+          "type": "text",
+          "ask": "Saal mein kaunse mahine kaam zyada chalta hai, kaunse kam?"
         }
       ],
       "minTurns": 3
@@ -175,32 +238,56 @@
         {
           "key": "monthly_income",
           "label": "Monthly income taken home",
-          "type": "number"
+          "type": "number",
+          "ask": "Sab kharcha nikaal kar mahine ki bachat ya kamai kitni hoti hai?"
         },
         {
           "key": "household_expenses",
           "label": "Monthly household expenses",
-          "type": "number"
+          "type": "number",
+          "ask": "Ghar ka mahine ka kharcha kitna ho jaata hai?"
         },
         {
           "key": "existing_loans",
           "label": "Running loans",
-          "type": "text"
+          "type": "text",
+          "ask": "Abhi koi loan chal raha hai — bank, finance company ya gold loan?"
         },
         {
           "key": "existing_emi",
           "label": "Total monthly EMI",
-          "type": "number"
+          "type": "number",
+          "ask": "Sab kishton ko milakar mahine mein kitna jaata hai?"
+        },
+        {
+          "key": "informal_loans",
+          "label": "Informal borrowing (committee, chit fund, moneylender, relatives)",
+          "type": "text",
+          "ask": "Kisi committee, chit fund, sahukar ya rishtedaar se paisa liya hua hai?"
+        },
+        {
+          "key": "repayment_history",
+          "label": "Any missed or late instalment before",
+          "type": "text",
+          "ask": "Pehle kabhi koi kisht chhooti ya der se gayi?"
         },
         {
           "key": "bank_account",
           "label": "Which bank",
-          "type": "text"
+          "type": "text",
+          "ask": "Aapka khaata kis bank mein hai?"
         },
         {
           "key": "savings",
           "label": "Savings or FD",
-          "type": "text"
+          "type": "text",
+          "ask": "Kuch bachat hai — FD, RD ya committee mein?"
+        },
+        {
+          "key": "assets",
+          "label": "Other assets (land, house, vehicle, gold)",
+          "type": "text",
+          "ask": "Aapke naam par kuch aur hai — zameen, makaan, gaadi ya sona?"
         }
       ],
       "minTurns": 2
@@ -215,19 +302,22 @@
           "label": "Aadhaar number",
           "type": "text",
           "condition": "no_borrower_brief",
-          "typed": true
+          "typed": true,
+          "ask": "Apna Aadhaar number likh dijiye."
         },
         {
           "key": "pan_number",
           "label": "PAN number",
           "type": "text",
           "condition": "no_borrower_brief",
-          "typed": true
+          "typed": true,
+          "ask": "Apna PAN number likh dijiye."
         },
         {
           "key": "aadhaar_address",
           "label": "Address on the Aadhaar",
-          "type": "text"
+          "type": "text",
+          "ask": "Aadhaar par kaunsa pata likha hai?"
         },
         {
           "key": "aadhaar_address_match",
@@ -237,7 +327,8 @@
             "match",
             "different",
             "not_shared"
-          ]
+          ],
+          "ask": "Kya Aadhaar wala pata yahi hai jahan abhi rehte hain?"
         },
         {
           "key": "pan_type",
@@ -247,7 +338,8 @@
             "personal",
             "firm",
             "not_shared"
-          ]
+          ],
+          "ask": "PAN card aapke naam ka hai ya dukaan/firm ke naam ka?"
         },
         {
           "key": "bank_account_type",
@@ -258,7 +350,14 @@
             "current",
             "both",
             "not_shared"
-          ]
+          ],
+          "ask": "Khaata bachat wala hai ya current account?"
+        },
+        {
+          "key": "business_registration",
+          "label": "GST, Udyam or trade licence",
+          "type": "text",
+          "ask": "Dukaan ka koi registration hai — GST, Udyam ya trade licence?"
         }
       ],
       "minTurns": 1
@@ -270,17 +369,26 @@
         {
           "key": "loan_purpose",
           "label": "Why they need the loan",
-          "type": "text"
+          "type": "text",
+          "ask": "Yeh paisa kis kaam mein lagayenge?"
         },
         {
           "key": "loan_amount",
           "label": "How much they want",
-          "type": "number"
+          "type": "number",
+          "ask": "Kitne paise ki zaroorat hai?"
+        },
+        {
+          "key": "own_contribution",
+          "label": "Own money going into the purpose",
+          "type": "number",
+          "ask": "Is kaam mein apni taraf se kitna paisa lagayenge?"
         },
         {
           "key": "repayment_plan",
           "label": "How they plan to repay",
-          "type": "text"
+          "type": "text",
+          "ask": "Kisht kis kamai se bharenge? Koi mahina halka gaya toh kaise karenge?"
         }
       ],
       "minTurns": 1

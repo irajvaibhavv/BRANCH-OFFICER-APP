@@ -30,6 +30,7 @@ export function buildScript(c) {
     { text: 'Business kitne saal se chal raha hai?', speech: 'बिज़नेस, कितने साल से चल रहा है?', claimType: 'vintage' },
     { text: 'Mahine ki income kitni ho jaati hai, roughly?', speech: 'महीने की इनकम, लगभग कितनी हो जाती है?', claimType: 'income' },
     { text: 'Ghar ka mahine ka kharcha kitna ho jaata hai?', speech: 'और घर का खर्चा, महीने का कितना हो जाता है?', claimType: 'expense' },
+    { text: 'Ghar mein aapke alawa aur koi kamata hai?', speech: 'घर में आपके अलावा, और कोई कमाता है?' },
   ];
 
   if (area.avgShopRent) {
@@ -56,6 +57,10 @@ export function buildScript(c) {
     text: 'Abhi koi loan ya EMI chal rahi hai? Total kitni EMI jaati hai mahine ki?',
     speech: 'अभी कोई लोन या ईएमआई चल रही है? टोटल कितनी ईएमआई, जाती है महीने की?',
     claimType: 'existingEmi',
+  });
+  steps.push({
+    text: 'Kisi committee, chit fund ya sahukar se bhi paisa liya hua hai? Yeh sirf record ke liye hai.',
+    speech: 'किसी कमेटी, चिट फंड, या साहूकार से भी पैसा लिया हुआ है? यह सिर्फ रिकॉर्ड के लिए है।',
   });
   steps.push({
     text: `Yeh ${fmt(c.loanAmountRequested)} ka loan kis kaam ke liye chahiye? Paisa exactly kahan lagayenge?`,
@@ -112,7 +117,13 @@ export function buildIntakeScript() {
     { text: 'Ghar apna hai ya kiraye ka?', speech: 'घर अपना है, या किराये का?', collect: 'housing' },
     { text: 'Mahine mein kitni kamai ho jaati hai, lagbhag?', speech: 'महीने में कितनी कमाई हो जाती है, लगभग?', collect: 'declaredIncome', claimType: 'income' },
     { text: 'Aur ghar ka kharcha mahine ka kitna ho jaata hai?', speech: 'और घर का खर्चा, महीने का कितना हो जाता है?', collect: 'expense', claimType: 'expense' },
+    { text: 'Ghar mein aapke alawa aur koi kamata hai?', speech: 'घर में आपके अलावा, और कोई कमाता है?', collect: 'earners' },
     { text: 'Abhi koi loan ya EMI chal rahi hai?', speech: 'अभी कोई लोन या ईएमआई चल रही है?', collect: 'existingEmi', claimType: 'existingEmi' },
+    {
+      text: 'Kisi committee, chit fund ya sahukar se bhi paisa liya hua hai? Yeh sirf record ke liye hai.',
+      speech: 'किसी कमेटी, चिट फंड, या साहूकार से भी पैसा लिया हुआ है? यह सिर्फ रिकॉर्ड के लिए है।',
+      collect: 'informalLoans',
+    },
     { text: 'Aapko kitna loan chahiye?', speech: 'आपको कितना लोन चाहिए?', collect: 'loanAmountRequested' },
     { text: 'Yeh paisa kis kaam mein lagayenge?', speech: 'यह पैसा किस काम में लगाएँगे?', collect: 'loanPurpose' },
 

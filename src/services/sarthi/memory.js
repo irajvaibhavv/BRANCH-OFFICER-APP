@@ -11,6 +11,11 @@ export const SCORE_KEYS = ['area_knowledge_score', 'business_domain_score'];
 
 export const EXTRACTABLE_KEYS = [...FIELD_KEYS, ...SCORE_KEYS];
 
+// "key (a|b)" for every key, so the prompts can never drift from the schema.
+export const KEY_GUIDE = EXTRACTABLE_KEYS
+  .map((k) => (FIELD_DEFS[k]?.options ? `${k} (${FIELD_DEFS[k].options.join('|')})` : k))
+  .join(', ');
+
 export function createEmptyMemory(caseData) {
   const collected = {};
   FIELD_KEYS.forEach((k) => { collected[k] = null; });
@@ -80,10 +85,13 @@ export function enterSection(memory, sectionId) {
   };
 }
 
-// Schema conditions are matched literally, never evaluated.
+// Schema conditions are parsed from two literal shapes, never evaluated: "key === 'value'" and "key > n".
 function conditionMet(field, memory) {
   if (!field.condition) return true;
-  if (field.condition === "residence_type === 'rented'") return memory.collected.residence_type === 'rented';
+  const eq = /^(\w+) === '(\w+)'$/.exec(field.condition);
+  if (eq) return memory.collected[eq[1]] === eq[2];
+  const gt = /^(\w+) > (\d+)$/.exec(field.condition);
+  if (gt) return Number(memory.collected[gt[1]]) > Number(gt[2]);
   if (field.condition === 'no_borrower_brief') return !memory.caseData?.brief?.avgMonthlyCredit;
   return true;
 }

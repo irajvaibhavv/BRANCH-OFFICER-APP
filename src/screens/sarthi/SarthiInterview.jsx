@@ -466,6 +466,8 @@ export default function SarthiInterview() {
         ...subject.brief.digInto,
         a.family ? `Household: ${a.family}` : null,
         a.housing ? `Home is ${a.housing}` : null,
+        a.earners ? `Other earners at home: ${a.earners}` : null,
+        a.informalLoans ? `Informal borrowing, in their words: ${a.informalLoans}` : null,
       ].filter(Boolean);
       built.current = subject;
     }

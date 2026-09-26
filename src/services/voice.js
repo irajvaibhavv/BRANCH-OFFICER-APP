@@ -100,6 +100,7 @@ async function drain() {
     current = { audio };
     audio.onended = finish;
     audio.onerror = finish;
+    audio.onplaying = () => { item.onStart?.(); item.onStart = null; };
     await audio.play();
   } catch (e) {
     console.warn(`[voice] ${item.profile.engine} unavailable, falling back to browser TTS`, e);
@@ -119,13 +120,14 @@ function pickVoice() {
 }
 synth?.addEventListener?.('voiceschanged', () => { voice = pickVoice(); });
 
-function browserSpeak(text, { rate = 1, onEnd } = {}) {
-  if (!synth) { onEnd?.(); return; }
+function browserSpeak(text, { rate = 1, onEnd, onStart } = {}) {
+  if (!synth) { onStart?.(); onEnd?.(); return; }
   voice = voice || pickVoice();
   const u = new SpeechSynthesisUtterance(clean(text));
   if (voice) u.voice = voice;
   u.lang = voice?.lang || 'en-IN';
   u.rate = rate; u.pitch = 1;
+  u.onstart = () => onStart?.();
   u.onend = () => onEnd?.();
   u.onerror = () => onEnd?.();
   synth.speak(u);
@@ -135,16 +137,17 @@ function browserSpeak(text, { rate = 1, onEnd } = {}) {
  * Speak a line; lines queue and play in order. onEnd fires when done (or immediately if unsupported).
  * `voice` overrides engine/voiceId/style/speed for this line only — pass nothing for the app default.
  * `src` plays a pre-rendered audio file instead of calling a TTS API: no quota, no network, no lag.
+ * `onStart` fires once, when sound actually begins (after any TTS render wait).
  */
-export function speak(text, { rate = 1, onEnd, voice, src } = {}) {
+export function speak(text, { rate = 1, onEnd, onStart, voice, src } = {}) {
   const profile = voice ? voiceProfile(voice) : DEFAULT_PROFILE;
-  if (src) { queue.push({ text, rate, onEnd, profile, src }); drain(); return; }
+  if (src) { queue.push({ text, rate, onEnd, onStart, profile, src }); drain(); return; }
   if (profile.engine !== 'browser' && !brokenEngines.has(profile.engine)) {
-    queue.push({ text, rate, onEnd, profile });
+    queue.push({ text, rate, onEnd, onStart, profile });
     drain();
     return;
   }
-  browserSpeak(text, { rate, onEnd });
+  browserSpeak(text, { rate, onEnd, onStart });
 }
 
 export function stopSpeaking() {

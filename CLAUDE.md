@@ -154,7 +154,8 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   and played from disk via `voiceManifest.json`, so a demo makes no TTS call — **re-run it after editing any
   question or the voice config**, or that line silently falls back to a live API call. The manifest only
   covers scripted lines: **live mode writes novel text every turn, so it always pays the TTS round trip.**
-  `say()` sets the caption before calling the voice engine, so the question is readable while audio loads.
+  The question text appears when the voice starts (`onStart` from `speak()`), not while TTS renders —
+  showing it seconds early made the audio feel laggy. Live replies put the ```speech``` fence first for the same reason.
 - **Live speech is streamed sentence by sentence** (`stream.js`). Murf renders a whole line
   before a word is audible, so a 3-sentence question is ~1.5s of silence. `speakStreamed` splits the
   Devanagari at `.!?।`, `prefetch`es every chunk at once and plays the first as soon as ITS audio

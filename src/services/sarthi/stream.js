@@ -43,12 +43,12 @@ export function splitSentences(text, { minChars = MIN_CHARS, maxChunks = MAX_CHU
 }
 
 // `onEnd` fires exactly once. A pre-rendered `src` is one file and is never split.
-export function speakStreamed(text, { voice, rate = 1, src, onEnd } = {}) {
-  if (src) { speak(text, { voice, rate, src, onEnd }); return 1; }
+export function speakStreamed(text, { voice, rate = 1, src, onEnd, onStart } = {}) {
+  if (src) { speak(text, { voice, rate, src, onEnd, onStart }); return 1; }
 
   const chunks = splitSentences(text);
-  if (chunks.length === 0) { onEnd?.(); return 0; }
-  if (chunks.length === 1) { speak(chunks[0], { voice, rate, onEnd }); return 1; }
+  if (chunks.length === 0) { onStart?.(); onEnd?.(); return 0; }
+  if (chunks.length === 1) { speak(chunks[0], { voice, rate, onEnd, onStart }); return 1; }
 
   prefetch(chunks, voice);
 
@@ -56,7 +56,7 @@ export function speakStreamed(text, { voice, rate = 1, src, onEnd } = {}) {
   // which would drop the tail and the final onEnd with it.
   const sayFrom = (i) => {
     const isLast = i === chunks.length - 1;
-    speak(chunks[i], { voice, rate, onEnd: isLast ? onEnd : () => sayFrom(i + 1) });
+    speak(chunks[i], { voice, rate, onStart: i === 0 ? onStart : undefined, onEnd: isLast ? onEnd : () => sayFrom(i + 1) });
   };
   sayFrom(0);
   return chunks.length;

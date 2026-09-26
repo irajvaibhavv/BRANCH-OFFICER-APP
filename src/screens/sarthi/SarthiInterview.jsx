@@ -132,19 +132,23 @@ export default function SarthiInterview() {
   const say = useCallback((text, { then, speech, again } = {}) => {
     lastLine.current = { text, speech };
     if (!again) setAsked((n) => n + 1);
-    setCaption({ who: 'ai', text });
     setAvatar('speaking');
     if (!canSpeak) {
+      setCaption({ who: 'ai', text });
       // No TTS at all — leave the caption up long enough to read, then carry on.
       const t = setTimeout(() => { setAvatar('idle'); (then ?? beginListening)(); }, Math.min(9000, 1800 + text.length * 45));
       return () => clearTimeout(t);
     }
     const line = speech || text;
+    // The question appears with the voice, not seconds before it while TTS renders.
+    let shown = false;
+    const show = () => { if (!shown) { shown = true; setCaption({ who: 'ai', text }); } };
     // Scripted lines play pre-rendered audio; live text is streamed sentence by sentence.
     speakStreamed(line, {
       voice: SARTHI_VOICE,
       src: voiceManifest[line],
-      onEnd: () => { setAvatar('idle'); (then ?? beginListening)(); },
+      onStart: show,
+      onEnd: () => { show(); setAvatar('idle'); (then ?? beginListening)(); },
     });
     return undefined;
   }, [beginListening]);
@@ -268,6 +272,9 @@ export default function SarthiInterview() {
       // Speak as soon as the speech fence closes. The follow-up (photo / end / listen) runs once,
       // after whichever of audio or stream finishes last.
       let spokenYet = false;
+      let voiceOn = false;
+      let pending = '';
+      const showCaption = (text) => { pending = text; if (voiceOn && text) setCaption({ who: 'ai', text }); };
       let audioDone = false;
       let streamDone = false;
       let after = null;
@@ -285,10 +292,7 @@ export default function SarthiInterview() {
         turn: borrowerTurn,
         onChunk: (full) => {
           const caption = peekDisplay(full);
-          if (caption) {
-            setAvatar('speaking');
-            setCaption({ who: 'ai', text: caption });
-          }
+          if (caption) showCaption(caption);
           if (spokenYet) return;
           const early = peekSpeech(full);
           if (!early) return;
@@ -298,7 +302,8 @@ export default function SarthiInterview() {
           speakStreamed(early, {
             voice: SARTHI_VOICE,
             src: voiceManifest[early],
-            onEnd: () => { audioDone = true; advance(); },
+            onStart: () => { voiceOn = true; setAvatar('speaking'); showCaption(pending); },
+            onEnd: () => { voiceOn = true; showCaption(pending); audioDone = true; advance(); },
           });
         },
       });
@@ -343,7 +348,7 @@ export default function SarthiInterview() {
       after = photo ? () => setPhotoAsk(photo) : complete ? finish : null;
 
       if (spokenYet) {
-        setCaption({ who: 'ai', text: display });
+        showCaption(display);
         lastLine.current = { text: display, speech };
         streamDone = true;
         advance();
@@ -666,7 +671,9 @@ export default function SarthiInterview() {
           <AnimatePresence mode="wait">
             {caption.text && (
               <motion.div
-                key={caption.text + caption.who}
+                // Keyed per turn, not per text: a streamed caption changes many times a second, and
+                // remounting on each change stalls AnimatePresence "wait" on a stale question.
+                key={`${caption.who}:${asked}`}
                 className={caption.who === 'borrower' ? styles.echo : styles.question}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}

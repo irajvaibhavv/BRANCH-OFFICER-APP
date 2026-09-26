@@ -80,14 +80,16 @@
           "key": "residence_duration",
           "label": "How long at current address",
           "type": "years",
-          "ask": "Is ghar mein kitne saal se reh rahe hain?"
+          "ask": "Is ghar mein kitne saal se reh rahe hain?",
+          "cross": {"priority": "low", "hint": "Ask which year they moved in and where they lived before."}
         },
         {
           "key": "monthly_rent",
           "label": "Monthly rent",
           "type": "number",
           "condition": "residence_type === 'rented'",
-          "ask": "Ghar ka kiraya mahine ka kitna dete hain?"
+          "ask": "Ghar ka kiraya mahine ka kitna dete hain?",
+          "cross": {"priority": "low", "hint": "Ask who the landlord is and since when the rent has been this amount."}
         }
       ],
       "minTurns": 2
@@ -106,13 +108,15 @@
           "key": "business_age",
           "label": "Years in business",
           "type": "years",
-          "ask": "Yeh kaam kitne saal se kar rahe hain?"
+          "ask": "Yeh kaam kitne saal se kar rahe hain?",
+          "cross": {"priority": "low", "hint": "Ask which year they started and what they did before this."}
         },
         {
           "key": "business_location",
           "label": "Shop or office location",
           "type": "text",
-          "ask": "Aapki dukaan ya kaam ki jagah kahan hai?"
+          "ask": "Aapki dukaan ya kaam ki jagah kahan hai?",
+          "cross": {"hint": "Ask for something only a person who sits there every day knows: the exact landmark, which gate or side of the place they named, or the shop next door. If AREA KNOWLEDGE lists landmarks, markets or a metro station for this area, ask about one of those."}
         },
         {
           "key": "shop_ownership",
@@ -124,14 +128,16 @@
             "family",
             "none"
           ],
-          "ask": "Dukaan apni hai ya kiraye ki?"
+          "ask": "Dukaan apni hai ya kiraye ki?",
+          "cross": {"when": {"is": "owned"}, "hint": "An owned shop is a large asset. Ask when and how they got it, and in whose name the papers are."}
         },
         {
           "key": "shop_rent",
           "label": "Monthly rent of the business premises",
           "type": "number",
           "condition": "shop_ownership === 'rented'",
-          "ask": "Dukaan ka kiraya mahine ka kitna hai?"
+          "ask": "Dukaan ka kiraya mahine ka kitna hai?",
+          "cross": {"priority": "low", "hint": "Ask who the landlord is and whether the rent goes by cash or bank. If AREA KNOWLEDGE gives a shop rent range, do not quote it to them."}
         },
         {
           "key": "ownership",
@@ -148,7 +154,8 @@
           "key": "employees",
           "label": "Number of helpers or employees",
           "type": "number",
-          "ask": "Kaam mein kitne log madad karte hain?"
+          "ask": "Kaam mein kitne log madad karte hain?",
+          "cross": {"priority": "low", "when": {"above": 0}, "hint": "Ask what one helper is paid each month, or the name of the longest-serving one."}
         },
         {
           "key": "products_services",
@@ -160,13 +167,15 @@
           "key": "customers_per_day",
           "label": "Customers in a day",
           "type": "number",
-          "ask": "Roz lagbhag kitne grahak aate hain?"
+          "ask": "Roz lagbhag kitne grahak aate hain?",
+          "cross": {"priority": "low", "hint": "Ask how many customers came this morning, or yesterday, so the daily figure rests on a real day."}
         },
         {
           "key": "monthly_sales",
           "label": "Monthly sales or turnover",
           "type": "number",
-          "ask": "Mahine mein kul bikri kitni ho jaati hai?"
+          "ask": "Mahine mein kul bikri kitni ho jaati hai?",
+          "cross": {"hint": "Ask how much they sold yesterday (or today so far), so the monthly figure can be checked against a real day."}
         },
         {
           "key": "monthly_expenses",
@@ -261,7 +270,8 @@
           "key": "monthly_income",
           "label": "Monthly income taken home",
           "type": "number",
-          "ask": "Sab kharcha nikaal kar mahine ki bachat ya kamai kitni hoti hai?"
+          "ask": "Sab kharcha nikaal kar mahine ki bachat ya kamai kitni hoti hai?",
+          "cross": {"hint": "Ask how much they actually took home last month — a real month, not an average."}
         },
         {
           "key": "household_expenses",
@@ -273,7 +283,8 @@
           "key": "existing_loans",
           "label": "Running loans",
           "type": "text",
-          "ask": "Abhi koi loan chal raha hai — bank, finance company ya gold loan?"
+          "ask": "Abhi koi loan chal raha hai — bank, finance company ya gold loan?",
+          "cross": {"when": {"isNot": "none"}, "hint": "Ask which lender it is from and when the last instalment falls."}
         },
         {
           "key": "existing_emi",

@@ -467,6 +467,9 @@ failed check or an identity_document flag as a high-severity finding — a forei
   given: "X of Y insider answers clear, V vague, R red flag". Then one line per question — what they said (Turn X),
   the follow-up if one was asked, and the status. Judge only against "expect", never your own idea of the trade.
   Two or more vague or red-flag answers is a finding: the applicant may not run this business day to day.
+- In the interview summary, use CROSS-QUESTIONS: an answer that stayed specific under its follow-up (a real landmark,
+  a year, a name, a real day's figure) supports the original claim; one that turned vague or shifted weakens it. Cite
+  both turns.
 - Then a HISAAB section: each check with ✓ or ✕ and its detail as given. A failed check is a finding, cited
   (Flag: math_<check>). Never recompute these numbers.
 - A loan_purpose flag (new venture, personal use, or an amount far above income) belongs in the risk findings with
@@ -476,7 +479,7 @@ failed check or an identity_document flag as a high-severity finding — a forei
 - Be objective. Report both positive and negative findings.
 - Output plain markdown only. No preamble, no code fences around the report.`;
 
-export function buildReporterInput({ caseData, transcript, claims, evidence, flags = [], collected = null, verification = null, understanding = null, tradeMath = [], eligibility, observations, photos = [], identity, mode = 'Handover' }) {
+export function buildReporterInput({ caseData, transcript, claims, evidence, flags = [], collected = null, verification = null, understanding = null, tradeMath = [], crossAnswers = [], eligibility, observations, photos = [], identity, mode = 'Handover' }) {
   const turns = transcript
     .map((m, i) => `[${i + 1}] ${m.role === 'assistant' ? 'SARTHI' : 'BORROWER'}: ${m.content}`)
     .join('\n');
@@ -511,6 +514,9 @@ ${flags.length ? JSON.stringify(flags, null, 2) : 'None raised.'}
 
 ## TRADE DEPTH (insider questions only a real operator answers easily; "status" was decided in code)
 ${understanding?.total ? JSON.stringify(understanding, null, 2) : 'No trade depth questions on file for this business.'}
+
+## CROSS-QUESTIONS (an answer tested with one follow-up before moving on)
+${crossAnswers?.length ? JSON.stringify(crossAnswers, null, 2) : 'None asked.'}
 
 ## HISAAB CHECKS (the trade's arithmetic, computed in code — do not recompute or soften)
 ${tradeMath?.length ? JSON.stringify(tradeMath, null, 2) : 'Not enough figures for the trade checks.'}

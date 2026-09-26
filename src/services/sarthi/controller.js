@@ -53,9 +53,40 @@ function sectionComplete(memory, section) {
 }
 
 // The interview ends when the schema is satisfied, not when the model thinks it is done.
+// A branch officer tests an answer before moving on; this many per interview keeps it a conversation,
+// and "low" priority ones (residence, vintage, staff, rents) may take only one, so location, ownership, sales, income and loans always get theirs.
+const MAX_CROSS = 6;
+const MAX_LOW_CROSS = 1;
+
 export function getNextAction(memory, caseData) {
   const config = getInterviewConfig(caseData);
   const sections = activeSections(config);
+
+  // A field just answered for the first time may earn one cross-question (schema "cross"), asked now.
+  if (memory.crossQueue?.length) {
+    const [key, ...rest] = memory.crossQueue;
+    const def = FIELD_DEFS_BY_KEY[key];
+    const asked = memory.crossAsked ?? [];
+    const lowUsed = asked.filter((k) => FIELD_DEFS_BY_KEY[k]?.cross?.priority === 'low').length;
+    const room = def?.cross && asked.length < MAX_CROSS && (def.cross.priority !== 'low' || lowUsed < MAX_LOW_CROSS);
+    if (!room) return getNextAction({ ...memory, crossQueue: rest }, caseData);
+    if (def?.cross) {
+      const section = sections.find((s) => s.id === memory.currentSection);
+      return {
+        action: 'ask_question',
+        section: memory.currentSection,
+        sectionLabel: section?.label ?? '',
+        crossOf: key,
+        directive: `Before moving on, ask ONE cross-question about their last answer (${def.label}: "${memory.collected[key]}"). ${def.cross.hint}`
+          + ' Ask it OPEN — never put the answer in the question and never offer choices from the reference data'
+          + ' ("metro ke kaunse gate ke paas?", not "Blue Line wale side?"). Short and curious, never suspicious, never'
+          + ' say why you are asking. Do not start a new topic this turn.',
+        known: knownFacts(memory),
+        memory: { ...memory, crossQueue: rest, crossAsked: [...asked, key] },
+      };
+    }
+    memory = { ...memory, crossQueue: [] };
+  }
   const idx = Math.max(0, sections.findIndex((s) => s.id === memory.currentSection));
 
   let cursor = idx;

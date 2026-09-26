@@ -31,6 +31,9 @@ export function createEmptyMemory(caseData) {
     income_mentions: [], // every stated income, for coaching detection
     verification: { area: [], business: [] },
     tradeAnswers: [], // insider trade questions, answered verbatim — see probes.js
+    crossQueue: [], // fields just answered that earn one cross-question (schema "cross")
+    crossAsked: [],
+    crossAnswers: [],
     transcript: [],
     currentSection: 'greeting',
     sectionStartTurn: { greeting: 0 },
@@ -42,13 +45,28 @@ export function createEmptyMemory(caseData) {
 }
 
 // Only non-null values overwrite, so a vague answer never erases an earlier specific one.
+// Whether the value just given earns its field's cross-question.
+function crossDue(def, value) {
+  const when = def?.cross?.when;
+  if (!def?.cross) return false;
+  if (!when) return true;
+  if (when.is !== undefined) return value === when.is;
+  if (when.isNot !== undefined) return String(value).toLowerCase() !== String(when.isNot);
+  if (when.above !== undefined) return Number(value) > when.above;
+  return true;
+}
+
 export function updateMemory(memory, facts = {}) {
   const collected = { ...memory.collected };
   let incomeMentions = memory.income_mentions;
+  const queue = [...(memory.crossQueue ?? [])];
 
   Object.entries(facts).forEach(([key, value]) => {
     if (value === null || value === undefined || value === '') return;
     if (!(key in collected)) return;
+    // First time a field is answered, it may earn one cross-question — never on a correction.
+    if (collected[key] == null && crossDue(FIELD_DEFS[key], value)
+      && !queue.includes(key) && !(memory.crossAsked ?? []).includes(key)) queue.push(key);
     collected[key] = value;
   });
 
@@ -59,7 +77,11 @@ export function updateMemory(memory, facts = {}) {
     ];
   }
 
-  return { ...memory, collected, income_mentions: incomeMentions };
+  return { ...memory, collected, income_mentions: incomeMentions, crossQueue: queue };
+}
+
+export function recordCrossAnswer(memory, key, question, text, turn) {
+  return { ...memory, crossAnswers: [...(memory.crossAnswers ?? []), { field: key, value: memory.collected[key], asked: question, answer: text, turn }] };
 }
 
 export function addFlag(memory, flag) {

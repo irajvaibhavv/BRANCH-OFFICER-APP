@@ -10,7 +10,7 @@ import { parseClaims, peekSpeech, peekDisplay, writeReport, VISION_URL, COMPLETE
 import { extractFacts, askTurn } from '../../services/sarthi/model';
 import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../services/sarthi/script';
 import { verifyClaims, computeEligibility, toNumber } from '../../services/sarthi/verifier';
-import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor, recordTradeAnswer } from '../../services/sarthi/memory';
+import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor, recordTradeAnswer, recordCrossAnswer } from '../../services/sarthi/memory';
 import pdSchema from '../../data/sarthi/pdSchema.json';
 import { getNextAction, directiveText, checkContradictions, checkInternalConsistency, getInterviewConfig, assessIncome } from '../../services/sarthi/controller';
 import { validateReport, extractRecommendation } from '../../services/sarthi/validator';
@@ -44,7 +44,7 @@ const save = (key, value) => {
 const CAPTION_FALLBACK_MS = 3000;
 
 // One topic = one schema field (or fixed section / verification task), so re-asks don't advance the count.
-const topicKey = (a) => `${a?.section ?? 'x'}:${a?.missingFields?.[0] ?? a?.verificationTask ?? a?.tradeProbe ?? ''}`;
+const topicKey = (a) => `${a?.section ?? 'x'}:${a?.crossOf ? `cross_${a.crossOf}` : a?.missingFields?.[0] ?? a?.verificationTask ?? a?.tradeProbe ?? ''}`;
 
 export default function SarthiInterview() {
   const { id } = useParams();
@@ -290,6 +290,10 @@ export default function SarthiInterview() {
       // An insider trade question is answered verbatim — the words ARE the evidence.
       if (lastAction.current?.tradeProbeDef) {
         memory.current = recordTradeAnswer(memory.current, lastAction.current.tradeProbeDef, text, borrowerTurn);
+      }
+      if (lastAction.current?.crossOf) {
+        const asked = transcript.current.filter((t) => t.role === 'assistant').at(-1)?.content ?? '';
+        memory.current = recordCrossAnswer(memory.current, lastAction.current.crossOf, asked, text, borrowerTurn);
       }
 
       let facts = {};
@@ -579,7 +583,7 @@ export default function SarthiInterview() {
     if (!demoRef.current) {
       try {
         setProgress('Writing the PD report…');
-        const raw = await writeReport({ caseData: subject, transcript: turns, claims: captured, evidence, flags, collected: collectedFacts, verification: memory.current.verification, understanding: depth, tradeMath: math.results, eligibility, observations, photos: photos.current, identity: subject.identity });
+        const raw = await writeReport({ caseData: subject, transcript: turns, claims: captured, evidence, flags, collected: collectedFacts, verification: memory.current.verification, understanding: depth, tradeMath: math.results, crossAnswers: memory.current.crossAnswers, eligibility, observations, photos: photos.current, identity: subject.identity });
         setProgress('Checking every citation…');
         validation = validateReport(raw, turns, captured, briefForCitation(subject), eligibility, { flags, collected: collectedFacts });
         report = validation.cleanedReport;

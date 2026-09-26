@@ -210,6 +210,11 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   data matches what inference sends. Extraction labels are checked against `hindiNumbers.js`; interviewer turns are
   speech-fence-first with Devanagari-only speech. Change the extractor prompt, the user message in `extractFacts`
   or the schema → rebuild. `REPORT.md` lists label fixes and thin fields.
+- **Cross-questions** (schema `cross` on a field): the first time a field is answered, `updateMemory` queues it and
+  the controller asks ONE follow-up straight away — the code picks WHEN (`cross.when`), the model phrases it from
+  `cross.hint` and the area data, and must ask it open (never "Blue Line wale side?" — that hands a faker the
+  answer). At most 6 per interview, only one `priority: "low"`, so location, ownership, sales, income and loans
+  always get theirs. Answers go to `memory.crossAnswers` and the report weighs them.
 - **Identity**: the greeting asks the name openly (never "Aap Ramesh ji hain na?" — anyone can say haan). `stated_name`
   is compared with the file name in code (`namesMatch` in `idChecks.js`); a mismatch raises a high `identity_mismatch`
   flag and unlocks `speaker_relation` (condition `name_mismatch`). Walk-ins skip both — there is no name on file.

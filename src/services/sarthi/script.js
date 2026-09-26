@@ -190,7 +190,23 @@ const FLAG_HEADS = {
 
 const photoSource = (p) => (p.provenance?.source === 'live_camera' ? ' (live camera)' : p.provenance ? ' (uploaded file)' : '');
 
-export function buildFallbackReport({ caseData, transcript, evidence, flags, eligibility, observations, photos = [], identity, cameraOn, mode = 'Handover' }) {
+// Business understanding and hisaab, as plain report lines; empty when the trade has no pack.
+function depthLines(understanding, tradeMath) {
+  const lines = [];
+  if (understanding?.total) {
+    const extra = [understanding.vague && `${understanding.vague} vague`, understanding.redFlag && `${understanding.redFlag} red flag`].filter(Boolean);
+    lines.push(`- Business understanding: ${understanding.clear} of ${understanding.total} insider answers clear${extra.length ? `, ${extra.join(', ')}` : ''}.`);
+    const mark = { clear: '✓', vague: '~', redFlag: '✕' };
+    understanding.items.forEach((i) => lines.push(`  - ${mark[i.status]} ${i.q} — "${i.answer}" (Turn ${i.turn})`));
+  }
+  if (tradeMath?.length) {
+    lines.push('- Hisaab:');
+    tradeMath.forEach((m) => lines.push(`  - ${m.pass ? '✓' : '✕'} ${m.detail}${m.pass ? '' : ` (Flag: math_${m.check})`}`));
+  }
+  return lines.join('\n');
+}
+
+export function buildFallbackReport({ caseData, transcript, evidence, flags, eligibility, observations, photos = [], identity, cameraOn, understanding = null, tradeMath = [], mode = 'Handover' }) {
   const c = caseData;
   const pattern = c.riskPatternMatch ? lookupRiskPattern(c.riskPatternMatch.patternId) : null;
   const biz = lookupBusiness(c.businessKey);
@@ -275,6 +291,7 @@ ${c.brief.areaDefaultRate != null
 ${area.source === 'specific'
       ? `- Area questions asked using ${c.areaKey} data (landmarks, metro, shop rent range ${fmt(area.avgShopRent.min)}–${fmt(area.avgShopRent.max)}). Officer should read the transcript for how they were answered.`
       : `- No surveyed data for ${c.area || 'this location'}, so landmark questions were skipped. Rent was checked against the ${area.label ?? 'small town'} range (${fmt(area.avgShopRent.min)}–${fmt(area.avgShopRent.max)}), which is indicative only — the officer should confirm it on the ground.`}
+${depthLines(understanding, tradeMath)}
 ${biz ? `- Trade-knowledge questions asked for ${biz.label}. Watch for: ${biz.knowledgeQuestions.map((q) => q.flag).slice(0, 2).join('; ')}.` : '- No trade-knowledge data on file for this business type; those questions were skipped.'}
 
 ### 6. LOAN ELIGIBILITY

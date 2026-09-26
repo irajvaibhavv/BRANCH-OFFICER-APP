@@ -234,6 +234,14 @@
 .idLine { font-size: 13.5px; line-height: 1.5; color: var(--s-ink); margin-bottom: 9px; }
 .idChecks { margin: 0; padding: 0; list-style: none; }
 .idChecks li { font-size: 12.5px; line-height: 1.45; margin-bottom: 5px; color: var(--s-ink-2); }
+/* ---------------------------------------------------------------- business understanding */
+.depthList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.depthList li { display: grid; grid-template-columns: 18px 1fr; gap: 6px; align-items: start; }
+.depthQ { font-size: 12.5px; color: var(--s-ink-3); line-height: 1.4; }
+.depthA { font-size: 13px; color: var(--s-ink); line-height: 1.45; overflow-wrap: anywhere; }
+.depth_clear { color: var(--s-clear); font-weight: 600; }
+.depth_vague { color: var(--s-watch); font-weight: 600; }
+.depth_redFlag { color: var(--s-stamp); font-weight: 600; }
 .pass { color: var(--s-clear); }
 .fail { color: var(--s-stamp); font-weight: 500; }
 

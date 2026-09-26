@@ -1,10 +1,10 @@
 // Decides WHAT to ask by walking pdSchema.json; the model only decides how to phrase it. No model calls here.
 import pdSchema from '../../data/sarthi/pdSchema.json';
 import { lookupLocation, lookupBusiness, hasAreaDetail } from './knowledge';
-import { getMissingFields, knownFacts, enterSection } from './memory';
+import { getMissingFields, knownFacts, enterSection, FIELD_DEFS as FIELD_DEFS_BY_KEY } from './memory';
 import { toNumber, toYears } from './verifier';
 import { namesMatch } from './idChecks';
-import { nextTradeProbe, tradeProbes, purposeSignals } from './probes';
+import { nextTradeProbe, nextTradeField, tradeProbes, purposeSignals } from './probes';
 import { formatINR } from '../../utils/formatters';
 
 const SECTIONS = pdSchema.sections;
@@ -47,7 +47,7 @@ function sectionComplete(memory, section) {
     return memory.income_mentions.length >= 2 || servedTime;
   }
 
-  if (section.type === 'trade_probes') return !nextTradeProbe(memory);
+  if (section.type === 'trade_probes') return !nextTradeField(memory) && !nextTradeProbe(memory);
 
   return getMissingFields(memory, section).length === 0;
 }
@@ -64,7 +64,11 @@ export function getNextAction(memory, caseData) {
 
   const section = sections[cursor];
   const instruction = buildInstruction(memory, section, caseData, config);
-  return { ...instruction, memory: enterSection(memory, section.id) };
+  // A flag is followed up once, in the turn it is raised with — not re-raised every turn after.
+  const raised = new Set((instruction.contradictions ?? []).map((f) => f.detail));
+  const next = enterSection(memory, section.id);
+  const flags = raised.size ? next.flags.map((f) => (raised.has(f.detail) ? { ...f, followedUp: true } : f)) : next.flags;
+  return { ...instruction, memory: { ...next, flags } };
 }
 
 function buildInstruction(memory, section, caseData, config) {
@@ -97,12 +101,26 @@ function buildInstruction(memory, section, caseData, config) {
       instruction.context = biz?.knowledgeQuestions ?? null;
     }
   } else if (section.type === 'trade_probes') {
-    const probe = nextTradeProbe(memory);
-    instruction.tradeProbe = probe.key;
-    instruction.tradeProbeDef = probe;
-    instruction.directive = `Ask this insider trade question — a real ${biz?.label ?? 'owner'} answers it without thinking: "${probe.ask}"`
-      + ' Say it in your own simple words, one question only. Never hint at the answer, never praise or correct it —'
-      + ' just note it and move on. If they say "pata nahi", accept it.';
+    const field = nextTradeField(memory);
+    const probe = field ? null : nextTradeProbe(memory);
+    if (field) {
+      // The trade's arithmetic needs this figure — asked like any field, so extraction fills it.
+      const def = section.fields?.find((f) => f.key === field) ?? { key: field, ...FIELD_DEFS_BY_KEY[field] };
+      instruction.missingFields = [field];
+      instruction.directive = `Ask about: ${def.label}. Plain-words example: "${def.ask}"`
+        + ' Ask ONE thing at a time, in your own words, as simply as the example.';
+    } else if (probe.parent) {
+      instruction.tradeProbe = probe.key;
+      instruction.tradeProbeDef = probe;
+      instruction.directive = `Their last answer needs one more question. Ask exactly this, in your own simple words: "${probe.ask}"`
+        + ' Sound curious, not suspicious. Never say why you are asking, never hint at the right answer, never correct them.';
+    } else {
+      instruction.tradeProbe = probe.key;
+      instruction.tradeProbeDef = probe;
+      instruction.directive = `Ask this insider trade question — a real ${biz?.label ?? 'owner'} answers it without thinking: "${probe.ask}"`
+        + ' Say it in your own simple words, one question only. Never hint at the answer, never praise or correct it —'
+        + ' just note it and move on. If they say "pata nahi", accept it.';
+    }
   } else if (section.type === 'coaching_check') {
     instruction.directive = section.action;
     instruction.previousMention = memory.income_mentions[0] ?? null;
@@ -127,7 +145,9 @@ function buildInstruction(memory, section, caseData, config) {
     instruction.riskAlert = caseData.riskPatternMatch;
   }
 
-  const open = memory.flags.filter((f) => !f.followedUp);
+  // One gentle follow-up per turn, the most serious first; stacking several turns a question into an audit.
+  const RANK = { high: 0, medium: 1, low: 2 };
+  const open = memory.flags.filter((f) => !f.followedUp).sort((a, b) => (RANK[a.severity] ?? 3) - (RANK[b.severity] ?? 3)).slice(0, 1);
   if (open.length) {
     instruction.contradictions = open;
     instruction.directive += ' Also follow up naturally on the flagged items below. Never confront, never say they contradicted themselves.';

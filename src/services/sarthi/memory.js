@@ -1,7 +1,7 @@
 // Interview state (collected facts, flags, transcript). Kept out of the model's context window.
 import pdSchema from '../../data/sarthi/pdSchema.json';
 import { namesMatch } from './idChecks';
-import { purposeSignals } from './probes';
+import { purposeSignals, judgeAnswer } from './probes';
 
 export const FIELD_KEYS = pdSchema.sections.flatMap((s) => (s.fields ?? []).map((f) => f.key));
 
@@ -136,7 +136,11 @@ export function completeness(memory) {
 // The borrower's own words are the answer — nothing to extract, and nothing for a model to smooth over.
 export function recordTradeAnswer(memory, probe, text, turn) {
   if (!probe || (memory.tradeAnswers ?? []).some((a) => a.key === probe.key)) return memory;
-  return { ...memory, tradeAnswers: [...(memory.tradeAnswers ?? []), { key: probe.key, q: probe.ask, answer: text, turn, expect: probe.expect, redFlag: probe.redFlag }] };
+  const entry = {
+    key: probe.key, parent: probe.parent ?? null, q: probe.ask, answer: text, turn,
+    status: judgeAnswer(probe, text), expect: probe.expect, redFlag: probe.redFlag,
+  };
+  return { ...memory, tradeAnswers: [...(memory.tradeAnswers ?? []), entry] };
 }
 
 export function recordVerification(memory, kind, record) {

@@ -50,37 +50,77 @@
         "ask": "Atta-chawal, packet wala saamaan, aur khula dal-masala — inmein sabse zyada munafa kismein hai?",
         "qHi": "आटा-चावल, पैकेट वाला सामान, और खुला दाल-मसाला — इनमें सबसे ज़्यादा मुनाफ़ा किसमें है?",
         "expect": "Branded staples (atta, oil, sugar) earn only 2-8%; packaged FMCG 8-15%; loose dal, masala and grains sold by weight 15-30%. A real owner names loose goods or personal care, never branded atta or oil.",
-        "redFlag": "Says atta, oil or sugar is the most profitable, or cannot rank the categories at all."
+        "redFlag": "Says atta, oil or sugar is the most profitable, or cannot rank the categories at all.",
+        "redFlagMatch": "\\b(atta|aata|aate|atte|tel|oil|cheeni|chini|sugar|chawal|rice)\\b",
+        "unlessMatch": "\\b(khula|khule|masala|masale|loose|dal|daal)\\b",
+        "onRedFlag": { "ask": "Achha? Ek bori atte pe kitna bach jaata hai?", "qHi": "अच्छा? एक बोरी आटे पे, कितना बच जाता है?" },
+        "onVague": {
+          "ask": "Chaliye, sirf do cheezein — packet wala biscuit aur khula masala. Kismein zyada bachta hai?",
+          "qHi": "चलिए, सिर्फ़ दो चीज़ें — पैकेट वाला बिस्कुट, और खुला मसाला। किसमें ज़्यादा बचता है?"
+        }
       },
       {
         "key": "distributor_cycle",
         "ask": "Distributor ka salesman kitne din mein order lene aata hai, aur kitne din ka udhaar deta hai?",
         "qHi": "डिस्ट्रीब्यूटर का सेल्समैन, कितने दिन में ऑर्डर लेने आता है, और कितने दिन का उधार देता है?",
         "expect": "Salesmen come on a fixed beat, usually weekly or twice a week, and distributors give 7-30 days credit. The owner knows the visit day and the credit period without thinking.",
-        "redFlag": "Cannot name a visit day or a credit period, or says everything is bought in cash at the market despite a high turnover."
+        "redFlag": "Cannot name a visit day or a credit period, or says everything is bought in cash at the market despite a high turnover.",
+        "redFlagMatch": "(sab cash|cash mein|nakad|mandi se|khud laata|khud lata)",
+        "onRedFlag": {
+          "ask": "Kisi company ka salesman aata hi nahi — biscuit ya sabun wala bhi nahi?",
+          "qHi": "किसी कंपनी का सेल्समैन आता ही नहीं — बिस्कुट या साबुन वाला भी नहीं?"
+        },
+        "onVague": {
+          "ask": "Aakhri baar salesman kab aaya tha — kaun sa din?",
+          "qHi": "आख़िरी बार सेल्समैन कब आया था — कौन सा दिन?"
+        }
       },
       {
         "key": "daily_fast_mover",
         "ask": "Roz sabse pehle kya khatam hota hai — doodh, bread ya kuch aur? Roz kitna mangwate hain?",
         "qHi": "रोज़ सबसे पहले क्या ख़त्म होता है — दूध, ब्रेड या कुछ और? रोज़ कितना मँगवाते हैं?",
         "expect": "An owner who stands in the shop knows the daily quantity of milk, bread or eggs in crates or packets, and it should roughly fit their stated footfall.",
-        "redFlag": "Vague (\"bahut\", \"jitna chahiye\"), or a quantity far out of line with the customers per day they claimed."
+        "redFlag": "Vague (\"bahut\", \"jitna chahiye\"), or a quantity far out of line with the customers per day they claimed.",
+        "onVague": { "ask": "Kal kitne packet doodh aaya tha?", "qHi": "कल कितने पैकेट दूध आया था?" }
       },
       {
         "key": "udhaar_ledger",
         "ask": "Grahakon ka udhaar kaise likhte hain — khata, diary ya mobile app? Sabse purana udhaar kitne mahine ka hai?",
         "qHi": "ग्राहकों का उधार कैसे लिखते हैं — खाता, डायरी या मोबाइल ऐप? सबसे पुराना उधार कितने महीने का है?",
         "expect": "Almost every kirana gives udhaar and tracks it in a khata or an app such as Khatabook; dues 1-3 months old are normal. Untracked udhaar is the main killer of kirana cash flow.",
-        "redFlag": "Claims no udhaar at all on a busy shop, or cannot say how it is tracked."
+        "redFlag": "Claims no udhaar at all on a busy shop, or cannot say how it is tracked.",
+        "redFlagMatch": "(nahi deta|deta hi nahi|koi udhaar nahi|udhaar nahi|no udhaar|sab cash)",
+        "onRedFlag": {
+          "ask": "Mohalle ke purane grahak ko bhi nahi? Mahine ke aakhir mein bhi nahi?",
+          "qHi": "मोहल्ले के पुराने ग्राहक को भी नहीं? महीने के आख़िर में भी नहीं?"
+        },
+        "onVague": {
+          "ask": "Abhi sabse zyada udhaar kiska hai, lagbhag kitna?",
+          "qHi": "अभी सबसे ज़्यादा उधार किसका है, लगभग कितना?"
+        }
       },
       {
         "key": "expiry_returns",
         "ask": "Jo maal expiry ho jaata hai, uska kya karte hain — company wapas leti hai?",
         "qHi": "जो माल एक्सपायरी हो जाता है, उसका क्या करते हैं — कंपनी वापस लेती है?",
         "expect": "Distributors usually take back or replace expired packaged FMCG against a claim; loose goods and staples are the owner's own loss. Even 1-2% wastage wipes out the margin on staples.",
-        "redFlag": "Has never dealt with expired stock, or does not know whether the distributor takes it back."
+        "redFlag": "Has never dealt with expired stock, or does not know whether the distributor takes it back.",
+        "redFlagMatch": "(kabhi nahi|hua nahi|hota nahi|nahi hota)",
+        "onRedFlag": {
+          "ask": "Biscuit ya namkeen ka packet bhi kabhi expire nahi hua?",
+          "qHi": "बिस्कुट या नमकीन का पैकेट भी, कभी एक्सपायर नहीं हुआ?"
+        }
       }
-    ]
+    ],
+    "hisaab": {
+      "fields": ["monthly_purchase", "stock_value", "credit_given"],
+      "purchaseToSales": { "min": 0.7, "max": 1.1, "expect": "0.85-0.92 (8-15% margin)" },
+      "stockDays": { "min": 3, "max": 60, "expect": "10-30 days of sales" },
+      "udhaarPctOfSales": { "max": 50 },
+      "milkPricePerPacket": 30,
+      "milkPricePerLitre": 60,
+      "milkMaxPctOfSales": 60
+    }
   },
 
   "garment_shop": {
@@ -944,6 +984,292 @@
     ]
   },
 
+  "electrical_shop": {
+    "id": "electrical_shop",
+    "label": "Electrical Shop",
+    "aliases": [
+      "electrical shop",
+      "electricals",
+      "electrical store",
+      "electric shop",
+      "electrical goods",
+      "bijli ki dukaan",
+      "bijli ka saamaan",
+      "bijli ke saaman",
+      "bijli ka saman",
+      "wire ki dukaan",
+      "switch ki dukaan",
+      "electrical ki dukaan"
+    ],
+    "typicalMarginPct": { "min": 10, "max": 20 },
+    "monthlyIncomeRange": {
+      "small": { "min": 20000, "max": 45000 },
+      "medium": { "min": 45000, "max": 120000 },
+      "large": { "min": 120000, "max": 350000 }
+    },
+    "dailyCustomers": { "min": 15, "max": 80 },
+    "avgBillValue": { "min": 300, "max": 3000 },
+    "commonExpenses": ["rent", "stock purchase", "helper salary", "electricity", "electrician commissions"],
+    "creditPeriodDays": "Distributors give 15-45 days; the shop gives known electricians and contractors 15-45 days",
+    "peakSeason": "Feb-May (fans, coolers, pre-summer wiring), pre-monsoon rewiring, Sept-Nov Diwali lighting; slow in the monsoon",
+    "rentPctOfIncome": { "min": 10, "max": 25 },
+    "redFlags": [
+      "Claims the best margin on branded wire, which runs only 3-5%",
+      "Cannot quote a wire coil rate, which every dealer tracks because it moves with copper",
+      "No electrician network — in this trade the electrician decides what the customer buys",
+      "Has never heard of the QR-code point schemes on wire and switch packs",
+      "No credit to electricians or contractors on a large turnover",
+      "Claims no dead stock at all"
+    ],
+    "knowledgeQuestions": [
+      {
+        "q": "90 metre ka 1.5 mm wire ka coil kitne ka dete ho?",
+        "expect": "Quotes a brand and a rate from memory",
+        "flag": "Cannot quote a coil rate",
+        "qHi": "90 मीटर का 1.5 एमएम वायर का कॉइल, कितने का देते हो?"
+      }
+    ],
+    "depth": [
+      {
+        "key": "margin_mix",
+        "ask": "Wire, switch-MCB, aur LED light — inmein sabse zyada munafa kismein hai?",
+        "qHi": "वायर, स्विच-एमसीबी, और एलईडी लाइट — इनमें सबसे ज़्यादा मुनाफ़ा किसमें है?",
+        "expect": "Wires and cables earn only 3-5% (volume, not margin); switches and MCBs 15-25%; LED and fancy lighting 30-40%+. A real owner names lights or switches, never branded wire.",
+        "redFlag": "Says wire gives the most margin, or cannot rank the categories.",
+        "redFlagMatch": "\\b(wire|taar|tar|cable|coil)\\b",
+        "unlessMatch": "\\b(light|lights|led|jhoomar|fancy|switch|mcb)\\b",
+        "onRedFlag": {
+          "ask": "Achha? Ek coil wire pe kitna bach jaata hai aapko?",
+          "qHi": "अच्छा? एक कॉइल वायर पे, कितना बच जाता है आपको?"
+        },
+        "onVague": {
+          "ask": "Sirf do cheezein — wire ka coil aur LED panel. Kismein zyada bachta hai?",
+          "qHi": "सिर्फ़ दो चीज़ें — वायर का कॉइल, और एलईडी पैनल। किसमें ज़्यादा बचता है?"
+        }
+      },
+      {
+        "key": "coil_price",
+        "ask": "1.5 mm wire ka 90 metre wala coil aaj kitne ka de rahe hain — kaunsi company ka?",
+        "qHi": "1.5 एमएम वायर का, 90 मीटर वाला कॉइल, आज कितने का दे रहे हैं — कौन सी कंपनी का?",
+        "expect": "Quotes a brand and a rate from memory — roughly Rs 1,500-4,000 in 2026 by brand and FR/FRLS grade — and knows wire makers revise list prices often, sometimes weekly, with copper.",
+        "redFlag": "Cannot quote a rate, or says wire prices never change.",
+        "redFlagMatch": "(fix hai|fixed hai|nahi badalta|same rehta|kabhi nahi badla)",
+        "onRedFlag": {
+          "ask": "Pichhle mahine ke rate se kuch farak aaya hai kya?",
+          "qHi": "पिछले महीने के रेट से, कुछ फ़र्क़ आया है क्या?"
+        },
+        "onVague": {
+          "ask": "Aapke yahan sabse zyada kaunsi company ka wire bikta hai — uska coil kitne ka?",
+          "qHi": "आपके यहाँ सबसे ज़्यादा किस कंपनी का वायर बिकता है — उसका कॉइल कितने का?"
+        }
+      },
+      {
+        "key": "electrician_network",
+        "ask": "Kitne electrician aapke yahan se maal uthwaate hain? Unko kya milta hai?",
+        "qHi": "कितने इलेक्ट्रीशियन, आपके यहाँ से माल उठवाते हैं? उनको क्या मिलता है?",
+        "expect": "The electrician decides the purchase — \"the homeowner rarely buys the wire; the electrician tells them what to buy\". A real shop names a handful of regular electricians and says they earn through company scan points or a shop commission.",
+        "redFlag": "No electricians, or says customers choose everything themselves.",
+        "redFlagMatch": "(koi nahi|nahi aate|direct customer|grahak khud|customer khud)",
+        "onRedFlag": {
+          "ask": "Ghar ki wiring ke liye grahak khud wire pasand karta hai, ya mistri bata ke bhejta hai?",
+          "qHi": "घर की वायरिंग के लिए, ग्राहक ख़ुद वायर पसंद करता है, या मिस्त्री बता के भेजता है?"
+        },
+        "onVague": {
+          "ask": "Sabse purana electrician kaun hai jo aapse maal leta hai?",
+          "qHi": "सबसे पुराना इलेक्ट्रीशियन कौन है, जो आपसे माल लेता है?"
+        }
+      },
+      {
+        "key": "qr_scheme",
+        "ask": "Wire ya switch ke dabbe mein jo QR code hota hai, woh kaun scan karta hai?",
+        "qHi": "वायर या स्विच के डिब्बे में जो क्यूआर कोड होता है, वो कौन स्कैन करता है?",
+        "expect": "Brands print a QR or 15-digit code on packs (Havells Sampark, Polycab Experts, Crompton Saathi); the electrician scans it for instant points to bank or UPI. Every electrical shop knows this.",
+        "redFlag": "Has never heard of the QR or points schemes.",
+        "redFlagMatch": "(koi qr nahi|qr nahi hota|kaunsa qr|kaun sa qr|pata nahi)",
+        "onRedFlag": {
+          "ask": "Havells ya Polycab ka koi point wala app ya scheme — kuch nahi chalta?",
+          "qHi": "हैवेल्स या पॉलीकैब का, कोई पॉइंट वाला ऐप या स्कीम — कुछ नहीं चलता?"
+        }
+      },
+      {
+        "key": "contractor_credit",
+        "ask": "Contractor ya electrician ko kitne din ka udhaar dete hain? Abhi kitna baaki hai?",
+        "qHi": "कॉन्ट्रैक्टर या इलेक्ट्रीशियन को, कितने दिन का उधार देते हैं? अभी कितना बाक़ी है?",
+        "expect": "Known electricians and contractors get 15-45 days; the owner knows roughly how much is outstanding and who owes the most.",
+        "redFlag": "Claims no credit at all to trade customers on a large turnover.",
+        "redFlagMatch": "(nahi deta|sab cash|koi udhaar nahi|udhaar nahi)",
+        "onRedFlag": {
+          "ask": "Kisi purane contractor ko bhi nahi — bade kaam mein bhi nahi?",
+          "qHi": "किसी पुराने कॉन्ट्रैक्टर को भी नहीं — बड़े काम में भी नहीं?"
+        },
+        "onVague": {
+          "ask": "Sabse zyada kiska baaki hai abhi, lagbhag kitna?",
+          "qHi": "सबसे ज़्यादा किसका बाक़ी है अभी, लगभग कितना?"
+        }
+      },
+      {
+        "key": "dead_stock",
+        "ask": "Kaunsa maal pada-pada purana ho jaata hai? Aisa maal kitne ka hoga?",
+        "qHi": "कौन सा माल पड़ा-पड़ा पुराना हो जाता है? ऐसा माल कितने का होगा?",
+        "expect": "Every shop has slow movers — fancy lights, old switch models, discontinued fittings. Shops stock roughly 70% fast, 20% medium, 10% slow items; 10-15% of stock sitting slow is normal.",
+        "redFlag": "Claims nothing ever sits unsold.",
+        "redFlagMatch": "(kuch nahi|sab bik jaata|sab nikal jaata|koi nahi|nahi padta)",
+        "onRedFlag": {
+          "ask": "Purane model ke switch ya fancy jhoomar bhi kabhi nahi atakte?",
+          "qHi": "पुराने मॉडल के स्विच, या फ़ैंसी झूमर भी, कभी नहीं अटकते?"
+        }
+      },
+      {
+        "key": "season",
+        "ask": "Saal mein kab sabse zyada bikri hoti hai, aur kab sabse kam?",
+        "qHi": "साल में कब सबसे ज़्यादा बिक्री होती है, और कब सबसे कम?",
+        "expect": "Peaks before summer (fans, coolers, wiring), before the monsoon (rewiring) and at Diwali (lighting); slowest in the monsoon.",
+        "redFlag": "Says sales are the same all year.",
+        "redFlagMatch": "(saal bhar ek jaisa|same rehta|koi farak nahi|barabar rehta)",
+        "onRedFlag": {
+          "ask": "Garmi shuru hone se pehle bhi koi farak nahi padta?",
+          "qHi": "गर्मी शुरू होने से पहले भी, कोई फ़र्क़ नहीं पड़ता?"
+        },
+        "onVague": {
+          "ask": "Garmi shuru hone se pehle kya zyada nikalta hai?",
+          "qHi": "गर्मी शुरू होने से पहले, क्या ज़्यादा निकलता है?"
+        }
+      }
+    ],
+    "hisaab": {
+      "fields": ["monthly_purchase", "stock_value", "credit_given"],
+      "purchaseToSales": { "min": 0.65, "max": 1.1, "expect": "0.80-0.90 (10-20% blended margin)" },
+      "stockDays": { "min": 10, "max": 120, "expect": "about 1-3 months of sales (indicative)" },
+      "udhaarPctOfSales": { "max": 60 },
+      "answerRanges": [
+        {
+          "probe": "coil_price",
+          "min": 800,
+          "max": 6000,
+          "parseMin": 100,
+          "what": "a 90 m coil of 1.5 sq mm wire",
+          "expect": "Rs 1,500-4,000 in 2026 by brand"
+        }
+      ]
+    }
+  },
+  "electrical_dealer": {
+    "id": "electrical_dealer",
+    "label": "Electrical Dealer / Distributor",
+    "aliases": [
+      "electrical distributor",
+      "electrical dealer",
+      "electrical wholesale",
+      "electrical wholesaler",
+      "wire dealer",
+      "cable dealer",
+      "wire distributor",
+      "cable distributor",
+      "electrical stockist",
+      "switchgear dealer",
+      "electrical agency",
+      "bijli ke saaman ka wholesale"
+    ],
+    "typicalMarginPct": { "min": 4, "max": 10 },
+    "monthlyIncomeRange": {
+      "small": { "min": 40000, "max": 100000 },
+      "medium": { "min": 100000, "max": 300000 },
+      "large": { "min": 300000, "max": 1000000 }
+    },
+    "dailyCustomers": { "min": 5, "max": 40 },
+    "avgBillValue": { "min": 5000, "max": 100000 },
+    "commonExpenses": ["godown rent", "delivery vehicle", "salesmen", "stock purchase", "bank interest on working capital"],
+    "creditPeriodDays": "Companies give 30-45 days with a cash discount for early payment; dealers give shops 15-30 days",
+    "peakSeason": "Pre-summer, pre-monsoon, and the Diwali quarter; year-end target push in March",
+    "rentPctOfIncome": { "min": 3, "max": 12 },
+    "redFlags": [
+      "Cannot name the brand or the distributor they buy from",
+      "Unaware of purchase targets or slab schemes",
+      "Claims zero credit to retailers",
+      "Margin claimed above 12% on wires"
+    ],
+    "knowledgeQuestions": [
+      {
+        "q": "Company kitne din ka udhaar deti hai?",
+        "expect": "30-45 days, with a cash discount for early payment",
+        "flag": "Does not know the terms",
+        "qHi": "कंपनी कितने दिन का उधार देती है?"
+      }
+    ],
+    "depth": [
+      {
+        "key": "principal",
+        "ask": "Kaunsi company ki dealership hai? Maal seedha company se aata hai ya kisi bade distributor se?",
+        "qHi": "कौन सी कंपनी की डीलरशिप है? माल सीधा कंपनी से आता है, या किसी बड़े डिस्ट्रीब्यूटर से?",
+        "expect": "Names the brand(s) and whether they are an authorised dealer or distributor, or buy from a super-stockist. Channel margins are thin: distributor about 5-8%, dealer 10-15% across the chain.",
+        "redFlag": "Vague about which brand, or who bills them.",
+        "redFlagMatch": "(sab company|sabka|jo mil jaaye|har company)",
+        "onRedFlag": {
+          "ask": "Bill kiske naam se aata hai — company ka ya kisi distributor ka?",
+          "qHi": "बिल किसके नाम से आता है — कंपनी का, या किसी डिस्ट्रीब्यूटर का?"
+        }
+      },
+      {
+        "key": "target_scheme",
+        "ask": "Company ka mahine ya quarter ka target kitna hai, aur poora hone pe kya milta hai?",
+        "qHi": "कंपनी का महीने या क्वार्टर का टारगेट कितना है, और पूरा होने पे क्या मिलता है?",
+        "expect": "Brands set monthly or quarterly purchase targets with slab discounts, turnover incentives or dealer trips; a real dealer knows this quarter's target and how close they are.",
+        "redFlag": "Says there are no targets or schemes.",
+        "redFlagMatch": "(koi target nahi|target nahi hota|koi scheme nahi)",
+        "onRedFlag": {
+          "ask": "Saal ke end mein ya Diwali pe koi extra discount ya trip — kuch nahi?",
+          "qHi": "साल के एंड में या दिवाली पे, कोई एक्स्ट्रा डिस्काउंट या ट्रिप — कुछ नहीं?"
+        },
+        "onVague": { "ask": "Pichhle quarter ka target poora hua tha?", "qHi": "पिछले क्वार्टर का टारगेट, पूरा हुआ था?" }
+      },
+      {
+        "key": "cash_discount",
+        "ask": "Company ko jaldi payment karne pe kitna discount milta hai, aur kitne din ka udhaar deti hai?",
+        "qHi": "कंपनी को जल्दी पेमेंट करने पे, कितना डिस्काउंट मिलता है, और कितने दिन का उधार देती है?",
+        "expect": "Companies give about 30-45 days credit and a cash discount (commonly 1-3%) for paying early; a dealer knows both numbers.",
+        "redFlag": "Does not know the credit period or the early-payment discount.",
+        "redFlagMatch": "(koi discount nahi|discount nahi milta)",
+        "onRedFlag": { "ask": "Aakhri bill kitne din mein bhara tha?", "qHi": "आख़िरी बिल, कितने दिन में भरा था?" },
+        "onVague": { "ask": "Aakhri bill kitne din mein bhara tha?", "qHi": "आख़िरी बिल, कितने दिन में भरा था?" }
+      },
+      {
+        "key": "retailer_book",
+        "ask": "Kitni dukaanon ya contractors ko maal dete hain, aur unhe kitne din ka udhaar?",
+        "qHi": "कितनी दुकानों या कॉन्ट्रैक्टर्स को माल देते हैं, और उन्हें कितने दिन का उधार?",
+        "expect": "A real dealer supplies a known set of retailers and contractors, usually on 15-30 days credit, and knows which accounts are overdue.",
+        "redFlag": "Claims to sell only for cash.",
+        "redFlagMatch": "(nahi deta|sab cash|koi udhaar nahi|udhaar nahi)",
+        "onRedFlag": { "ask": "Ek bhi dukaan ka paisa atka hua nahi hai?", "qHi": "एक भी दुकान का पैसा अटका हुआ नहीं है?" },
+        "onVague": { "ask": "Sabse zyada kiska baaki hai, aur kab se?", "qHi": "सबसे ज़्यादा किसका बाक़ी है, और कब से?" }
+      },
+      {
+        "key": "copper_price",
+        "ask": "Copper mehenga hota hai toh wire ka rate kitne din mein badal jaata hai? Aakhri baar kab badla tha?",
+        "qHi": "कॉपर महँगा होता है, तो वायर का रेट कितने दिन में बदल जाता है? आख़िरी बार कब बदला था?",
+        "expect": "Wire makers revise list prices often — sometimes weekly — with copper; a dealer remembers the last revision and whether they stocked up before it.",
+        "redFlag": "Says wire rates are fixed.",
+        "redFlagMatch": "(nahi badalta|fix hai|fixed hai|same rehta)",
+        "onRedFlag": {
+          "ask": "Pichhle saal aur aaj ke coil ke rate mein koi farak nahi?",
+          "qHi": "पिछले साल और आज के, कॉइल के रेट में कोई फ़र्क़ नहीं?"
+        }
+      },
+      {
+        "key": "returns",
+        "ask": "Kharab ya warranty wala maal kaise wapas jaata hai — company leti hai?",
+        "qHi": "ख़राब या वारंटी वाला माल, कैसे वापस जाता है — कंपनी लेती है?",
+        "expect": "Brands replace defective switchgear, fans and lights under warranty through the distributor; a dealer knows the process and how long credit notes take.",
+        "redFlag": "Has never handled a return.",
+        "redFlagMatch": "(kabhi nahi hua|kabhi nahi aaya|koi return nahi)"
+      }
+    ],
+    "hisaab": {
+      "fields": ["monthly_purchase", "stock_value", "credit_given"],
+      "purchaseToSales": { "min": 0.8, "max": 1.05, "expect": "0.90-0.96 (4-10% margin)" },
+      "stockDays": { "min": 7, "max": 90, "expect": "about 15-60 days of sales (indicative)" },
+      "udhaarPctOfSales": { "max": 100 }
+    }
+  },
   "electrical_contractor": {
     "id": "electrical_contractor",
     "label": "Electrical Contractor",
@@ -996,37 +1322,112 @@
         "ask": "Aapka electrical contractor licence kaunsi class ka hai — A, B ya C? Kis state ka hai?",
         "qHi": "आपका इलेक्ट्रिकल कॉन्ट्रैक्टर लाइसेंस, कौन सी क्लास का है — ए, बी या सी? किस स्टेट का है?",
         "expect": "State licensing boards issue classes by voltage: C for domestic or small work (up to 250V, below 650V in some states), B for commercial up to 650V or 11kV, A for high-tension. A licence needs a certified supervisor on the rolls.",
-        "redFlag": "Does not know the class, has no licence, or claims industrial or HT work on a Class C licence."
+        "redFlag": "Does not know the class, has no licence, or claims industrial or HT work on a Class C licence.",
+        "redFlagMatch": "(zaroorat nahi|licence nahi|license nahi|koi licence|nahi hai)",
+        "onRedFlag": {
+          "ask": "Naye meter ke liye wiring ki test report kaun sign karta hai phir?",
+          "qHi": "नए मीटर के लिए, वायरिंग की टेस्ट रिपोर्ट कौन साइन करता है फिर?"
+        },
+        "onVague": { "ask": "Licence pe kis board ka naam likha hai?", "qHi": "लाइसेंस पे, किस बोर्ड का नाम लिखा है?" }
       },
       {
         "key": "work_orders",
         "ask": "Abhi kitne kaam haath mein hain — kiska kaam hai aur kitne ka order hai?",
         "qHi": "अभी कितने काम हाथ में हैं — किसका काम है, और कितने का ऑर्डर है?",
         "expect": "Names specific clients (a builder, a society, a government department) with order values, and has written work orders.",
-        "redFlag": "Cannot name a client or an order value, or everything is \"chhote-mote kaam\"."
+        "redFlag": "Cannot name a client or an order value, or everything is \"chhote-mote kaam\".",
+        "redFlagMatch": "(chhote.?mote|kuch khaas nahi|abhi koi nahi)",
+        "onRedFlag": {
+          "ask": "Pichhla sabse bada kaam kaunsa tha — kiska, aur kitne ka?",
+          "qHi": "पिछला सबसे बड़ा काम कौन सा था — किसका, और कितने का?"
+        },
+        "onVague": {
+          "ask": "Pichhla sabse bada kaam kaunsa tha — kiska, aur kitne ka?",
+          "qHi": "पिछला सबसे बड़ा काम कौन सा था — किसका, और कितने का?"
+        }
       },
       {
         "key": "payment_cycle",
         "ask": "Bill dene ke kitne din baad paisa aata hai? Kuch paisa roka bhi jaata hai kya?",
         "qHi": "बिल देने के कितने दिन बाद पैसा आता है? कुछ पैसा रोका भी जाता है क्या?",
         "expect": "Private builders pay in 30-90 days; government running bills hold 5-10% retention until the defect liability period ends, plus a 3-10% security deposit.",
-        "redFlag": "Claims immediate full payment on large jobs, or has never heard of retention on government work."
+        "redFlag": "Claims immediate full payment on large jobs, or has never heard of retention on government work.",
+        "redFlagMatch": "(turant|usi din|poora mil|sab advance|advance mein)",
+        "onRedFlag": {
+          "ask": "Builder ke kaam mein bhi poora paisa turant? Koi hissa baad mein nahi milta?",
+          "qHi": "बिल्डर के काम में भी, पूरा पैसा तुरंत? कोई हिस्सा बाद में नहीं मिलता?"
+        }
       },
       {
         "key": "material_share",
         "ask": "Ek project mein kitna paisa material mein jaata hai aur kitna labour mein? Wire-MCB udhaar par milta hai?",
         "qHi": "एक प्रोजेक्ट में कितना पैसा मटेरियल में जाता है, और कितना लेबर में? वायर-एमसीबी उधार पर मिलता है?",
         "expect": "Material is about 60-70% of project cost and labour 25-35%; wire and switchgear come from dealers on 15-30 days credit.",
-        "redFlag": "Says material is a small share, or counts material billed to the client as income."
+        "redFlag": "Says material is a small share, or counts material billed to the client as income.",
+        "redFlagMatch": "(customer laata|customer deta|client laata|client deta|party laati|party deti)",
+        "onRedFlag": {
+          "ask": "Toh aap sirf labour lete hain — ek flat ki wiring ka labour kitna banta hai?",
+          "qHi": "तो आप सिर्फ़ लेबर लेते हैं — एक फ़्लैट की वायरिंग का लेबर, कितना बनता है?"
+        },
+        "onVague": {
+          "ask": "Pichhle project mein wire aur MCB kitne ka laga tha?",
+          "qHi": "पिछले प्रोजेक्ट में, वायर और एमसीबी कितने का लगा था?"
+        }
       },
       {
         "key": "point_rate",
         "ask": "Ek point ki wiring ka labour kitna lete hain?",
         "qHi": "एक पॉइंट की वायरिंग का लेबर, कितना लेते हैं?",
         "expect": "About Rs 25-80 per point for labour in 2026, higher in multi-storey buildings and big cities.",
-        "redFlag": "Has no per-point rate in mind, or quotes far outside the market."
+        "redFlag": "Has no per-point rate in mind, or quotes far outside the market.",
+        "onVague": {
+          "ask": "Pichhle kaam mein kitne point the, aur kitna mila tha?",
+          "qHi": "पिछले काम में कितने पॉइंट थे, और कितना मिला था?"
+        }
+      },
+      {
+        "key": "supervisor",
+        "ask": "Aapke yahan licence wala supervisor kaun hai, aur wireman kitne hain?",
+        "qHi": "आपके यहाँ लाइसेंस वाला सुपरवाइज़र कौन है, और वायरमैन कितने हैं?",
+        "expect": "A contractor licence is conditional on at least one certified supervisor on the rolls, plus permitted wiremen; a real contractor names them.",
+        "redFlag": "No supervisor, or does not know one is required.",
+        "redFlagMatch": "(koi nahi|zaroorat nahi|main hi sab|akela)",
+        "onRedFlag": {
+          "ask": "Licence banwate waqt supervisor ka certificate kiska lagaya tha?",
+          "qHi": "लाइसेंस बनवाते वक़्त, सुपरवाइज़र का सर्टिफ़िकेट किसका लगाया था?"
+        }
+      },
+      {
+        "key": "testing",
+        "ask": "Kaam khatam hone pe kaunsa test karte hain, kis machine se?",
+        "qHi": "काम ख़त्म होने पे, कौन सा टेस्ट करते हैं, किस मशीन से?",
+        "expect": "Insulation resistance with a megger (500V domestic, 1000V higher voltage) and an earth resistance test; licensing requires calibrated testers.",
+        "redFlag": "Does no testing, or cannot name the instrument.",
+        "redFlagMatch": "(koi test nahi|test nahi karte|zaroorat nahi)",
+        "onRedFlag": {
+          "ask": "Earthing theek hai ya nahi, woh kaise pata karte hain?",
+          "qHi": "अर्थिंग ठीक है या नहीं, वो कैसे पता करते हैं?"
+        },
+        "onVague": {
+          "ask": "Megger ya earth tester — inmein se kuch hai aapke paas?",
+          "qHi": "मेगर या अर्थ टेस्टर — इनमें से कुछ है आपके पास?"
+        }
       }
-    ]
+    ],
+    "hisaab": {
+      "fields": ["monthly_purchase"],
+      "materialPct": { "min": 45, "max": 85, "expect": "60-70% of project cost" },
+      "answerRanges": [
+        {
+          "probe": "point_rate",
+          "min": 15,
+          "max": 150,
+          "parseMin": 5,
+          "what": "labour per wiring point",
+          "expect": "Rs 25-80 per point in 2026"
+        }
+      ]
+    }
   },
   "building_contractor": {
     "id": "building_contractor",

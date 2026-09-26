@@ -25,6 +25,7 @@ import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { SARTHI_VOICE, PRERENDERED } from '../../services/sarthi/voice';
 import voiceManifest from '../../data/sarthi/voiceManifest.json';
 import { useSarthiReports } from '../../hooks/useSarthiReports';
+import { checkTradeMath, understanding } from '../../services/sarthi/probes';
 import styles from './SarthiInterview.module.css';
 
 // One-way video interview. Live (Gemini via proxy) or scripted when no proxy is reachable;
@@ -383,7 +384,11 @@ export default function SarthiInterview() {
       }
 
       const config = getInterviewConfig(subject);
+      // The trade's arithmetic, rerun every turn so a figure that does not add up is followed up while they are here.
+      const math = checkTradeMath(memory.current);
+      memory.current = { ...memory.current, tradeMath: math.results };
       const found_flags = [
+        ...math.flags,
         ...checkContradictions(before, facts, subject),
         // A walk-in has nothing to check against, so their own numbers have to do the work.
         ...(config.isNewApplicant ? checkInternalConsistency(memory.current, subject) : []),
@@ -550,7 +555,9 @@ export default function SarthiInterview() {
 
     // Where verifier and controller flag the same field, keep the verifier's (it has a turn).
     const settled = new Set(claimFlags.map((f) => f.claimType).filter(Boolean));
-    const flags = [...claimFlags, ...memory.current.flags, ...consistency, ...photoFlags]
+    const math = checkTradeMath(memory.current);
+    const depth = understanding(memory.current);
+    const flags = [...claimFlags, ...memory.current.flags, ...consistency, ...math.flags, ...photoFlags]
       .filter((f) => !(f.type === 'contradiction' && settled.has(CLAIM_FIELD[f.field])))
       .filter((f, i, all) => all.findIndex((o) => o.detail === f.detail) === i);
 
@@ -561,7 +568,7 @@ export default function SarthiInterview() {
 
     save(`bo_sarthi_transcript_${subject.id}`, turns);
     save(`bo_sarthi_claims_${subject.id}`, captured);
-    save(`bo_sarthi_evidence_${subject.id}`, { evidence, flags, eligibility, observations, collected: collectedFacts, tradeAnswers: memory.current.tradeAnswers });
+    save(`bo_sarthi_evidence_${subject.id}`, { evidence, flags, eligibility, observations, collected: collectedFacts, understanding: depth, tradeMath: math.results });
     // Images are kept in their own key: base64 is heavy and must not risk the report's own write.
     save(`bo_sarthi_photos_${subject.id}`, photos.current);
 
@@ -572,7 +579,7 @@ export default function SarthiInterview() {
     if (!demoRef.current) {
       try {
         setProgress('Writing the PD report…');
-        const raw = await writeReport({ caseData: subject, transcript: turns, claims: captured, evidence, flags, collected: collectedFacts, verification: memory.current.verification, tradeAnswers: memory.current.tradeAnswers, eligibility, observations, photos: photos.current, identity: subject.identity });
+        const raw = await writeReport({ caseData: subject, transcript: turns, claims: captured, evidence, flags, collected: collectedFacts, verification: memory.current.verification, understanding: depth, tradeMath: math.results, eligibility, observations, photos: photos.current, identity: subject.identity });
         setProgress('Checking every citation…');
         validation = validateReport(raw, turns, captured, briefForCitation(subject), eligibility, { flags, collected: collectedFacts });
         report = validation.cleanedReport;
@@ -584,7 +591,7 @@ export default function SarthiInterview() {
 
     if (!report) {
       setProgress('Writing the PD report…');
-      report = buildFallbackReport({ caseData: subject, transcript: turns, evidence, flags, eligibility, observations, photos: photos.current, identity: subject.identity, cameraOn: cameraRef.current });
+      report = buildFallbackReport({ caseData: subject, transcript: turns, evidence, flags, eligibility, observations, photos: photos.current, identity: subject.identity, cameraOn: cameraRef.current, understanding: depth, tradeMath: math.results });
       validation = validateReport(report, turns, captured, briefForCitation(subject), eligibility, { flags, collected: collectedFacts });
     }
 
@@ -604,6 +611,8 @@ export default function SarthiInterview() {
       // metadata only — the images themselves live in bo_sarthi_photos_<case>
       photos: photos.current.map(({ dataUrl, ...rest }) => rest),
       identity: subject.identity ?? null,
+      understanding: depth.total ? depth : null,
+      tradeMath: math.results.length ? math.results : null,
       validation,
       turns: turns.length,
     };

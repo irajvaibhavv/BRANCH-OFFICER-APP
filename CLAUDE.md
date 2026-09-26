@@ -183,13 +183,20 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   Without those answers it stays `assessable: false` and the report says "not assessable" rather than
   printing a figure. A declared income alone is never enough to produce a number.
 - **Depth, not a form** (`probes.js`). A trade with a `depth[]` pack in `businessKnowledge.json` (kirana,
-  electrical contractor so far) gets a `trade_depth` section of insider questions — margin by category, distributor
+  electrical shop, electrical dealer/distributor, electrical contractor so far) gets a `trade_depth` section of insider questions — margin by category, distributor
   cycle, licence class, retention — whose answers are stored verbatim in `memory.tradeAnswers` (no extraction) and
   judged in the report against each probe's `expect` / `redFlag`. Such a trade skips the single
   `business_domain` knowledge question. Loan purpose is checked in code: a different trade or "kholna/shuru" is a
   new venture, an amount above 24 months of income is a stretch; each unlocks follow-ups (`purpose_reason`,
-  `purpose_experience`, `current_business_plan`, `amount_basis`) and raises a `loan_purpose` flag. New trade =
-  add a `depth[]` pack, researched, not invented. `lookupBusiness` takes the longest word-start match — a bare
+  `purpose_experience`, `current_business_plan`, `amount_basis`) and raises a `loan_purpose` flag. Three layers, all decided in code:
+  (1) insider questions; (2) `judgeAnswer` marks each answer clear / vague / redFlag from its own words
+  (`redFlagMatch`, `unlessMatch`, a vague-word list) and `nextTradeProbe` asks that probe's `onRedFlag` /
+  `onVague` follow-up once; (3) `checkTradeMath` tests the trade's arithmetic from `hisaab` limits (kirana:
+  purchases 70-110% of sales, stock 3-60 days, udhaar ≤ 50% of sales, milk ≤ 60% of sales; electrical: material
+  45-85%; `answerRanges` test a quoted rate — coil price, per-point labour — against the market) — the `hisaab.fields` are asked of every applicant, and each failure is a `trade_math` flag. The report
+  shows `understanding()` as "X of Y insider answers clear" plus the hisaab list. Flags are followed up one per
+  turn, most severe first, then marked `followedUp` — before this they were re-sent every turn. New trade =
+  add a `depth[]` pack (with follow-ups) and `hisaab` limits, researched, not invented. `lookupBusiness` takes the longest word-start match — a bare
   substring once filed taxi, carpenter and welding under CA ("ca").
 - **SLM training data** (`npm run sarthi:training -- <source.jsonl>`, output in git-ignored `training/`):
   `scripts/build-training-data.mjs` bundles the app's own `EXTRACTOR_SYSTEM`, schema and number parser, so the

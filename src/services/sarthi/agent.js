@@ -463,10 +463,12 @@ failed check or an identity_document flag as a high-severity finding — a forei
 - The ELIGIBILITY section numbers are calculated by the system using verified math. You MUST use these exact numbers in your report. Do NOT recalculate or adjust them. Report them exactly as given.
 - If ELIGIBILITY has "assessable": false, the file has no verified income. Write "not assessable until a bank statement or ITR is seen" and do NOT derive an eligible amount from the declared figure. Never print a null.
 - Cite a photograph as (Photo: shop) or (Photo: home), and an identity check by its name.
-- Give TRADE DEPTH its own short section after the interview summary: for each question, one line — what they
-  said (Turn X), and whether it fits "expect", is vague, or matches "redFlag". Judge only against those two fields,
-  never against your own idea of the trade. Two or more vague or red-flag answers is a finding: the applicant may
-  not run this business day to day.
+- Give BUSINESS UNDERSTANDING its own short section after the interview summary. Open with the score exactly as
+  given: "X of Y insider answers clear, V vague, R red flag". Then one line per question — what they said (Turn X),
+  the follow-up if one was asked, and the status. Judge only against "expect", never your own idea of the trade.
+  Two or more vague or red-flag answers is a finding: the applicant may not run this business day to day.
+- Then a HISAAB section: each check with ✓ or ✕ and its detail as given. A failed check is a finding, cited
+  (Flag: math_<check>). Never recompute these numbers.
 - A loan_purpose flag (new venture, personal use, or an amount far above income) belongs in the risk findings with
   the borrower's own reasons from purpose_reason / purpose_experience / amount_basis, cited by turn.
 - A photograph's provenance.source says how it arrived: "live_camera" was taken during the interview, "upload" was a file. Never describe an uploaded file as taken during the interview.
@@ -474,7 +476,7 @@ failed check or an identity_document flag as a high-severity finding — a forei
 - Be objective. Report both positive and negative findings.
 - Output plain markdown only. No preamble, no code fences around the report.`;
 
-export function buildReporterInput({ caseData, transcript, claims, evidence, flags = [], collected = null, verification = null, tradeAnswers = [], eligibility, observations, photos = [], identity, mode = 'Handover' }) {
+export function buildReporterInput({ caseData, transcript, claims, evidence, flags = [], collected = null, verification = null, understanding = null, tradeMath = [], eligibility, observations, photos = [], identity, mode = 'Handover' }) {
   const turns = transcript
     .map((m, i) => `[${i + 1}] ${m.role === 'assistant' ? 'SARTHI' : 'BORROWER'}: ${m.content}`)
     .join('\n');
@@ -507,8 +509,11 @@ ${collected ? JSON.stringify(Object.fromEntries(Object.entries(collected).filter
 ## FLAGS RAISED BY THE SYSTEM (contradictions, coaching drift and internal-consistency failures — decided in code, not by you)
 ${flags.length ? JSON.stringify(flags, null, 2) : 'None raised.'}
 
-## TRADE DEPTH (insider questions only a real operator answers easily — judge each answer against "expect")
-${tradeAnswers.length ? JSON.stringify(tradeAnswers, null, 2) : 'No trade depth questions on file for this business.'}
+## TRADE DEPTH (insider questions only a real operator answers easily; "status" was decided in code)
+${understanding?.total ? JSON.stringify(understanding, null, 2) : 'No trade depth questions on file for this business.'}
+
+## HISAAB CHECKS (the trade's arithmetic, computed in code — do not recompute or soften)
+${tradeMath?.length ? JSON.stringify(tradeMath, null, 2) : 'Not enough figures for the trade checks.'}
 
 ## KNOWLEDGE CHECK RESULTS
 ${verification && (verification.area?.length || verification.business?.length) ? JSON.stringify(verification, null, 2) : 'Scores are in the structured PD record as area_knowledge_score and business_domain_score.'}

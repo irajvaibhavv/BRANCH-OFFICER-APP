@@ -19,6 +19,7 @@ const VERDICT = {
 };
 
 const MARK = { confirmed: 'holds up', contradicted: 'contradicted', unverified: 'unsettled' };
+const DEPTH_MARK = { clear: '✓', vague: '~', redFlag: '✕' };
 
 export default function SarthiReport() {
   const { id } = useParams();
@@ -112,6 +113,44 @@ export default function SarthiReport() {
             </article>
           ))}
         </div>
+      )}
+
+      {/* insider questions — does this person actually run the business? */}
+      {r.understanding && (
+        <>
+          <h2 className={styles.head}>How well they know their business</h2>
+          <div className={r.understanding.redFlag + r.understanding.vague >= 2 ? styles.idBad : styles.idOk}>
+            <p className={styles.idLine}>
+              <strong>{r.understanding.clear} of {r.understanding.total}</strong> insider answers clear
+              {r.understanding.vague ? ` · ${r.understanding.vague} vague` : ''}
+              {r.understanding.redFlag ? ` · ${r.understanding.redFlag} red flag` : ''}
+            </p>
+            <ul className={styles.depthList}>
+              {r.understanding.items.map((i) => (
+                <li key={i.key}>
+                  <span className={styles[`depth_${i.status}`]}>{DEPTH_MARK[i.status]}</span>
+                  <div>
+                    <div className={styles.depthQ}>{i.q}</div>
+                    <div className={styles.depthA}>"{i.answer}" <span className={styles.src}>(Turn {i.turn})</span></div>
+                    {i.followUp && <div className={styles.depthA}>↳ {i.followUp.q} — "{i.followUp.answer}"</div>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
+      )}
+
+      {/* the trade's arithmetic, computed in code */}
+      {r.tradeMath && (
+        <>
+          <h2 className={styles.head}>Does the hisaab add up</h2>
+          <ul className={styles.idChecks}>
+            {r.tradeMath.map((m) => (
+              <li key={m.check} className={m.pass ? styles.pass : styles.fail}>{m.pass ? '✓' : '✕'} {m.detail}</li>
+            ))}
+          </ul>
+        </>
       )}
 
       {/* identity — what was checked, and plainly what was not */}

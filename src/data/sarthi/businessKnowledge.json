@@ -43,6 +43,43 @@
         "flag": "Cannot name any distributor",
         "qHi": "कौन सा डिस्ट्रिब्यूटर आता है, आपके यहाँ?"
       }
+    ],
+    "depth": [
+      {
+        "key": "margin_mix",
+        "ask": "Atta-chawal, packet wala saamaan, aur khula dal-masala — inmein sabse zyada munafa kismein hai?",
+        "qHi": "आटा-चावल, पैकेट वाला सामान, और खुला दाल-मसाला — इनमें सबसे ज़्यादा मुनाफ़ा किसमें है?",
+        "expect": "Branded staples (atta, oil, sugar) earn only 2-8%; packaged FMCG 8-15%; loose dal, masala and grains sold by weight 15-30%. A real owner names loose goods or personal care, never branded atta or oil.",
+        "redFlag": "Says atta, oil or sugar is the most profitable, or cannot rank the categories at all."
+      },
+      {
+        "key": "distributor_cycle",
+        "ask": "Distributor ka salesman kitne din mein order lene aata hai, aur kitne din ka udhaar deta hai?",
+        "qHi": "डिस्ट्रीब्यूटर का सेल्समैन, कितने दिन में ऑर्डर लेने आता है, और कितने दिन का उधार देता है?",
+        "expect": "Salesmen come on a fixed beat, usually weekly or twice a week, and distributors give 7-30 days credit. The owner knows the visit day and the credit period without thinking.",
+        "redFlag": "Cannot name a visit day or a credit period, or says everything is bought in cash at the market despite a high turnover."
+      },
+      {
+        "key": "daily_fast_mover",
+        "ask": "Roz sabse pehle kya khatam hota hai — doodh, bread ya kuch aur? Roz kitna mangwate hain?",
+        "qHi": "रोज़ सबसे पहले क्या ख़त्म होता है — दूध, ब्रेड या कुछ और? रोज़ कितना मँगवाते हैं?",
+        "expect": "An owner who stands in the shop knows the daily quantity of milk, bread or eggs in crates or packets, and it should roughly fit their stated footfall.",
+        "redFlag": "Vague (\"bahut\", \"jitna chahiye\"), or a quantity far out of line with the customers per day they claimed."
+      },
+      {
+        "key": "udhaar_ledger",
+        "ask": "Grahakon ka udhaar kaise likhte hain — khata, diary ya mobile app? Sabse purana udhaar kitne mahine ka hai?",
+        "qHi": "ग्राहकों का उधार कैसे लिखते हैं — खाता, डायरी या मोबाइल ऐप? सबसे पुराना उधार कितने महीने का है?",
+        "expect": "Almost every kirana gives udhaar and tracks it in a khata or an app such as Khatabook; dues 1-3 months old are normal. Untracked udhaar is the main killer of kirana cash flow.",
+        "redFlag": "Claims no udhaar at all on a busy shop, or cannot say how it is tracked."
+      },
+      {
+        "key": "expiry_returns",
+        "ask": "Jo maal expiry ho jaata hai, uska kya karte hain — company wapas leti hai?",
+        "qHi": "जो माल एक्सपायरी हो जाता है, उसका क्या करते हैं — कंपनी वापस लेती है?",
+        "expect": "Distributors usually take back or replace expired packaged FMCG against a claim; loose goods and staples are the owner's own loss. Even 1-2% wastage wipes out the margin on staples.",
+        "redFlag": "Has never dealt with expired stock, or does not know whether the distributor takes it back."
+      }
     ]
   },
 
@@ -907,6 +944,90 @@
     ]
   },
 
+  "electrical_contractor": {
+    "id": "electrical_contractor",
+    "label": "Electrical Contractor",
+    "aliases": [
+      "electrical contractor",
+      "electric contractor",
+      "wiring contractor",
+      "electrical thekedar",
+      "bijli ka theka",
+      "electrical contract",
+      "electrical ka theka"
+    ],
+    "typicalMarginPct": { "min": 10, "max": 20 },
+    "monthlyIncomeRange": {
+      "small": { "min": 25000, "max": 60000 },
+      "medium": { "min": 60000, "max": 200000 },
+      "large": { "min": 200000, "max": 600000 }
+    },
+    "dailyCustomers": { "min": 0, "max": 3 },
+    "avgBillValue": { "min": 25000, "max": 500000 },
+    "commonExpenses": [
+      "wire and fittings",
+      "wiremen wages",
+      "supervisor salary",
+      "testing instruments",
+      "transport",
+      "security deposits"
+    ],
+    "creditPeriodDays": "Dealers give 15-30 days on material; builders pay in 30-90 days; government holds 5-10% retention",
+    "peakSeason": "October-March construction season; slow in monsoon",
+    "rentPctOfIncome": { "min": 3, "max": 10 },
+    "redFlags": [
+      "Material billed to the client counted as profit",
+      "Claims high-tension or industrial jobs on a Class C licence",
+      "No certified supervisor on the rolls",
+      "Cannot name a single current client or work order",
+      "Claims full payment on completion for large builder or government jobs"
+    ],
+    "knowledgeQuestions": [
+      {
+        "q": "Insulation tester se kitne volt par test karte hain?",
+        "expect": "500V for domestic wiring, 1000V for higher-voltage installations",
+        "flag": "Does not know what an insulation (megger) test is",
+        "qHi": "इंसुलेशन टेस्टर से, कितने वोल्ट पर टेस्ट करते हैं?"
+      }
+    ],
+    "depth": [
+      {
+        "key": "licence_class",
+        "ask": "Aapka electrical contractor licence kaunsi class ka hai — A, B ya C? Kis state ka hai?",
+        "qHi": "आपका इलेक्ट्रिकल कॉन्ट्रैक्टर लाइसेंस, कौन सी क्लास का है — ए, बी या सी? किस स्टेट का है?",
+        "expect": "State licensing boards issue classes by voltage: C for domestic or small work (up to 250V, below 650V in some states), B for commercial up to 650V or 11kV, A for high-tension. A licence needs a certified supervisor on the rolls.",
+        "redFlag": "Does not know the class, has no licence, or claims industrial or HT work on a Class C licence."
+      },
+      {
+        "key": "work_orders",
+        "ask": "Abhi kitne kaam haath mein hain — kiska kaam hai aur kitne ka order hai?",
+        "qHi": "अभी कितने काम हाथ में हैं — किसका काम है, और कितने का ऑर्डर है?",
+        "expect": "Names specific clients (a builder, a society, a government department) with order values, and has written work orders.",
+        "redFlag": "Cannot name a client or an order value, or everything is \"chhote-mote kaam\"."
+      },
+      {
+        "key": "payment_cycle",
+        "ask": "Bill dene ke kitne din baad paisa aata hai? Kuch paisa roka bhi jaata hai kya?",
+        "qHi": "बिल देने के कितने दिन बाद पैसा आता है? कुछ पैसा रोका भी जाता है क्या?",
+        "expect": "Private builders pay in 30-90 days; government running bills hold 5-10% retention until the defect liability period ends, plus a 3-10% security deposit.",
+        "redFlag": "Claims immediate full payment on large jobs, or has never heard of retention on government work."
+      },
+      {
+        "key": "material_share",
+        "ask": "Ek project mein kitna paisa material mein jaata hai aur kitna labour mein? Wire-MCB udhaar par milta hai?",
+        "qHi": "एक प्रोजेक्ट में कितना पैसा मटेरियल में जाता है, और कितना लेबर में? वायर-एमसीबी उधार पर मिलता है?",
+        "expect": "Material is about 60-70% of project cost and labour 25-35%; wire and switchgear come from dealers on 15-30 days credit.",
+        "redFlag": "Says material is a small share, or counts material billed to the client as income."
+      },
+      {
+        "key": "point_rate",
+        "ask": "Ek point ki wiring ka labour kitna lete hain?",
+        "qHi": "एक पॉइंट की वायरिंग का लेबर, कितना लेते हैं?",
+        "expect": "About Rs 25-80 per point for labour in 2026, higher in multi-storey buildings and big cities.",
+        "redFlag": "Has no per-point rate in mind, or quotes far outside the market."
+      }
+    ]
+  },
   "building_contractor": {
     "id": "building_contractor",
     "label": "Building Contractor",

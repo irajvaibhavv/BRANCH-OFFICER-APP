@@ -158,6 +158,11 @@ officer handed them. Speak like a respectful local bank person, not a form.
   then build up. Never suggest a number or a range yourself — that puts words in their mouth.
 - Echo the key number back inside your next question so they can correct you without an extra
   turn: "Achha, mahine ke lagbhag saath hazaar. Aur ghar ka kharcha kitna hota hai?"
+- Their words are evidence — never change them. Repeat a name or word exactly as they said or typed it;
+  never swap it for one you think they meant ("abcd" is not "Abdul", "Rj" is not "Raj"). In the speech block,
+  write such a word sound-for-sound as given. If an answer is not a real answer — random letters like "abcd",
+  "asdf", "test", or a number where a name was asked — do not accept or reinterpret it: say you didn't catch
+  it and ask the same thing again, once.
 - "Pata nahi" or "yaad nahi" is a valid answer. Thank them and move on; never press twice, never
   make them feel judged.
 - Before asking for a document number or about loans, say in a few words why: "Yeh sirf record
@@ -398,7 +403,11 @@ Write the report in this exact format:
 ---
 
 ### 1. IDENTITY VERIFICATION
-[Liveness / camera status and any video observations supplied. Nothing else.]
+[Liveness / camera status and any video observations supplied. If an identity_mismatch flag exists, state it FIRST
+here — who the application is for, the name the speaker gave, and the speaker_relation fact if collected — and the
+recommendation must not be to approve until the applicant is met in person. Describe any ID document ONLY from
+the IDENTITY DOCUMENT section: never call it "verified" (these are offline format checks, not eKYC), and state a
+failed check or an identity_document flag as a high-severity finding — a foreign ID means reject. Nothing else.]
 
 ### 2. INTERVIEW SUMMARY
 [3-5 bullet points summarizing the key takeaways from the interview. Each point must cite a turn number.]
@@ -450,12 +459,18 @@ Write the report in this exact format:
 - The ELIGIBILITY section numbers are calculated by the system using verified math. You MUST use these exact numbers in your report. Do NOT recalculate or adjust them. Report them exactly as given.
 - If ELIGIBILITY has "assessable": false, the file has no verified income. Write "not assessable until a bank statement or ITR is seen" and do NOT derive an eligible amount from the declared figure. Never print a null.
 - Cite a photograph as (Photo: shop) or (Photo: home), and an identity check by its name.
+- Give TRADE DEPTH its own short section after the interview summary: for each question, one line — what they
+  said (Turn X), and whether it fits "expect", is vague, or matches "redFlag". Judge only against those two fields,
+  never against your own idea of the trade. Two or more vague or red-flag answers is a finding: the applicant may
+  not run this business day to day.
+- A loan_purpose flag (new venture, personal use, or an amount far above income) belongs in the risk findings with
+  the borrower's own reasons from purpose_reason / purpose_experience / amount_basis, cited by turn.
 - A photograph's provenance.source says how it arrived: "live_camera" was taken during the interview, "upload" was a file. Never describe an uploaded file as taken during the interview.
 - Do NOT make a loan decision. Your job is to present findings. The officer decides.
 - Be objective. Report both positive and negative findings.
 - Output plain markdown only. No preamble, no code fences around the report.`;
 
-export function buildReporterInput({ caseData, transcript, claims, evidence, flags = [], collected = null, verification = null, eligibility, observations, photos = [], identity, mode = 'Handover' }) {
+export function buildReporterInput({ caseData, transcript, claims, evidence, flags = [], collected = null, verification = null, tradeAnswers = [], eligibility, observations, photos = [], identity, mode = 'Handover' }) {
   const turns = transcript
     .map((m, i) => `[${i + 1}] ${m.role === 'assistant' ? 'SARTHI' : 'BORROWER'}: ${m.content}`)
     .join('\n');
@@ -487,6 +502,9 @@ ${collected ? JSON.stringify(Object.fromEntries(Object.entries(collected).filter
 
 ## FLAGS RAISED BY THE SYSTEM (contradictions, coaching drift and internal-consistency failures — decided in code, not by you)
 ${flags.length ? JSON.stringify(flags, null, 2) : 'None raised.'}
+
+## TRADE DEPTH (insider questions only a real operator answers easily — judge each answer against "expect")
+${tradeAnswers.length ? JSON.stringify(tradeAnswers, null, 2) : 'No trade depth questions on file for this business.'}
 
 ## KNOWLEDGE CHECK RESULTS
 ${verification && (verification.area?.length || verification.business?.length) ? JSON.stringify(verification, null, 2) : 'Scores are in the structured PD record as area_knowledge_score and business_domain_score.'}

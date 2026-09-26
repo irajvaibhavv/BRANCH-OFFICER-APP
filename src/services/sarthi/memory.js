@@ -1,5 +1,7 @@
 // Interview state (collected facts, flags, transcript). Kept out of the model's context window.
 import pdSchema from '../../data/sarthi/pdSchema.json';
+import { namesMatch } from './idChecks';
+import { purposeSignals } from './probes';
 
 export const FIELD_KEYS = pdSchema.sections.flatMap((s) => (s.fields ?? []).map((f) => f.key));
 
@@ -28,6 +30,7 @@ export function createEmptyMemory(caseData) {
     flags: [],
     income_mentions: [], // every stated income, for coaching detection
     verification: { area: [], business: [] },
+    tradeAnswers: [], // insider trade questions, answered verbatim — see probes.js
     transcript: [],
     currentSection: 'greeting',
     sectionStartTurn: { greeting: 0 },
@@ -93,6 +96,14 @@ function conditionMet(field, memory) {
   const gt = /^(\w+) > (\d+)$/.exec(field.condition);
   if (gt) return Number(memory.collected[gt[1]]) > Number(gt[2]);
   if (field.condition === 'no_borrower_brief') return !memory.caseData?.brief?.avgMonthlyCredit;
+  if (field.condition === 'has_borrower_brief') return !!memory.caseData?.brief?.avgMonthlyCredit;
+  if (field.condition.startsWith('purpose_') || field.condition === 'amount_stretch') {
+    const p = purposeSignals(memory.collected, memory.caseData);
+    if (field.condition === 'purpose_new_venture') return p.newVenture;
+    if (field.condition === 'purpose_needs_probe') return p.newVenture || p.personal;
+    if (field.condition === 'amount_stretch') return p.stretch;
+  }
+  if (field.condition === 'name_mismatch') return !memory.caseData?.isNew && namesMatch(memory.collected.stated_name, memory.caseData?.name) === false;
   return true;
 }
 
@@ -120,6 +131,12 @@ export function completeness(memory) {
   });
   const filled = keys.filter((k) => memory.collected[k] != null).length;
   return { filled, total: keys.length, pct: keys.length ? Math.round((filled / keys.length) * 100) : 0 };
+}
+
+// The borrower's own words are the answer — nothing to extract, and nothing for a model to smooth over.
+export function recordTradeAnswer(memory, probe, text, turn) {
+  if (!probe || (memory.tradeAnswers ?? []).some((a) => a.key === probe.key)) return memory;
+  return { ...memory, tradeAnswers: [...(memory.tradeAnswers ?? []), { key: probe.key, q: probe.ask, answer: text, turn, expect: probe.expect, redFlag: probe.redFlag }] };
 }
 
 export function recordVerification(memory, kind, record) {

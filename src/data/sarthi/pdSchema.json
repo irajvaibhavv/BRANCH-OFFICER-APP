@@ -4,7 +4,7 @@
       "id": "greeting",
       "label": "Opening",
       "type": "fixed",
-      "action": "Greet in two short, friendly sentences — say you'd like to know a little about them and their kaam, with a few easy questions. Confirm their name.",
+      "action": "Greet in two short, friendly sentences — say you'd like to know a little about them and their kaam, with a few easy questions. Then ask them to tell you their full name. Never say the applicant's name first ('Aap Ramesh ji hain na?') — someone else would just say haan.",
       "required": false,
       "minTurns": 1
     },
@@ -12,6 +12,21 @@
       "id": "personal",
       "label": "Personal",
       "fields": [
+        {
+          "key": "stated_name",
+          "label": "Name as they say it",
+          "type": "text",
+          "condition": "has_borrower_brief",
+          "ask": "Aapka poora naam bataiye?"
+        },
+        {
+          "key": "speaker_relation",
+          "label": "Who is speaking, if not the applicant",
+          "type": "enum",
+          "options": ["self", "family", "employee", "agent", "other"],
+          "condition": "name_mismatch",
+          "ask": "Yeh application {applicant} ji ke naam se hai. Aap unke kya lagte hain?"
+        },
         {
           "key": "applicant_name",
           "label": "Full name as on Aadhaar",
@@ -167,6 +182,13 @@
         }
       ],
       "minTurns": 3
+    },
+    {
+      "id": "trade_depth",
+      "label": "Trade depth",
+      "type": "trade_probes",
+      "note": "Insider questions from businessKnowledge.json depth[]; only a real operator answers them without thinking.",
+      "minTurns": 1
     },
     {
       "id": "business_deep_dive",
@@ -377,6 +399,34 @@
           "label": "How much they want",
           "type": "number",
           "ask": "Kitne paise ki zaroorat hai?"
+        },
+        {
+          "key": "purpose_reason",
+          "label": "Why this purpose",
+          "type": "text",
+          "condition": "purpose_needs_probe",
+          "ask": "Yeh kaam kyun karna chahte hain — isme aapko kya fayda dikhta hai?"
+        },
+        {
+          "key": "purpose_experience",
+          "label": "Experience in the new line of work",
+          "type": "text",
+          "condition": "purpose_new_venture",
+          "ask": "Is naye kaam ka pehle koi tajurba hai — kahin kaam kiya ya seekha?"
+        },
+        {
+          "key": "current_business_plan",
+          "label": "Who runs the current business meanwhile",
+          "type": "text",
+          "condition": "purpose_new_venture",
+          "ask": "Naya kaam shuru hone par abhi wala kaam kaun sambhalega?"
+        },
+        {
+          "key": "amount_basis",
+          "label": "How the amount was worked out",
+          "type": "text",
+          "condition": "amount_stretch",
+          "ask": "Itne paise ka hisaab kaise banaya — kis cheez mein kitna lagega?"
         },
         {
           "key": "own_contribution",

@@ -178,6 +178,9 @@ export function claimFromAnswer(step, answer, turn) {
 const inr = (n) => (typeof n === 'number' ? n.toLocaleString('en-IN') : n);
 
 const FLAG_HEADS = {
+  identity_mismatch: 'Person on the call may not be the applicant',
+  identity_document: 'Identity document problem',
+  loan_purpose: 'Loan purpose needs a closer look',
   contradiction: 'Contradicts the file',
   coaching_detected: 'Answer changed when asked again',
   internal_consistency: 'Their own numbers do not add up',

@@ -10,11 +10,11 @@ import { parseClaims, peekSpeech, peekDisplay, writeReport, VISION_URL, COMPLETE
 import { extractFacts, askTurn } from '../../services/sarthi/model';
 import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../services/sarthi/script';
 import { verifyClaims, computeEligibility, toNumber } from '../../services/sarthi/verifier';
-import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor } from '../../services/sarthi/memory';
+import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor, recordTradeAnswer } from '../../services/sarthi/memory';
 import pdSchema from '../../data/sarthi/pdSchema.json';
 import { getNextAction, directiveText, checkContradictions, checkInternalConsistency, getInterviewConfig, assessIncome } from '../../services/sarthi/controller';
 import { validateReport, extractRecommendation } from '../../services/sarthi/validator';
-import { validateAadhaar, validatePan } from '../../services/sarthi/idChecks';
+import { validateAadhaar, validatePan, detectForeignId, pickIdentity, identitySummary } from '../../services/sarthi/idChecks';
 import PhotoCapture from '../../components/sarthi/PhotoCapture';
 import { startFrameCapture, stopCamera, pauseCamera, resumeCamera, getObservations, resetObservations } from '../../services/sarthi/video';
 import { downscale, analysePhoto, PHOTO_ASKS } from '../../services/sarthi/photo';
@@ -43,7 +43,7 @@ const save = (key, value) => {
 const CAPTION_FALLBACK_MS = 3000;
 
 // One topic = one schema field (or fixed section / verification task), so re-asks don't advance the count.
-const topicKey = (a) => `${a?.section ?? 'x'}:${a?.missingFields?.[0] ?? a?.verificationTask ?? ''}`;
+const topicKey = (a) => `${a?.section ?? 'x'}:${a?.missingFields?.[0] ?? a?.verificationTask ?? a?.tradeProbe ?? ''}`;
 
 export default function SarthiInterview() {
   const { id } = useParams();
@@ -106,6 +106,7 @@ export default function SarthiInterview() {
   const caseRef = useRef(null);
   const demoRef = useRef(false);
   const mutedRef = useRef(false);
+  const lastAction = useRef(null); // what the borrower is answering right now
   // The counter counts topics, not questions: a re-ask of the same field is not a new sawaal.
   const topics = useRef(new Set());
   const countTopic = (key) => {
@@ -189,7 +190,7 @@ export default function SarthiInterview() {
     if (!c.business_type) return null; // nothing to ground on yet
 
     const a = intake.current;
-    const identity = a.panCheck?.ok ? a.panCheck : a.aadhaarCheck?.ok ? a.aadhaarCheck : a.panCheck ?? a.aadhaarCheck ?? null;
+    const identity = pickIdentity(a);
     const area = c.business_location ?? c.aadhaar_address ?? '';
     const subject = buildNewCase({
       name: c.applicant_name ?? 'New applicant',
@@ -216,6 +217,23 @@ export default function SarthiInterview() {
     memory.current = { ...memory.current, caseData: subject, brief: subject.brief };
     return subject;
   }, []);
+
+  // A foreign national ID ends the PD: without Indian KYC there is nothing to lend against.
+  const stopForForeignId = (text, turn) => {
+    const foreign = detectForeignId(text);
+    if (!foreign) return false;
+    intake.current = { ...intake.current, foreignId: foreign };
+    memory.current = addFlags(memory.current, [{
+      type: 'identity_document', field: 'identity_document', severity: 'high', turn,
+      detail: `Gave a ${foreign.label} (${foreign.masked}) instead of an Indian Aadhaar or PAN. The interview was stopped here.`,
+    }]);
+    const line = 'Dhanyawaad. Yeh loan sirf Indian Aadhaar ya PAN ke saath hi aage badh sakta hai. Branch officer aapse khud baat karenge.';
+    const speech = 'धन्यवाद। यह लोन सिर्फ़ इंडियन आधार या पैन के साथ ही आगे बढ़ सकता है। ब्रांच ऑफ़िसर आपसे ख़ुद बात करेंगे।';
+    transcript.current.push({ role: 'assistant', content: line });
+    memory.current = recordTurn(memory.current, 'assistant', line);
+    say(line, { speech, then: finish });
+    return true;
+  };
 
   /* ---------------------------------------------------------------- one borrower answer */
   const handleAnswer = useCallback(async (text) => {
@@ -246,6 +264,7 @@ export default function SarthiInterview() {
         if (step.collect === 'pan') intake.current.panCheck = validatePan(text, intake.current.name ?? '');
         setCollected({ ...intake.current });
       }
+      if (['aadhaar', 'pan'].includes(step?.collect) && stopForForeignId(text, borrowerTurn)) return;
 
       stepRef.current += 1;
       const next = scriptRef.current[stepRef.current];
@@ -267,6 +286,10 @@ export default function SarthiInterview() {
       // Extract first, then pick the next topic, so the controller decides on THIS turn's facts.
       // Snapshot before merging: checkContradictions and coaching detection compare against prior state.
       const before = memory.current;
+      // An insider trade question is answered verbatim — the words ARE the evidence.
+      if (lastAction.current?.tradeProbeDef) {
+        memory.current = recordTradeAnswer(memory.current, lastAction.current.tradeProbeDef, text, borrowerTurn);
+      }
 
       let facts = {};
       try {
@@ -280,11 +303,16 @@ export default function SarthiInterview() {
       }
       if (Object.keys(facts).length) memory.current = updateMemory(memory.current, { ...facts, _verbatim: text });
 
+      // Checked on their own words, not the extraction — the model filed a CNIC under pan_number.
+      const docDue = memory.current.currentSection === 'documents' || facts.aadhaar_number || facts.pan_number;
+      if (docDue && stopForForeignId(text, borrowerTurn)) return;
+
       if (isIntake) rebuildWalkIn();
       const subject = caseRef.current ?? caseData;
 
       const action = getNextAction(memory.current, subject);
       if (action.memory) memory.current = action.memory;
+      lastAction.current = action;
 
       if (action.action === 'end_interview') { finish(); return; }
 
@@ -345,6 +373,10 @@ export default function SarthiInterview() {
           memory.current.collected.applicant_name ?? '',
         );
       }
+      const failedDocs = [facts.aadhaar_number && intake.current.aadhaarCheck, facts.pan_number && intake.current.panCheck]
+        .filter((c) => c && !c.ok)
+        .map((c) => ({ type: 'identity_document', field: 'identity_document', severity: 'high', turn: borrowerTurn, detail: identitySummary(c) }));
+      if (failedDocs.length) memory.current = addFlags(memory.current, failedDocs);
       if (isIntake && (facts.aadhaar_number || facts.pan_number)) {
         intake.current = { ...intake.current };
         setCollected({ ...memory.current.collected, ...intake.current });
@@ -383,6 +415,7 @@ export default function SarthiInterview() {
       }
     } catch (e) {
       // Borrow one scripted question and retry live next turn; only a permanent error locks to the script.
+      lastAction.current = null; // the scripted question is not the trade probe the controller picked
       const permanent = e?.status != null && !TRANSIENT.has(e.status);
       console.warn(`[sarthi] live turn failed (${e?.message}) — ${permanent ? 'switching to scripted mode' : 'using a scripted question, will retry live next turn'}`);
       if (permanent) {
@@ -472,10 +505,12 @@ export default function SarthiInterview() {
 
     // A live walk-in has been rebuilt all along; the scripted fallback assembles one from intake.
     let subject = caseRef.current ?? caseData;
+    // The rebuilt case can predate the last document answer; the intake record is always current.
+    if (isIntake && built.current) subject = { ...subject, identity: pickIdentity(intake.current) ?? subject.identity };
     if (isIntake && !built.current) {
       setProgress('Opening the file…');
       const a = intake.current;
-      const identity = a.panCheck?.ok ? a.panCheck : a.aadhaarCheck?.ok ? a.aadhaarCheck : a.panCheck ?? a.aadhaarCheck ?? null;
+      const identity = pickIdentity(a);
       subject = buildNewCase({
         name: a.name ?? 'Unnamed applicant',
         phone: '', age: a.age ?? '',
@@ -526,7 +561,7 @@ export default function SarthiInterview() {
 
     save(`bo_sarthi_transcript_${subject.id}`, turns);
     save(`bo_sarthi_claims_${subject.id}`, captured);
-    save(`bo_sarthi_evidence_${subject.id}`, { evidence, flags, eligibility, observations, collected: collectedFacts });
+    save(`bo_sarthi_evidence_${subject.id}`, { evidence, flags, eligibility, observations, collected: collectedFacts, tradeAnswers: memory.current.tradeAnswers });
     // Images are kept in their own key: base64 is heavy and must not risk the report's own write.
     save(`bo_sarthi_photos_${subject.id}`, photos.current);
 
@@ -537,7 +572,7 @@ export default function SarthiInterview() {
     if (!demoRef.current) {
       try {
         setProgress('Writing the PD report…');
-        const raw = await writeReport({ caseData: subject, transcript: turns, claims: captured, evidence, flags, collected: collectedFacts, verification: memory.current.verification, eligibility, observations, photos: photos.current, identity: caseData.identity });
+        const raw = await writeReport({ caseData: subject, transcript: turns, claims: captured, evidence, flags, collected: collectedFacts, verification: memory.current.verification, tradeAnswers: memory.current.tradeAnswers, eligibility, observations, photos: photos.current, identity: subject.identity });
         setProgress('Checking every citation…');
         validation = validateReport(raw, turns, captured, briefForCitation(subject), eligibility, { flags, collected: collectedFacts });
         report = validation.cleanedReport;

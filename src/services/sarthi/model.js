@@ -58,7 +58,8 @@ Rules:
 - Enum fields take exactly one of their options:
 ${ENUM_GUIDE}
 - monthly_rent is HOUSE rent; shop_rent is the rent of the shop or business premises.
-- informal_loans, repayment_history and assets are short text in their words, e.g. "committee 2000 mahina".
+- informal_loans, repayment_history, assets, purpose_reason, purpose_experience, current_business_plan and
+  amount_basis are short text in their words, e.g. "committee 2000 mahina".
 - area_knowledge_score and business_domain_score are "high", "medium" or "low", and rate how
   CONFIDENTLY the borrower answered a knowledge question — not whether they were factually right.
   An instant specific answer is high; hesitation or "pata nahi" is low.

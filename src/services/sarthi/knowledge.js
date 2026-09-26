@@ -132,13 +132,33 @@ export function hasAreaDetail(areaKey) {
 }
 
 // Matches by key, label or alias ("sabzi ka thela").
+// Short names must be whole words; longer ones may be followed by an ending ("kiranas", "wiring-contractor").
+function wordMatch(text, name) {
+  let i = text.indexOf(name);
+  while (i !== -1) {
+    const before = i === 0 || !/[a-z0-9]/.test(text[i - 1]);
+    const after = text[i + name.length];
+    if (before && (name.length >= 4 || !after || !/[a-z0-9]/.test(after))) return true;
+    i = text.indexOf(name, i + 1);
+  }
+  return false;
+}
+
 export function lookupBusiness(businessKey) {
   if (!businessKey) return null;
   if (businessKnowledge[businessKey]) return businessKnowledge[businessKey];
   const lower = String(businessKey).toLowerCase();
-  return Object.values(businessKnowledge).find((b) =>
-    lower.includes(b.label.toLowerCase())
-    || b.aliases?.some((a) => lower.includes(a.toLowerCase()))) ?? null;
+  // Most specific wins, and a name must start a word: "ca" (CA) must not match inside "electrical",
+  // and "contractor" must not beat "electrical contractor".
+  let best = null;
+  let bestLen = 0;
+  for (const b of Object.values(businessKnowledge)) {
+    for (const name of [b.label, ...(b.aliases ?? [])]) {
+      const n = name.toLowerCase();
+      if (n.length > bestLen && wordMatch(lower, n)) { best = b; bestLen = n.length; }
+    }
+  }
+  return best;
 }
 
 export function lookupRiskPattern(patternId) {

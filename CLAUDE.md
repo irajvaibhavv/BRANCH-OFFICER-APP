@@ -177,6 +177,18 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   'calculated_from_answers'`, which both report writers must present as rebuilt and explicitly unverified.
   Without those answers it stays `assessable: false` and the report says "not assessable" rather than
   printing a figure. A declared income alone is never enough to produce a number.
+- **Depth, not a form** (`probes.js`). A trade with a `depth[]` pack in `businessKnowledge.json` (kirana,
+  electrical contractor so far) gets a `trade_depth` section of insider questions — margin by category, distributor
+  cycle, licence class, retention — whose answers are stored verbatim in `memory.tradeAnswers` (no extraction) and
+  judged in the report against each probe's `expect` / `redFlag`. Such a trade skips the single
+  `business_domain` knowledge question. Loan purpose is checked in code: a different trade or "kholna/shuru" is a
+  new venture, an amount above 24 months of income is a stretch; each unlocks follow-ups (`purpose_reason`,
+  `purpose_experience`, `current_business_plan`, `amount_basis`) and raises a `loan_purpose` flag. New trade =
+  add a `depth[]` pack, researched, not invented. `lookupBusiness` takes the longest word-start match — a bare
+  substring once filed taxi, carpenter and welding under CA ("ca").
+- **Identity**: the greeting asks the name openly (never "Aap Ramesh ji hain na?" — anyone can say haan). `stated_name`
+  is compared with the file name in code (`namesMatch` in `idChecks.js`); a mismatch raises a high `identity_mismatch`
+  flag and unlocks `speaker_relation` (condition `name_mismatch`). Walk-ins skip both — there is no name on file.
   `idChecks.js` does the offline document checks (Aadhaar Verhoeff, PAN structure + surname initial);
   it is not eKYC and the copy says so everywhere.
 - **Photographs**: Sarthi asks for the shop and home mid-interview (`photo` on a script step, or a

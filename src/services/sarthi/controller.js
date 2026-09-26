@@ -3,6 +3,9 @@ import pdSchema from '../../data/sarthi/pdSchema.json';
 import { lookupLocation, lookupBusiness, hasAreaDetail } from './knowledge';
 import { getMissingFields, knownFacts, enterSection } from './memory';
 import { toNumber, toYears } from './verifier';
+import { namesMatch } from './idChecks';
+import { nextTradeProbe, tradeProbes, purposeSignals } from './probes';
+import { formatINR } from '../../utils/formatters';
 
 const SECTIONS = pdSchema.sections;
 
@@ -25,6 +28,11 @@ export function activeSections(config) {
   });
 }
 
+// A trade with its own insider questions (trade_depth) has already been tested harder than one knowledge question.
+function verificationTasks(memory, section) {
+  return tradeProbes(memory).length ? section.tasks.filter((t) => t.source !== 'businessKnowledge') : section.tasks;
+}
+
 function sectionComplete(memory, section) {
   const started = memory.sectionStartTurn[section.id] ?? memory.turnCount;
   const servedTime = memory.turnCount >= started + (section.minTurns ?? 1);
@@ -32,12 +40,14 @@ function sectionComplete(memory, section) {
   if (section.type === 'fixed') return servedTime;
 
   if (section.type === 'verification') {
-    return section.tasks.every((t) => memory.collected[`${t.key}_score`] != null);
+    return verificationTasks(memory, section).every((t) => memory.collected[`${t.key}_score`] != null);
   }
 
   if (section.type === 'coaching_check') {
     return memory.income_mentions.length >= 2 || servedTime;
   }
+
+  if (section.type === 'trade_probes') return !nextTradeProbe(memory);
 
   return getMissingFields(memory, section).length === 0;
 }
@@ -71,7 +81,8 @@ function buildInstruction(memory, section, caseData, config) {
   if (section.type === 'fixed') {
     instruction.directive = section.action;
   } else if (section.type === 'verification') {
-    const task = section.tasks.find((t) => memory.collected[`${t.key}_score`] == null) ?? section.tasks[0];
+    const tasks = verificationTasks(memory, section);
+    const task = tasks.find((t) => memory.collected[`${t.key}_score`] == null) ?? tasks[0];
     instruction.verificationTask = task.key;
 
     if (task.source === 'locationKnowledge') {
@@ -85,6 +96,13 @@ function buildInstruction(memory, section, caseData, config) {
         : 'We hold no trade data for this business. Skip the trade question and move on.';
       instruction.context = biz?.knowledgeQuestions ?? null;
     }
+  } else if (section.type === 'trade_probes') {
+    const probe = nextTradeProbe(memory);
+    instruction.tradeProbe = probe.key;
+    instruction.tradeProbeDef = probe;
+    instruction.directive = `Ask this insider trade question — a real ${biz?.label ?? 'owner'} answers it without thinking: "${probe.ask}"`
+      + ' Say it in your own simple words, one question only. Never hint at the answer, never praise or correct it —'
+      + ' just note it and move on. If they say "pata nahi", accept it.';
   } else if (section.type === 'coaching_check') {
     instruction.directive = section.action;
     instruction.previousMention = memory.income_mentions[0] ?? null;
@@ -93,7 +111,8 @@ function buildInstruction(memory, section, caseData, config) {
     // Naming the next two fields lets the model bridge naturally; it still asks one.
     instruction.missingFields = missing.map((f) => f.key);
     const [first, second] = missing;
-    instruction.directive = `Ask about: ${first.label}. Plain-words example: "${first.ask}"`
+    const ask = first.ask.replace('{applicant}', caseData.name);
+    instruction.directive = `Ask about: ${first.label}. Plain-words example: "${ask}"`
       + (second ? ` Next after that: ${second.label}.` : '')
       + ' Ask ONE thing at a time, in your own words, as simply as the example.';
     if (section.id === 'documents') {
@@ -136,6 +155,43 @@ export function getHyperLocalInstruction(memory, caseData) {
 export function checkContradictions(memory, facts, caseData) {
   const flags = [];
   const brief = caseData?.brief ?? {};
+
+  // The loan is judged against the business it must come out of — a new venture or a stretch amount is dug into.
+  if (facts.loan_purpose || facts.loan_amount) {
+    const p = purposeSignals({ ...memory.collected, ...facts }, caseData);
+    // Raised once, on the purpose answer; an unrelated trade is high, expanding the same one is medium.
+    if (facts.loan_purpose && p.newVenture && p.current) {
+      flags.push({
+        type: 'loan_purpose', field: 'loan_purpose', severity: p.target ? 'high' : 'medium',
+        detail: `Runs a ${p.current} but wants the loan for "${p.purpose}"${p.target ? ` (${p.target})` : ''} — a new venture outside the business being assessed`,
+        turn: memory.turnCount,
+      });
+    }
+    if (facts.loan_purpose && p.personal) {
+      flags.push({
+        type: 'loan_purpose', field: 'loan_purpose', severity: 'medium',
+        detail: `Stated purpose "${p.purpose}" is personal, not for the business`,
+        turn: memory.turnCount,
+      });
+    }
+    if (facts.loan_amount && p.stretch) {
+      flags.push({
+        type: 'loan_purpose', field: 'loan_amount', severity: p.months > 60 ? 'high' : 'medium',
+        detail: `Asked for ${formatINR(p.amount, { compact: false })} — about ${p.months} months of their stated monthly income of ${formatINR(p.income, { compact: false })}`,
+        turn: memory.turnCount,
+      });
+    }
+  }
+
+  // A PD is only a PD if the applicant is the one answering.
+  if (facts.stated_name && !caseData?.isNew && namesMatch(facts.stated_name, caseData?.name) === false) {
+    flags.push({
+      type: 'identity_mismatch', field: 'stated_name', severity: 'high',
+      declared: facts.stated_name, known: caseData.name,
+      detail: `Application is in the name of ${caseData.name}, but the person on the call gave their name as "${facts.stated_name}"`,
+      turn: memory.turnCount,
+    });
+  }
 
   const income = toNumber(facts.monthly_income);
   if (income != null && brief.avgMonthlyCredit) {

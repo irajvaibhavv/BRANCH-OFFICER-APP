@@ -1,6 +1,7 @@
 // Local dev stand-in for api/ (npm run sarthi, port 3001; vite proxies /api/sarthi-*).
-// GEMINI_API_KEY required, GROQ_API_KEY optional — neither may carry a VITE_ prefix.
+// ANTHROPIC_API_KEY or GEMINI_API_KEY required, GROQ_API_KEY optional — none may carry a VITE_ prefix.
 import http from 'http';
+import { claudeOn, claudeLabel, callClaude, streamClaude, visionClaude } from '../api/_claude.js';
 
 const PORT = 3001;
 const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
@@ -64,13 +65,17 @@ http.createServer(async (req, res) => {
   req.on('end', async () => {
     const send = (code, obj) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
     const wantsSlm = req.url.includes('chat') && (() => { try { return JSON.parse(body || '{}').provider === 'slm'; } catch { return false; } })();
-    if (!KEY && !(wantsSlm && GROQ_KEY)) return send(500, { error: 'GEMINI_API_KEY is not set in this terminal' });
+    if (!KEY && !claudeOn() && !(wantsSlm && GROQ_KEY)) return send(500, { error: 'Neither ANTHROPIC_API_KEY nor GEMINI_API_KEY is set in this terminal' });
 
     try {
       const payload = JSON.parse(body || '{}');
 
       if (req.url.includes('vision')) {
         if (!payload.image) return send(400, { error: 'No image supplied' });
+        if (claudeOn()) {
+          const text = await visionClaude({ image: payload.image, prompt: payload.prompt || VISION_PROMPT, maxTokens: payload.prompt ? 200 : 100 });
+          return send(200, { observation: text.includes('nothing_notable') ? null : text });
+        }
         const text = await gemini({
           contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: payload.image } }, { text: payload.prompt || VISION_PROMPT }] }],
           // thinkingBudget 0 is mandatory: thought tokens count against maxOutputTokens, so a
@@ -88,6 +93,17 @@ http.createServer(async (req, res) => {
         const text = await groq({ systemPrompt, messages, temperature, maxTokens });
         return send(200, { reply: text, served: 'slm' });
       }
+
+      const opts = { systemPrompt, messages, temperature, maxTokens, thinkingBudget };
+      if (claudeOn() && stream) {
+        await streamClaude(opts, {
+          start: () => res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache, no-transform' }),
+          write: (t) => res.write(t),
+          end: () => res.end(),
+        });
+        return;
+      }
+      if (claudeOn()) return send(200, { reply: await callClaude(opts), served: 'llm' });
 
       // Streaming: same wire format as api/sarthi-chat.js on Vercel — plain text chunks, so the
       // caption types out and the ```speech``` block can reach the voice before the reply ends.
@@ -139,11 +155,14 @@ http.createServer(async (req, res) => {
       });
       return send(200, { reply: text, served: 'llm' });
     } catch (e) {
-      return send(500, { error: e.message });
+      if (res.headersSent) return res.end(); // failed mid-stream; the client keeps what arrived
+      return send(e.status || 500, { error: e.message });
     }
   });
 }).listen(PORT, () => {
   console.log(`Sarthi proxy on http://localhost:${PORT}`);
-  console.log(`  LLM  ${MODEL} · key ${KEY ? 'set' : 'MISSING — set GEMINI_API_KEY'}`);
+  console.log(claudeOn()
+    ? `  LLM  Claude ${claudeLabel()} · ANTHROPIC_API_KEY set`
+    : `  LLM  ${MODEL} · key ${KEY ? 'set' : 'MISSING — set ANTHROPIC_API_KEY or GEMINI_API_KEY'}`);
   console.log(`  SLM  ${SLM_MODEL} · key ${GROQ_KEY ? 'set' : 'not set — fast tasks will use the LLM'}`);
 });

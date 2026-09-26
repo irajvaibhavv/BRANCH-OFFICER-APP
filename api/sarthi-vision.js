@@ -1,4 +1,5 @@
 // Sarthi vision endpoint (Vercel): one JPEG frame in, a short factual observation out.
+import { claudeOn, visionClaude } from './_claude.js';
 
 const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
@@ -15,12 +16,16 @@ Do NOT describe the person's appearance, clothing, or make any judgment about th
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
-  if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'GEMINI_API_KEY is not set on the server' });
+  if (!claudeOn() && !process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'Neither ANTHROPIC_API_KEY nor GEMINI_API_KEY is set on the server' });
 
   const { image, prompt } = req.body ?? {};
   if (!image) return res.status(400).json({ error: 'No image supplied' });
 
   try {
+    if (claudeOn()) {
+      const text = await visionClaude({ image, prompt: prompt || VISION_PROMPT, maxTokens: prompt ? 200 : 100 });
+      return res.json({ observation: text.includes('nothing_notable') ? null : text });
+    }
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
@@ -50,6 +55,6 @@ export default async function handler(req, res) {
     const text = (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text || '').join('');
     return res.json({ observation: text.includes('nothing_notable') ? null : text });
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return res.status(e.status || 500).json({ error: e.message });
   }
 }

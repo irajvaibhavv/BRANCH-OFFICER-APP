@@ -1,5 +1,6 @@
-// Sarthi chat endpoint (Vercel). provider 'llm' = Gemini, 'slm' = Groq; the client routes, this never re-routes.
-// Keys are server-only — never VITE_-prefixed. Without GROQ_API_KEY, 'slm' is served by Gemini.
+// Sarthi chat endpoint (Vercel). provider 'llm' = Claude (or Gemini without ANTHROPIC_API_KEY), 'slm' = Groq;
+// the client routes, this never re-routes. Keys are server-only — never VITE_-prefixed. Without GROQ_API_KEY, 'slm' is served by the LLM.
+import { claudeOn, callClaude, streamClaude } from './_claude.js';
 
 const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 const SLM_MODEL = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
@@ -127,14 +128,25 @@ export default async function handler(req, res) {
     maxTokens = 1024, thinkingBudget = 0, provider = 'llm', stream = false,
   } = req.body ?? {};
 
-  // 'slm' only reaches Groq when a key exists; otherwise it is served by Gemini unchanged.
+  // 'slm' only reaches Groq when a key exists; otherwise it is served by the LLM unchanged.
   const useGroq = provider === 'slm' && !!process.env.GROQ_API_KEY;
-  if (!useGroq && !process.env.GEMINI_API_KEY) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY is not set on the server' });
+  const useClaude = !useGroq && claudeOn();
+  if (!useGroq && !useClaude && !process.env.GEMINI_API_KEY) {
+    return res.status(500).json({ error: 'Neither ANTHROPIC_API_KEY nor GEMINI_API_KEY is set on the server' });
   }
+  const opts = { systemPrompt, messages, temperature, maxTokens, thinkingBudget };
 
   try {
-    // Streaming is Gemini-only: the SLM is fast enough that a stream would add complexity for
+    if (useClaude && stream) {
+      return await streamClaude(opts, {
+        start: () => res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' }),
+        write: (t) => res.write(t),
+        end: () => res.end(),
+      });
+    }
+    if (useClaude) return res.json({ reply: await callClaude(opts), served: 'llm' });
+
+    // Streaming is LLM-only: the SLM is fast enough that a stream would add complexity for
     // no perceptible gain, and it is not the provider for conversational turns anyway.
     if (stream && !useGroq) {
       return await streamGemini({ systemPrompt, messages, temperature, maxTokens, thinkingBudget }, res);
@@ -146,6 +158,7 @@ export default async function handler(req, res) {
     return res.json({ reply, served: useGroq ? 'slm' : 'llm' });
   } catch (e) {
     // Pass the upstream status through: the client retries 429/5xx and gives up on 400/401/404.
+    if (res.headersSent) return res.end(); // failed mid-stream; the client keeps what arrived
     return res.status(e.status || 500).json({ error: e.message });
   }
 }

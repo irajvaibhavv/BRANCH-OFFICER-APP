@@ -42,7 +42,7 @@ const ENUM_GUIDE = Object.entries(FIELD_DEFS)
   .map(([k, d]) => `  ${k}: ${d.options.join(' | ')}`)
   .join('\n');
 
-const EXTRACTOR_SYSTEM = `You extract structured facts from one answer in a loan interview. You are not part of the conversation and you never reply to the borrower.
+export const EXTRACTOR_SYSTEM = `You extract structured facts from one answer in a loan interview. You are not part of the conversation and you never reply to the borrower.
 
 Return ONLY a JSON object. No prose, no markdown fences, no explanation.
 
@@ -86,11 +86,14 @@ function readJson(reply) {
   return null;
 }
 
+// Counts the model adds up ("biwi, teen bachche, maa" = 6) — the parser can only read the one number said.
+const SUMMED_COUNTS = new Set(['family_size', 'dependents', 'earning_members']);
+
 // The model picks WHICH field a number belongs to; the parser decides WHAT the number is.
 function reconcileNumbers(facts, answerText) {
   const out = { ...facts };
   for (const [key, value] of Object.entries(facts)) {
-    if (FIELD_DEFS[key]?.type !== 'number' || typeof value !== 'number') continue;
+    if (FIELD_DEFS[key]?.type !== 'number' || typeof value !== 'number' || SUMMED_COUNTS.has(key)) continue;
     const { value: fixed, corrected, from } = reconcile(value, answerText);
     if (corrected) {
       console.warn(`[sarthi] ${key}: model said ${from}, borrower said ${fixed} — using ${fixed}`);

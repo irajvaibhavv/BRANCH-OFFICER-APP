@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "sarthi": "node --env-file-if-exists=.env.local scripts/sarthi-proxy.mjs",
-    "sarthi:voice": "node scripts/prerender-voice.mjs"
+    "sarthi:voice": "node scripts/prerender-voice.mjs",
+    "sarthi:training": "node scripts/build-training-data.mjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",

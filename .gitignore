@@ -4,3 +4,6 @@ dist
 
 .env.local
 .env*.local
+
+# Generated training data (npm run sarthi:training) — rebuildable, and may be built from private source files
+/training/

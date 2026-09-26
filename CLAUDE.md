@@ -95,6 +95,11 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   (with none or several, the parser cannot know which field is meant, so it abstains). Measured
   saves: "pandrah hazaar" read as 12,000, "bais hazaar" as 20,000, "saath customer" as 6. `saath`
   is read as 60 only before a scale word or countable noun, so "mere saath partner hai" stays text.
+  Checked against the 978-example extraction set (2026-09-26): spellings are folded ("baarah" = "barah"), sawa/
+  saade/paune shift the next number (+¼, +½, −¼), "sau" is a scale, "no" is never 9, and a model value that is a
+  conversion of the spoken one (implied thousands, daily/yearly → monthly) or a zero ("koi nahi") is kept. Summed
+  counts (family_size, dependents, earning_members) are never reconciled. It now overrides 1 label of 592, and
+  that label is wrong.
 - **`VITE_SARTHI_MOCKS=true`** (DEV only) serves canned replies from `mocks.js` with no
   network call, so work on the loop or the UI does not burn the free tiers the demo needs. The
   fixtures are raw fenced text run through the real parser, so they prove the plumbing — not that
@@ -186,6 +191,11 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   `purpose_experience`, `current_business_plan`, `amount_basis`) and raises a `loan_purpose` flag. New trade =
   add a `depth[]` pack, researched, not invented. `lookupBusiness` takes the longest word-start match — a bare
   substring once filed taxi, carpenter and welding under CA ("ca").
+- **SLM training data** (`npm run sarthi:training -- <source.jsonl>`, output in git-ignored `training/`):
+  `scripts/build-training-data.mjs` bundles the app's own `EXTRACTOR_SYSTEM`, schema and number parser, so the
+  data matches what inference sends. Extraction labels are checked against `hindiNumbers.js`; interviewer turns are
+  speech-fence-first with Devanagari-only speech. Change the extractor prompt, the user message in `extractFacts`
+  or the schema → rebuild. `REPORT.md` lists label fixes and thin fields.
 - **Identity**: the greeting asks the name openly (never "Aap Ramesh ji hain na?" — anyone can say haan). `stated_name`
   is compared with the file name in code (`namesMatch` in `idChecks.js`); a mismatch raises a high `identity_mismatch`
   flag and unlocks `speaker_relation` (condition `name_mismatch`). Walk-ins skip both — there is no name on file.

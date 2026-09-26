@@ -2,7 +2,7 @@
 
 const UNITS = {
   ek: 1, do: 2, teen: 3, char: 4, chaar: 4, paanch: 5, panch: 5, chhah: 6, chhe: 6, che: 6, chey: 6,
-  saat: 7, aath: 8, aat: 8, nau: 9, no: 9, das: 10, dus: 10,
+  saat: 7, aath: 8, aat: 8, nau: 9, das: 10, dus: 10, // never "no": "no loans" is not 9
   gyarah: 11, gyara: 11, barah: 12, bara: 12, terah: 13, tera: 13, chaudah: 14, chauda: 14,
   pandrah: 15, pandra: 15, solah: 16, sola: 16, satrah: 17, satra: 17, atharah: 18, athara: 18,
   athaara: 18, unnis: 19, bees: 20, bis: 20, ikkis: 21, bais: 22, baees: 22, teis: 23, tais: 23,
@@ -18,20 +18,32 @@ const UNITS = {
   sattar: 70, sattar_: 70, ikhattar: 71, bahattar: 72, tihattar: 73, chauhattar: 74,
   pachhattar: 75, chhihattar: 76, sathattar: 77, athhattar: 78, unasi: 79,
   assi: 80, asi: 80, ikyasi: 81, beyasi: 82, tirasi: 83, churasi: 84, chaurasi: 84,
-  pichasi: 85, chhiyasi: 86, satasi: 87, athasi: 88, navasi: 89,
+  pichasi: 85, pachasi: 85, chhiyasi: 86, satasi: 87, athasi: 88, navasi: 89,
   nabbe: 90, nabbay: 90, ikyanve: 91, banve: 92, tiranve: 93, chauranve: 94, pichanve: 95,
   chhiyanve: 96, satanve: 97, athanve: 98, ninyanve: 99, sau: 100,
 };
 
+// Speech recognition and typing spell the same word many ways ("baarah", "barah"); compare a folded form.
+const fold = (w) => w.replace(/aa+/g, 'a').replace(/ee+|ii+/g, 'i').replace(/oo+|uu+/g, 'u').replace(/h+$/, 'h');
+const FOLDED_UNITS = Object.fromEntries(Object.entries(UNITS).map(([k, v]) => [fold(k), v]));
+// Short folded forms collide with English ("aat" → "at"), so only longer words use the fold.
+const unitOf = (w) => UNITS[w] ?? (fold(w).length >= 4 ? FOLDED_UNITS[fold(w)] : undefined);
+
+// Standalone value, or how the word shifts the number after it: sawa +¼, saade +½, paune −¼.
 const FRACTIONS = {
   aadha: 0.5, adha: 0.5, aadhi: 0.5,
   sawa: 1.25, sava: 1.25,
   dedh: 1.5, derh: 1.5, dhedh: 1.5,
   dhai: 2.5, dhaai: 2.5, dhayi: 2.5, dhari: 2.5,
-  saade: 0.5, sade: 0.5, saadhe: 0.5, // additive: "saade teen" = 3 + 0.5
+  saade: 0.5, sade: 0.5, saadhe: 0.5,
+  paune: 0.75, pone: 0.75,
 };
+const SHIFT = { sawa: 0.25, sava: 0.25, saade: 0.5, sade: 0.5, saadhe: 0.5, paune: -0.25, pone: -0.25 };
+const fractionOf = (w) => (FRACTIONS[w] !== undefined ? w : Object.keys(FRACTIONS).find((k) => fold(k) === fold(w)) ?? null);
 
+// "sau" multiplies like a scale: "dhai sau" = 250, "paanch sau" = 500.
 const SCALES = {
+  sau: 100,
   hazaar: 1000, hazar: 1000, hajaar: 1000, hajar: 1000, k: 1000,
   lakh: 100000, lac: 100000, lakhs: 100000,
   crore: 10000000, karod: 10000000, cr: 10000000,
@@ -68,22 +80,22 @@ export function readNumbers(text) {
 
     let fraction = null;
     let base = null;
-    if (!t.isDigit && FRACTIONS[t.raw] !== undefined) {
-      fraction = t.raw;
+    const frac = t.isDigit ? null : fractionOf(t.raw);
+    if (frac) {
+      fraction = frac;
       const next = tokens[i + 1];
-      if (next && !next.isDigit && UNITS[next.raw] !== undefined) {
-        // Additive form: "saade teen" = 3.5, "sawa do" = 2.25 (sawa/dedh/dhai are standalone).
-        base = FRACTIONS[fraction] === 0.5 && /^(saade|sade|saadhe)$/.test(fraction)
-          ? UNITS[next.raw] + 0.5
-          : UNITS[next.raw];
+      const nextUnit = next && !next.isDigit && SCALES[next.raw] === undefined ? unitOf(next.raw) : undefined;
+      if (nextUnit !== undefined && SHIFT[frac] !== undefined) {
+        // "sawa do" = 2.25, "saade teen" = 3.5, "paune teen" = 2.75.
+        base = nextUnit + SHIFT[frac];
         consumed = 2; end = next.end;
       } else {
-        base = FRACTIONS[fraction];
+        base = FRACTIONS[frac];
       }
     } else if (t.isDigit) {
       base = plainDigits(t.raw);
-    } else if (UNITS[t.raw] !== undefined) {
-      base = UNITS[t.raw];
+    } else if (unitOf(t.raw) !== undefined) {
+      base = unitOf(t.raw);
     }
 
     if (base === null || base === undefined) { i += 1; continue; }
@@ -100,8 +112,13 @@ export function readNumbers(text) {
         end = s.end;
         j += 1;
         const nxt = tokens[j];
-        if (nxt && ((nxt.isDigit && plainDigits(nxt.raw) !== null) || UNITS[nxt.raw] !== undefined)) {
-          running = nxt.isDigit ? plainDigits(nxt.raw) : UNITS[nxt.raw];
+        // A number after "hazaar"/"lakh" belongs to this figure only if a smaller scale follows it
+        // ("ek lakh bees hazaar"); otherwise it is the next figure ("baarah hazaar, paanch saal").
+        // After "sau" a bare tail is normal speech: "do sau pachaas" = 250.
+        const after = tokens[j + 1];
+        const joins = SCALES[s.raw] === 100 || (after && !after.isDigit && SCALES[after.raw] !== undefined && SCALES[after.raw] < SCALES[s.raw]);
+        if (nxt && joins && SCALES[nxt.raw] === undefined && ((nxt.isDigit && plainDigits(nxt.raw) !== null) || unitOf(nxt.raw) !== undefined)) {
+          running = nxt.isDigit ? plainDigits(nxt.raw) : unitOf(nxt.raw);
           end = nxt.end;
           j += 1;
           continue;
@@ -113,7 +130,7 @@ export function readNumbers(text) {
     }
     value = sawScale ? total + running : running;
 
-    if (!sawScale && /^(saath|sathh|satth)$/.test(t.raw)) {
+    if (!sawScale && /^(saath|sathh|satth|sath)$/.test(t.raw)) {
       const after = lower.slice(end).trim();
       if (!COUNTABLE_AFTER.test(after)) { i += 1; continue; }
     }
@@ -135,11 +152,17 @@ export function readNumber(text) {
   return all.length ? all[0].value : null;
 }
 
+// A model value that is the spoken one converted — implied thousands ("pachees" rent = 25,000), yearly or
+// daily or weekly to monthly — is a conversion, not a misread, and must survive.
+const CONVERSIONS = [1000, 100000, 12, 1 / 12, 30, 26, 25, 4, 4.33, 1 / 30];
+const isConversion = (model, spoken) => CONVERSIONS.some((c) => Math.abs(model / spoken / c - 1) < 0.02);
+
 // The parser wins only when the sentence holds exactly one number; otherwise it abstains.
 export function reconcile(modelValue, answerText) {
   const found = readNumbers(answerText);
   if (found.length !== 1) return { value: modelValue, corrected: false, from: null };
   const spoken = found[0].value;
-  if (modelValue === spoken) return { value: spoken, corrected: false, from: null };
+  // A zero comes from "koi nahi" / "khatam ho gaya", which the parser cannot read — keep it.
+  if (modelValue === 0 || modelValue === spoken || isConversion(modelValue, spoken)) return { value: modelValue, corrected: false, from: null };
   return { value: spoken, corrected: true, from: modelValue };
 }

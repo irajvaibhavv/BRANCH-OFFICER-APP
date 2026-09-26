@@ -16,6 +16,20 @@ export function customCases() {
   }
 }
 
+// One-time wipe of every walk-in and its report; bump the stamp to wipe again on every device.
+const WALKIN_PURGE = '2026-09-26';
+export function purgeWalkIns() {
+  try {
+    const ls = window.localStorage;
+    if (ls.getItem('bo_sarthi_walkin_purge') === WALKIN_PURGE) return;
+    ls.removeItem(CUSTOM_CASES_KEY);
+    const reports = JSON.parse(ls.getItem('bo_sarthi_reports')) ?? [];
+    ls.setItem('bo_sarthi_reports', JSON.stringify(reports.filter((r) => !String(r.caseId).startsWith('sarthi_new_'))));
+    Object.keys(ls).filter((k) => k.startsWith('bo_sarthi_') && k.includes('sarthi_new_')).forEach((k) => ls.removeItem(k));
+    ls.setItem('bo_sarthi_walkin_purge', WALKIN_PURGE);
+  } catch { /* storage blocked — nothing to purge */ }
+}
+
 export function allCases() {
   return [...customCases(), ...borrowers];
 }

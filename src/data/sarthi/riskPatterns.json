@@ -73,5 +73,49 @@
       "कोई महीना ऐसा गया, जब इनकम ज़ीरो थी?",
       "अगर एक बड़ा क्लाइंट छोड़ दे। तो इनकम पे, कितना असर पड़ेगा?"
     ]
+  },
+  {
+    "patternId": "MBD-USEDPHONE-004",
+    "area": "Moradabad",
+    "businessType": "Mobile / second-hand phones",
+    "failureRate": 0.4,
+    "whatWentWrong": "Shops that bought used phones without IMEI checks or seller ID had stock seized as stolen; the business shut and the loan went bad.",
+    "redFlags": [
+      "No IMEI check before buying a used phone",
+      "No seller ID or purchase bill kept",
+      "Many small unrelated UPI credits"
+    ],
+    "questionsToAsk": [
+      "Purana phone lene se pehle kya check karte hain?",
+      "Bechne wale ka ID aur bill rakhte hain?",
+      "Kabhi police ne koi phone ke baare mein poochha?"
+    ],
+    "questionsToAskHi": [
+      "पुराना फ़ोन लेने से पहले, क्या चेक करते हैं?",
+      "बेचने वाले का आईडी और बिल रखते हैं?",
+      "कभी पुलिस ने, कोई फ़ोन के बारे में पूछा?"
+    ]
+  },
+  {
+    "patternId": "IND-CONTRACT-005",
+    "area": "Indore",
+    "businessType": "Contractor",
+    "failureRate": 0.3,
+    "whatWentWrong": "Contractors borrowed against government bills that were then delayed past six months; EMIs were missed while the money was stuck.",
+    "redFlags": [
+      "Most income from one government department",
+      "Retention money not tracked",
+      "Late payments that line up with bill delays"
+    ],
+    "questionsToAsk": [
+      "Abhi kitne bill pending hain, aur kab se?",
+      "Retention ka kitna paisa ruka hua hai?",
+      "Bill der se aaye toh kisht kaise bharoge?"
+    ],
+    "questionsToAskHi": [
+      "अभी कितने बिल पेंडिंग हैं, और कब से?",
+      "रिटेंशन का कितना पैसा रुका हुआ है?",
+      "बिल देर से आए, तो किश्त कैसे भरोगे?"
+    ]
   }
 ]

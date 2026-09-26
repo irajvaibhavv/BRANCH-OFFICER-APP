@@ -5,8 +5,9 @@ import Page from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import EmptyState from '../../components/ui/EmptyState';
 import { formatINR } from '../../utils/formatters';
-import { getCase, lookupRiskPattern } from '../../services/sarthi/knowledge';
+import { getCase, lookupRiskPattern, bankIncome } from '../../services/sarthi/knowledge';
 import { computeEligibility } from '../../services/sarthi/verifier';
+import { validatePan, maskPan } from '../../services/sarthi/idChecks';
 import styles from './SarthiBrief.module.css';
 
 export default function SarthiBrief() {
@@ -27,9 +28,12 @@ export default function SarthiBrief() {
   const pattern = c.riskPatternMatch ? lookupRiskPattern(c.riskPatternMatch.patternId) : null;
   const elig = computeEligibility(c);
   // A walk-in has no bank credits, bureau record or ITR — show that, never a figure derived from null.
-  const noBank = !b.avgMonthlyCredit;
-  const gap = noBank ? null : Math.round(((c.declaredIncome - b.avgMonthlyCredit) / b.avgMonthlyCredit) * 100);
+  const bank = bankIncome(c);
+  const noBank = !bank;
+  const gap = noBank ? null : Math.round(((c.declaredIncome - bank.income) / bank.income) * 100);
   const short = elig.assessable ? c.loanAmountRequested - elig.maxEligible : null;
+  // Checked here, in code, so a PAN that is not theirs shows before the interview starts.
+  const pan = b.kyc?.pan ? validatePan(b.kyc.pan, c.name) : null;
 
   return (
     <Page mode="slide" className={`sarthi ${styles.page}`}>
@@ -45,15 +49,16 @@ export default function SarthiBrief() {
           <div className={styles.gapArrow} aria-hidden="true" />
           <div>
             <div className={styles.gapLabel}>Bank has seen</div>
-            <div className={styles.gapReal}>{noBank ? 'Nothing on file' : formatINR(b.avgMonthlyCredit, { compact: false })}</div>
+            <div className={styles.gapReal}>{noBank ? 'Nothing on file' : formatINR(bank.income, { compact: false })}</div>
           </div>
         </div>
         <p className={styles.gapLine}>
           {noBank
             ? <>No bank statement on file. Sarthi will rebuild income from their own answers — footfall, bill size and their trade&apos;s margin — and report it as unverified.</>
             : gap > 0
-              ? <>Declared income runs <b>{gap}% above</b> {b.bankStatementMonths} months of bank credits. Press on where the difference comes from.</>
-              : <>Declared income sits within reach of {b.bankStatementMonths} months of bank credits.</>}
+              ? <>Declared income runs <b>{gap}% above</b> what {b.bankStatementMonths} months of bank statements support. Press on where the difference comes from.</>
+              : <>Declared income sits within reach of {b.bankStatementMonths} months of bank statements.</>}
+          {bank?.marginPct != null && <> The account shows {formatINR(bank.credits, { compact: false })} a month of sales; at the trade&apos;s typical {bank.marginPct}% margin that is about {formatINR(bank.income, { compact: false })} of income.</>}
         </p>
       </section>
 
@@ -76,15 +81,36 @@ export default function SarthiBrief() {
           />
         </dl>
 
-        {(b.largeDeposits.length > 0 || b.missingDocs.length > 0) && (
+        {/* With a documents list, missing papers are shown there instead. */}
+        {(b.largeDeposits.length > 0 || (!b.docsSubmitted && b.missingDocs.length > 0)) && (
           <ul className={styles.loose}>
             {b.largeDeposits.map((d, i) => (
               <li key={i}>{formatINR(d.amount)} landed in {d.month} with no source on file</li>
             ))}
-            {b.missingDocs.map((d) => <li key={d}>{d} never arrived</li>)}
+            {!b.docsSubmitted && b.missingDocs.map((d) => <li key={d}>{d} never arrived</li>)}
           </ul>
         )}
       </section>
+
+      {/* Documents and KYC — what was pulled, how, and what is still missing */}
+      {(b.kyc || b.bank || b.bureau) && (
+        <section>
+          <h2 className={styles.head}>Documents and KYC</h2>
+          <dl className={styles.record}>
+            {b.kyc && <Row term="Aadhaar" value={`XXXX XXXX ${b.kyc.aadhaarLast4}`} note={b.kyc.aadhaarCheck} tone={/eKYC|XML/.test(b.kyc.aadhaarCheck) ? 'clear' : 'watch'} />}
+            {pan && <Row term="PAN" value={maskPan(pan.value)} note={pan.ok ? 'format and surname initial check out' : pan.checks.filter((x) => !x.pass).map((x) => x.detail).join('; ')} tone={pan.ok ? 'clear' : 'stamp'} />}
+            {b.bank && <Row term="Bank" value={`${b.bank.name}, ${b.bank.type}`} note={b.bank.source} />}
+            {b.bank && <Row term="Account behaviour" value={`${b.bank.bounces} bounce${b.bank.bounces === 1 ? '' : 's'}`} note={`avg balance ${formatINR(b.bank.avgBalance, { compact: false })} · ${b.bank.cashCreditPct}% cash, ${b.bank.upiCreditPct}% UPI credits`} tone={b.bank.bounces ? 'watch' : 'clear'} />}
+            {b.bureau && <Row term="Bureau detail" value={`${b.bureau.enquiries6m} enquir${b.bureau.enquiries6m === 1 ? 'y' : 'ies'} in 6 months`} note={`${b.bureau.bureau} ${b.bureau.pulledOn} · ${b.bureau.worstDpd}`} tone={b.bureau.enquiries6m >= 3 || /late/.test(b.bureau.worstDpd) ? 'watch' : undefined} />}
+          </dl>
+          {b.docsSubmitted?.length > 0 && (
+            <ul className={styles.docs}>
+              {b.docsSubmitted.map((d) => <li key={d} className={styles.docIn}>✓ {d}</li>)}
+              {b.missingDocs.map((d) => <li key={d} className={styles.docOut}>✕ {d} — not submitted</li>)}
+            </ul>
+          )}
+        </section>
+      )}
 
       {/* What the lender can actually support */}
       <section className={styles.money}>

@@ -262,7 +262,109 @@
       { "q": "Handset pe margin zyada hai ya accessories pe?", "expect": "Accessories, by a wide margin; handsets are 4-8%", "flag": "Says handsets carry the bigger margin" },
       { "q": "Kaunse brand ka distributor aapko supply karta hai?", "expect": "Names a real distributor for a real brand", "flag": "Cannot name any" },
       { "q": "Mahine mein kitne handset nikal jaate hain?", "expect": "A confident specific number", "flag": "No idea of unit volume" }
-    ]
+    ],
+    "depth": [
+      {
+        "key": "margin_mix",
+        "ask": "Naye phone, cover-charger jaisi accessories, aur repair — inmein sabse zyada kismein bachta hai?",
+        "qHi": "नए फ़ोन, कवर-चार्जर जैसी एक्सेसरीज़, और रिपेयर — इनमें सबसे ज़्यादा किसमें बचता है?",
+        "expect": "New handsets earn thin margins that keep shrinking; accessories (covers, chargers, tempered glass, power banks) earn 30-40%+; repair labour is mostly margin. A real owner names accessories or repair, never new phones.",
+        "redFlag": "Says new phones give the most margin, or cannot rank the three.",
+        "redFlagMatch": "(naye phone|new phone|phone mein|mobile mein|handset)",
+        "unlessMatch": "(cover|charger|accessor|repair|glass|tempered|guard)",
+        "onRedFlag": {
+          "ask": "Achha? Ek Redmi ya Vivo bechne pe kitna bach jaata hai?",
+          "qHi": "अच्छा? एक रेडमी या वीवो बेचने पे, कितना बच जाता है?"
+        },
+        "onVague": {
+          "ask": "Ek phone cover pe kitna bachta hai, aur ek naye phone pe?",
+          "qHi": "एक फ़ोन कवर पे कितना बचता है, और एक नए फ़ोन पे?"
+        }
+      },
+      {
+        "key": "top_brand",
+        "ask": "Aapke yahan sabse zyada kaunsi company ka phone bikta hai, aur kitne tak ka?",
+        "qHi": "आपके यहाँ, सबसे ज़्यादा किस कंपनी का फ़ोन बिकता है, और कितने तक का?",
+        "expect": "Tier 2-3 shops mostly sell Vivo, Oppo, Realme, Redmi and Samsung in the Rs 8,000-20,000 band; the owner names the brand and the band at once.",
+        "redFlag": "Cannot name a brand or a price band.",
+        "redFlagMatch": "(sab company|sabka|har company)",
+        "onRedFlag": {
+          "ask": "Pichhle hafte sabse zyada kaunsa model gaya?",
+          "qHi": "पिछले हफ़्ते, सबसे ज़्यादा कौन सा मॉडल गया?"
+        },
+        "onVague": {
+          "ask": "Pichhle hafte sabse zyada kaunsa model gaya?",
+          "qHi": "पिछले हफ़्ते, सबसे ज़्यादा कौन सा मॉडल गया?"
+        }
+      },
+      {
+        "key": "screen_rate",
+        "ask": "Redmi Note ya Samsung A-series ka display badalne ka kitna lete hain?",
+        "qHi": "रेडमी नोट या सैमसंग ए-सीरीज़ का डिस्प्ले बदलने का, कितना लेते हैं?",
+        "expect": "Budget LCD screens cost roughly Rs 700-2,500 and mid-range AMOLED Rs 3,500-12,000 in 2026; a repairer quotes by model and separates original from copy displays.",
+        "redFlag": "Cannot quote a screen rate, or does not know original from copy.",
+        "onVague": {
+          "ask": "Copy display aur original — dono ka alag rate kya hai?",
+          "qHi": "कॉपी डिस्प्ले और ओरिजिनल — दोनों का अलग रेट क्या है?"
+        }
+      },
+      {
+        "key": "finance_emi",
+        "ask": "Phone EMI pe bhi dete hain — kis finance company se? Mahine mein kitne case ho jaate hain?",
+        "qHi": "फ़ोन ईएमआई पे भी देते हैं — किस फ़ाइनेंस कंपनी से? महीने में कितने केस हो जाते हैं?",
+        "expect": "Many tier 2-3 shops are partner stores of consumer-durable lenders (Bajaj Finance has 1.5 lakh+ partner stores); the owner knows the monthly case count and that customers need a CIBIL score of about 650.",
+        "redFlag": "Does not know what phone EMI financing is.",
+        "redFlagMatch": "(kaunsa finance|kya hota hai|pata nahi)",
+        "onRedFlag": {
+          "ask": "Bajaj ya kisi aur finance ka aadmi dukaan pe nahi baithta?",
+          "qHi": "बजाज या किसी और फ़ाइनेंस का आदमी, दुकान पे नहीं बैठता?"
+        }
+      },
+      {
+        "key": "recharge",
+        "ask": "Recharge aur bill payment se mahine ka kitna commission ban jaata hai?",
+        "qHi": "रिचार्ज और बिल पेमेंट से, महीने का कितना कमीशन बन जाता है?",
+        "expect": "Retail recharge and bill-payment commission is about 0.5-4% (some portals pay 4-7%); a real shop knows the monthly volume and roughly what it earns.",
+        "redFlag": "No idea of recharge volume or commission.",
+        "onVague": { "ask": "Roz kitne recharge ho jaate hain, lagbhag?", "qHi": "रोज़ कितने रिचार्ज हो जाते हैं, लगभग?" }
+      },
+      {
+        "key": "used_phone_check",
+        "ask": "Purana phone kharidne se pehle kaise pakka karte hain ki woh chori ka nahi hai?",
+        "qHi": "पुराना फ़ोन ख़रीदने से पहले, कैसे पक्का करते हैं कि वो चोरी का नहीं है?",
+        "expect": "A careful shop checks the IMEI (e.g. on the government Sanchar Saathi / CEIR portal), keeps the seller's ID and the original bill or box. Buying used phones with no checks puts the whole stock at risk of seizure.",
+        "redFlag": "Buys used phones with no IMEI check, ID or bill.",
+        "redFlagMatch": "(kuch check nahi|check nahi karte|dekhte nahi|zaroorat nahi|bina bill|bharosa)",
+        "onRedFlag": {
+          "ask": "Bina bill aur bina ID wala phone aaye toh kya karte hain?",
+          "qHi": "बिना बिल और बिना आईडी वाला फ़ोन आए, तो क्या करते हैं?"
+        },
+        "onVague": { "ask": "IMEI number kahin check karte hain?", "qHi": "आईएमईआई नंबर, कहीं चेक करते हैं?" }
+      },
+      {
+        "key": "common_repair",
+        "ask": "Repair mein sabse zyada kya kaam aata hai, aur kitni der mein ho jaata hai?",
+        "qHi": "रिपेयर में सबसे ज़्यादा क्या काम आता है, और कितनी देर में हो जाता है?",
+        "expect": "Screen, battery and charging port — usually fixed in 15-60 minutes, with 3-6 months warranty on parts.",
+        "redFlag": "Cannot name the everyday repairs.",
+        "onVague": { "ask": "Kal kaunsa repair aaya tha?", "qHi": "कल कौन सा रिपेयर आया था?" }
+      }
+    ],
+    "hisaab": {
+      "fields": ["monthly_purchase", "stock_value"],
+      "purchaseToSales": { "min": 0.7, "max": 1.05, "expect": "0.80-0.92 (thin phones, richer accessories and repair)" },
+      "stockDays": { "min": 7, "max": 90, "expect": "about 15-45 days — phones lose value fast (indicative)" },
+      "answerRanges": [
+        {
+          "probe": "screen_rate",
+          "min": 300,
+          "max": 15000,
+          "parseMin": 100,
+          "what": "a Redmi Note / Samsung A-series display",
+          "expect": "Rs 700-2,500 LCD, Rs 3,500-12,000 AMOLED"
+        }
+      ]
+    }
   },
 
   "hardware_paint": {

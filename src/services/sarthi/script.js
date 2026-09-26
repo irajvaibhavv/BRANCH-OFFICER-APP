@@ -298,7 +298,7 @@ ${biz ? `- Trade-knowledge questions asked for ${biz.label}. Watch for: ${biz.kn
 ${eligibility.assessable
       ? `- Assessed Monthly Income: ₹${inr(eligibility.assessedIncome)} ${eligibility.assessedIncomeMethod === 'calculated_from_answers'
         ? `— **rebuilt from the interview, not from a statement**. ${eligibility.assessedIncomeSource}${eligibility.assessedIncomeNote ? ` ${eligibility.assessedIncomeNote}` : ''}`
-        : '(Brief: avgMonthlyCredit — bank credits, not declared income)'}
+        : `(${eligibility.assessedIncomeSource})`}
 - Existing EMIs: ₹${inr(eligibility.existingEmi)} (Brief: existingEMIs)
 - Available EMI Capacity: ₹${inr(eligibility.availableEmiCapacity)} (${eligibility.foirPct}% FOIR less existing EMIs)
 - Recommended Product: ${eligibility.product} at ${eligibility.rate}% for ${eligibility.tenureMonths} months

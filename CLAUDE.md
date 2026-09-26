@@ -108,6 +108,13 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   have landmarks, so trap questions are gated on that; tier ranges are indicative and the verifier
   softens a rent verdict to `unverified` rather than `contradicted` on them. Always resolve with
   `areaKey || area` — a walk-in has no `areaKey`.
+- **Bank credits are not income for a shop.** `bankIncome(c)` (knowledge.js) is the only way to read income off
+  the bank: when `brief.creditsAre === 'turnover'` the credits are sales and are cut to the trade's typical
+  margin; otherwise they pass through. Eligibility, the income verdict, the contradiction flag and both brief
+  screens all use it — reading `avgMonthlyCredit` directly as income made a Rs 9.5 lakh phone showroom look
+  eligible for Rs 50 lakh. Seeded applicants carry `brief.kyc` (Aadhaar last four only), `brief.bureau`,
+  `brief.bank` (incl. Account Aggregator source) and `docsSubmitted`, shown under "Documents and KYC".
+  `resetSarthiData()` wipes every `bo_sarthi_*` key once per stamp — bump it when the seeded applicants change.
 - **Walk-ins are assessed on internal consistency**: `checkInternalConsistency` compares their own
   numbers against each other and against `typicalMarginPct` in `businessKnowledge.json`, and
   `assessIncome` rebuilds income from footfall × bill × margin, taking the LOWER of that and what

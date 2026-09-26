@@ -1,6 +1,6 @@
 // Decides WHAT to ask by walking pdSchema.json; the model only decides how to phrase it. No model calls here.
 import pdSchema from '../../data/sarthi/pdSchema.json';
-import { lookupLocation, lookupBusiness, hasAreaDetail } from './knowledge';
+import { lookupLocation, lookupBusiness, hasAreaDetail, bankIncome } from './knowledge';
 import { getMissingFields, knownFacts, enterSection, FIELD_DEFS as FIELD_DEFS_BY_KEY } from './memory';
 import { toNumber, toYears } from './verifier';
 import { namesMatch } from './idChecks';
@@ -214,14 +214,15 @@ export function checkContradictions(memory, facts, caseData) {
   }
 
   const income = toNumber(facts.monthly_income);
-  if (income != null && brief.avgMonthlyCredit) {
-    const diff = ((income - brief.avgMonthlyCredit) / brief.avgMonthlyCredit) * 100;
+  const bank = bankIncome(caseData);
+  if (income != null && bank) {
+    const diff = ((income - bank.income) / bank.income) * 100;
     if (diff > 40) {
       flags.push({
         type: 'contradiction', field: 'monthly_income',
-        declared: income, known: brief.avgMonthlyCredit, diff: Math.round(diff),
+        declared: income, known: bank.income, diff: Math.round(diff),
         severity: diff > 80 ? 'high' : 'medium',
-        detail: `Declared income ${income} is ${Math.round(diff)}% above bank credits ${brief.avgMonthlyCredit}`,
+        detail: `Declared income ${income} is ${Math.round(diff)}% above the ${bank.income} the bank statement supports (${bank.basis})`,
         turn: memory.turnCount,
       });
     }
@@ -345,9 +346,8 @@ export function checkInternalConsistency(memory, caseData) {
 // Bank credits win. Otherwise rebuild from footfall × bill × margin and take the LOWER of that and the declaration.
 export function assessIncome(memory, caseData) {
   const brief = caseData?.brief ?? {};
-  if (brief.avgMonthlyCredit) {
-    return { income: brief.avgMonthlyCredit, method: 'bank_credits', source: 'Brief: avgMonthlyCredit', assessable: true };
-  }
+  const bank = bankIncome(caseData);
+  if (bank) return { income: bank.income, method: 'bank_credits', source: bank.source, assessable: true };
 
   const c = memory?.collected ?? {};
   const customers = toNumber(c.customers_per_day);

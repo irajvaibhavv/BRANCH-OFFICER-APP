@@ -1,6 +1,6 @@
 // Decides confirmed / contradicted / unverified with plain rules — never a model.
 import { emi, maxLoan, PRODUCT_RATES, FOIR } from '../../utils/loanCalc';
-import { lookupLocation } from './knowledge';
+import { lookupLocation, bankIncome } from './knowledge';
 import { formatINR } from '../../utils/formatters';
 
 /* Tunable thresholds — every rule below reads from here. */
@@ -77,19 +77,22 @@ export function toYears(v) {
 }
 
 const RULES = {
-  income: (claimed, { brief }) => {
+  income: (claimed, { caseData }) => {
     const value = toNumber(claimed);
     if (value == null) return { status: 'unverified', detail: 'No numeric income stated' };
-    const base = brief.avgMonthlyCredit;
+    const bank = bankIncome(caseData);
+    const base = bank?.income;
+    const label = bank && bank.basis !== 'bank credits' ? `income from bank turnover` : 'bank credits';
+    const src = bank?.source ?? 'Brief: avgMonthlyCredit';
     if (!base) return { status: 'unverified', detail: 'Self-declared only — no bank statement on file to check it against', verified: 'nothing on file' };
     const diff = ((value - base) / base) * 100;
     if (Math.abs(diff) <= THRESHOLDS.incomeMatchPct) {
-      return { status: 'confirmed', detail: `Within ${THRESHOLDS.incomeMatchPct}% of bank credits (${fmt(base)})`, verified: fmt(base), source: 'Brief: avgMonthlyCredit' };
+      return { status: 'confirmed', detail: `Within ${THRESHOLDS.incomeMatchPct}% of ${label} (${fmt(base)})`, verified: fmt(base), source: src };
     }
     if (diff > THRESHOLDS.incomeOverstatePct) {
-      return { status: 'contradicted', detail: `${Math.round(diff)}% above bank credits (${fmt(base)})`, verified: fmt(base), source: 'Brief: avgMonthlyCredit' };
+      return { status: 'contradicted', detail: `${Math.round(diff)}% above ${label} (${fmt(base)})`, verified: fmt(base), source: src };
     }
-    return { status: 'unverified', detail: `${Math.round(diff)}% difference from bank credits (${fmt(base)})`, verified: fmt(base), source: 'Brief: avgMonthlyCredit' };
+    return { status: 'unverified', detail: `${Math.round(diff)}% difference from ${label} (${fmt(base)})`, verified: fmt(base), source: src };
   },
 
   turnover: (claimed, ctx) => RULES.income(claimed, ctx),
@@ -250,8 +253,9 @@ export function computeEligibility(caseData, assessed = null) {
   const existingEmi = brief.existingEMIs ?? 0;
 
   // Bank credits first, else income rebuilt from their answers — never a bare declaration.
-  const rebuilt = !brief.avgMonthlyCredit && assessed?.assessable ? assessed : null;
-  const assessedIncome = brief.avgMonthlyCredit ?? rebuilt?.income ?? null;
+  const bank = bankIncome(caseData);
+  const rebuilt = !bank && assessed?.assessable ? assessed : null;
+  const assessedIncome = bank?.income ?? rebuilt?.income ?? null;
 
   // Nothing verified or rebuildable: report "not assessable" rather than a number.
   if (!assessedIncome) {
@@ -284,7 +288,7 @@ export function computeEligibility(caseData, assessed = null) {
     assessedIncome,
     assessedIncomeSource: rebuilt
       ? `Rebuilt from the interview — ${rebuilt.source}. No bank statement has been seen.`
-      : 'Brief: avgMonthlyCredit (bank credits, not declared income)',
+      : bank.basis === 'bank credits' ? 'Brief: avgMonthlyCredit (bank credits, not declared income)' : `Brief: avgMonthlyCredit — ${bank.basis}, not declared income`,
     assessedIncomeMethod: rebuilt ? 'calculated_from_answers' : 'bank_credits',
     assessedIncomeNote: rebuilt?.note,
     declaredIncome: caseData.declaredIncome,

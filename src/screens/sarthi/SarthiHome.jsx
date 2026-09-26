@@ -5,7 +5,7 @@ import TopBar from '../../components/layout/TopBar';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { useSarthiReports } from '../../hooks/useSarthiReports';
 import { formatINR, timeAgo } from '../../utils/formatters';
-import { CASES, CUSTOM_CASES_KEY } from '../../services/sarthi/knowledge';
+import { CASES, CUSTOM_CASES_KEY, bankIncome } from '../../services/sarthi/knowledge';
 import styles from './SarthiHome.module.css';
 
 const RISK_WORD = { high: 'High risk', medium: 'Medium risk', low: 'Low risk' };
@@ -42,7 +42,7 @@ export default function SarthiHome() {
       <div className={styles.list}>
         {files.map((c, i) => {
           const declared = c.declaredIncome;
-          const verified = c.brief.avgMonthlyCredit;
+          const verified = bankIncome(c)?.income ?? null;
           const gap = verified ? Math.round(((declared - verified) / verified) * 100) : null;
           const widest = Math.max(declared, verified ?? 0) || 1;
           const report = reports.find((r) => r.caseId === c.id);

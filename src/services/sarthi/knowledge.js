@@ -16,18 +16,17 @@ export function customCases() {
   }
 }
 
-// One-time wipe of every walk-in and its report; bump the stamp to wipe again on every device.
-const WALKIN_PURGE = '2026-09-26';
-export function purgeWalkIns() {
+// One-time wipe of all Sarthi data on each device — walk-ins, reports, transcripts, photos — so a new set of
+// seeded applicants starts clean. Bump the stamp to wipe again.
+const SARTHI_RESET = '2026-09-27-applicants-v2';
+const RESET_KEY = 'bo_sarthi_reset';
+export function resetSarthiData() {
   try {
     const ls = window.localStorage;
-    if (ls.getItem('bo_sarthi_walkin_purge') === WALKIN_PURGE) return;
-    ls.removeItem(CUSTOM_CASES_KEY);
-    const reports = JSON.parse(ls.getItem('bo_sarthi_reports')) ?? [];
-    ls.setItem('bo_sarthi_reports', JSON.stringify(reports.filter((r) => !String(r.caseId).startsWith('sarthi_new_'))));
-    Object.keys(ls).filter((k) => k.startsWith('bo_sarthi_') && k.includes('sarthi_new_')).forEach((k) => ls.removeItem(k));
-    ls.setItem('bo_sarthi_walkin_purge', WALKIN_PURGE);
-  } catch { /* storage blocked — nothing to purge */ }
+    if (ls.getItem(RESET_KEY) === SARTHI_RESET) return;
+    Object.keys(ls).filter((k) => k.startsWith('bo_sarthi_') && k !== RESET_KEY).forEach((k) => ls.removeItem(k));
+    ls.setItem(RESET_KEY, SARTHI_RESET);
+  } catch { /* storage blocked — nothing to reset */ }
 }
 
 export function allCases() {
@@ -159,6 +158,26 @@ export function lookupBusiness(businessKey) {
     }
   }
   return best;
+}
+
+/**
+ * What the bank statement says they earn. Credits into a shop's account are its SALES, so when the brief marks
+ * them as turnover they are cut to the trade's typical margin — treating turnover as income made a mobile
+ * showroom with Rs 9.5 lakh of phone sales look like it could carry a Rs 50 lakh loan.
+ */
+export function bankIncome(c) {
+  const credits = c?.brief?.avgMonthlyCredit;
+  if (!credits) return null;
+  if (c.brief.creditsAre !== 'turnover') return { income: credits, credits, basis: 'bank credits', source: 'Brief: avgMonthlyCredit' };
+  const m = lookupBusiness(c.businessKey || c.business)?.typicalMarginPct;
+  const pct = m ? (m.min + m.max) / 2 : 10;
+  return {
+    income: Math.round((credits * pct) / 100),
+    credits,
+    marginPct: pct,
+    basis: `bank turnover ${credits.toLocaleString('en-IN')} × ${pct}% typical margin`,
+    source: 'Brief: avgMonthlyCredit × trade margin',
+  };
 }
 
 export function lookupRiskPattern(patternId) {

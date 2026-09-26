@@ -1,162 +1,716 @@
 [
   {
-    "id": "sarthi_case_1",
-    "name": "Ramesh Gupta",
-    "age": 38,
-    "area": "Dwarka Sector 7, Delhi",
-    "areaKey": "Dwarka",
-    "business": "Partnership garment shop",
-    "businessKey": "garment_shop",
-    "businessName": "Gupta Garments",
-    "businessVintage": "2 years",
-    "loanPurpose": "Working capital",
-    "loanAmountRequested": 1500000,
-    "declaredIncome": 300000,
+    "id": "sarthi_kirana_1",
+    "name": "Mahesh Agarwal",
+    "age": 44,
+    "area": "Karol Bagh, Delhi",
+    "areaKey": "Karol Bagh",
+    "business": "Kirana store",
+    "businessKey": "kirana_store",
+    "businessName": "Agarwal General Store",
+    "businessVintage": "14 years",
+    "loanPurpose": "Stock for the festive season and a new chiller",
+    "loanAmountRequested": 500000,
+    "declaredIncome": 45000,
+    "employment": "Self-employed",
+    "riskLevel": "low",
+    "brief": {
+      "avgMonthlyCredit": 380000,
+      "bureauScore": 752,
+      "existingEMIs": 6500,
+      "runningLoans": [
+        {
+          "type": "Two-wheeler loan",
+          "emi": 6500,
+          "remaining": 11
+        }
+      ],
+      "gstRegistered": false,
+      "gstVintage": null,
+      "itrFiled": true,
+      "itrIncome": 480000,
+      "bankStatementMonths": 12,
+      "largeDeposits": [],
+      "missingDocs": [],
+      "areaDefaultRate": 0.08,
+      "kyc": {
+        "aadhaarLast4": "4827",
+        "aadhaarCheck": "OTP eKYC done",
+        "pan": "BQMPA4821K",
+        "nameOnPan": "MAHESH AGARWAL",
+        "dob": "1982-03-14",
+        "address": "H.No 17/4, Beadon Pura, Karol Bagh, Delhi"
+      },
+      "bureau": {
+        "bureau": "CIBIL",
+        "pulledOn": "2026-09-20",
+        "enquiries6m": 1,
+        "worstDpd": "None in 36 months",
+        "activeAccounts": 2,
+        "oldestAccountYears": 9
+      },
+      "bank": {
+        "name": "Punjab National Bank",
+        "type": "Current",
+        "source": "Account Aggregator (Finvu), 12 months",
+        "avgBalance": 38000,
+        "bounces": 0,
+        "cashCreditPct": 35,
+        "upiCreditPct": 60
+      },
+      "docsSubmitted": [
+        "Aadhaar (eKYC)",
+        "PAN",
+        "Bank statement via AA — 12 months",
+        "ITR FY 2025-26",
+        "Udyam registration",
+        "Shop rent agreement"
+      ],
+      "digInto": [
+        "Clean file — confirm the chiller quote and where the festive stock will come from",
+        "Karol Bagh rents are high: check the shop rent against the rent agreement"
+      ],
+      "creditsAre": "turnover"
+    },
+    "riskPatternMatch": {
+      "patternId": "KB-HIGHRENT-002",
+      "matchReason": "Karol Bagh + retail",
+      "failureRate": 0.35,
+      "pastCause": "Income overstated against high rent"
+    },
+    "hi": {
+      "name": "महेश अग्रवाल",
+      "firstName": "महेश",
+      "area": "करोल बाग़, दिल्ली",
+      "businessName": "अग्रवाल जनरल स्टोर",
+      "loanAmount": "पाँच लाख"
+    }
+  },
+  {
+    "id": "sarthi_kirana_2",
+    "name": "Rekha Devi",
+    "age": 39,
+    "area": "Rustampur, Gorakhpur",
+    "areaKey": null,
+    "business": "Kirana store",
+    "businessKey": "kirana_store",
+    "businessName": "Rekha Kirana Bhandar",
+    "businessVintage": "6 years",
+    "loanPurpose": "More stock and a deep freezer",
+    "loanAmountRequested": 300000,
+    "declaredIncome": 55000,
+    "employment": "Self-employed",
+    "riskLevel": "medium",
+    "brief": {
+      "avgMonthlyCredit": 300000,
+      "bureauScore": null,
+      "existingEMIs": null,
+      "runningLoans": [],
+      "gstRegistered": false,
+      "gstVintage": null,
+      "itrFiled": false,
+      "itrIncome": null,
+      "bankStatementMonths": 6,
+      "largeDeposits": [],
+      "missingDocs": [
+        "Shop ownership or rent proof"
+      ],
+      "areaDefaultRate": 0.11,
+      "kyc": {
+        "aadhaarLast4": "3318",
+        "aadhaarCheck": "Offline Aadhaar XML",
+        "pan": "CKDPD5530M",
+        "nameOnPan": "REKHA DEVI",
+        "dob": "1987-07-02",
+        "address": "Mohalla Rustampur, Gorakhpur, UP"
+      },
+      "bureau": {
+        "bureau": "CIBIL",
+        "pulledOn": "2026-09-21",
+        "enquiries6m": 0,
+        "worstDpd": "No record — new to credit",
+        "activeAccounts": 0,
+        "oldestAccountYears": 0
+      },
+      "bank": {
+        "name": "Baroda UP Bank (Gramin)",
+        "type": "Savings",
+        "source": "PDF statement, 6 months",
+        "avgBalance": 9000,
+        "bounces": 0,
+        "cashCreditPct": 70,
+        "upiCreditPct": 25
+      },
+      "docsSubmitted": [
+        "Aadhaar (offline XML)",
+        "PAN",
+        "Bank statement PDF — 6 months",
+        "SHG membership letter"
+      ],
+      "digInto": [
+        "New to credit — no bureau history; an earlier SHG loan is mentioned in the SHG letter, ask how it was repaid",
+        "Declared income (55k) is about 59% above what her bank turnover supports (Rs 3 lakh of sales × 11.5% ≈ 34.5k); 70% of credits are cash deposits",
+        "No proof the shop is hers — ask who owns the premises"
+      ],
+      "creditsAre": "turnover"
+    },
+    "riskPatternMatch": null,
+    "hi": {
+      "name": "रेखा देवी",
+      "firstName": "रेखा",
+      "area": "रुस्तमपुर, गोरखपुर",
+      "businessName": "रेखा किराना भंडार",
+      "loanAmount": "तीन लाख"
+    }
+  },
+  {
+    "id": "sarthi_kirana_3",
+    "name": "Rakesh Kushwaha",
+    "age": 33,
+    "area": "Izzatnagar, Bareilly",
+    "areaKey": null,
+    "business": "Kirana store",
+    "businessKey": "kirana_store",
+    "businessName": "Kushwaha Stores",
+    "businessVintage": "3 years",
+    "loanPurpose": "Open a second outlet — a cafe near the bus stand",
+    "loanAmountRequested": 1200000,
+    "declaredIncome": 80000,
     "employment": "Self-employed",
     "riskLevel": "high",
     "brief": {
-      "avgMonthlyCredit": 165000,
-      "bureauScore": 680,
-      "existingEMIs": 18000,
+      "avgMonthlyCredit": 220000,
+      "bureauScore": 648,
+      "existingEMIs": 14000,
       "runningLoans": [
         {
-          "type": "Personal Loan",
-          "emi": 8000,
-          "remaining": 14
+          "type": "Personal loan",
+          "emi": 9000,
+          "remaining": 20
         },
         {
-          "type": "Credit Card",
-          "emi": 10000,
-          "outstanding": 120000
+          "type": "Consumer durable loan",
+          "emi": 5000,
+          "remaining": 4
         }
       ],
-      "gstRegistered": true,
-      "gstVintage": "1.5 years",
+      "gstRegistered": false,
+      "gstVintage": null,
       "itrFiled": true,
-      "itrIncome": 220000,
+      "itrIncome": 260000,
       "bankStatementMonths": 6,
       "largeDeposits": [
         {
-          "month": "March",
-          "amount": 500000,
-          "note": "Unusual spike"
+          "month": "July",
+          "amount": 250000,
+          "note": "Cash deposit, withdrawn within a week"
+        }
+      ],
+      "missingDocs": [
+        "Udyam registration",
+        "Shop rent agreement"
+      ],
+      "areaDefaultRate": 0.14,
+      "kyc": {
+        "aadhaarLast4": "9061",
+        "aadhaarCheck": "OTP eKYC done",
+        "pan": "CVTPM7314L",
+        "nameOnPan": "RAKESH KUSHWAHA",
+        "dob": "1993-01-19",
+        "address": "Izzatnagar, Bareilly, UP"
+      },
+      "bureau": {
+        "bureau": "CIBIL",
+        "pulledOn": "2026-09-22",
+        "enquiries6m": 4,
+        "worstDpd": "30+ days late once (March 2026)",
+        "activeAccounts": 3,
+        "oldestAccountYears": 2
+      },
+      "bank": {
+        "name": "HDFC Bank",
+        "type": "Savings",
+        "source": "Account Aggregator (OneMoney), 6 months",
+        "avgBalance": 6000,
+        "bounces": 2,
+        "cashCreditPct": 55,
+        "upiCreditPct": 40
+      },
+      "docsSubmitted": [
+        "Aadhaar (eKYC)",
+        "PAN",
+        "Bank statement via AA — 6 months",
+        "ITR FY 2025-26"
+      ],
+      "digInto": [
+        "Declared income (80k) is over three times what his bank turnover supports (Rs 2.2 lakh of sales × 11.5% ≈ 25k)",
+        "The loan is for a cafe — a new venture outside the kirana being assessed",
+        "4 credit enquiries in 6 months and a 30+ day late payment in March",
+        "Rs 2.5 lakh cash deposited in July and withdrawn within a week — source unclear",
+        "PAN 5th letter does not match the surname initial — confirm the PAN is his"
+      ],
+      "creditsAre": "turnover"
+    },
+    "riskPatternMatch": null,
+    "hi": {
+      "name": "राकेश कुशवाहा",
+      "firstName": "राकेश",
+      "area": "इज़्ज़तनगर, बरेली",
+      "businessName": "कुशवाहा स्टोर्स",
+      "loanAmount": "बारह लाख"
+    }
+  },
+  {
+    "id": "sarthi_electrical_1",
+    "name": "Imran Qureshi",
+    "age": 41,
+    "area": "Dwarka Sector 12, Delhi",
+    "areaKey": "Dwarka",
+    "business": "Electrical shop, partnership with brother",
+    "businessKey": "electrical_shop",
+    "businessName": "Qureshi Electricals",
+    "businessVintage": "9 years",
+    "loanPurpose": "Fan, cooler and wire stock before summer",
+    "loanAmountRequested": 1000000,
+    "declaredIncome": 90000,
+    "employment": "Self-employed",
+    "riskLevel": "medium",
+    "brief": {
+      "avgMonthlyCredit": 550000,
+      "bureauScore": 731,
+      "existingEMIs": 12000,
+      "runningLoans": [
+        {
+          "type": "Business loan",
+          "emi": 12000,
+          "remaining": 16
+        }
+      ],
+      "gstRegistered": true,
+      "gstVintage": "5 years",
+      "itrFiled": true,
+      "itrIncome": 840000,
+      "bankStatementMonths": 12,
+      "largeDeposits": [
+        {
+          "month": "April",
+          "amount": 400000,
+          "note": "Transfer from a contractor — matches a GST invoice"
         }
       ],
       "missingDocs": [
         "Partnership deed copy"
       ],
-      "areaDefaultRate": 0.18,
+      "areaDefaultRate": 0.12,
+      "kyc": {
+        "aadhaarLast4": "7754",
+        "aadhaarCheck": "OTP eKYC done",
+        "pan": "AHRPQ2289D",
+        "nameOnPan": "IMRAN QURESHI",
+        "dob": "1985-11-08",
+        "address": "Sector 12, Dwarka, New Delhi"
+      },
+      "bureau": {
+        "bureau": "CIBIL",
+        "pulledOn": "2026-09-22",
+        "enquiries6m": 1,
+        "worstDpd": "None in 36 months",
+        "activeAccounts": 2,
+        "oldestAccountYears": 7
+      },
+      "bank": {
+        "name": "ICICI Bank",
+        "type": "Current (firm)",
+        "source": "Account Aggregator (Finvu), 12 months",
+        "avgBalance": 145000,
+        "bounces": 0,
+        "cashCreditPct": 20,
+        "upiCreditPct": 45
+      },
+      "docsSubmitted": [
+        "Aadhaar (eKYC)",
+        "PAN",
+        "Firm current account via AA — 12 months",
+        "GST returns — 12 months",
+        "ITR FY 2025-26",
+        "Shop rent agreement"
+      ],
       "digInto": [
-        "Declared income (3L) is 82% above bank credits (1.65L)",
-        "Partnership deed not provided - verify partnership status",
-        "Large cash deposit in March - source unclear",
-        "Business vintage only 2 years, but claims established clientele"
-      ]
+        "Partnership with his brother, but no partnership deed on file — who owns what share?",
+        "Sales look genuine (GST and bank agree) — check how much of it is credit to contractors",
+        "Summer stock loan: does the purchase plan match last year's summer sales?"
+      ],
+      "creditsAre": "turnover"
     },
     "riskPatternMatch": {
       "patternId": "DWK-PARTNERSHIP-001",
-      "matchReason": "Dwarka + Partnership business",
+      "matchReason": "Dwarka + partnership business",
       "failureRate": 0.6,
       "pastCause": "Partner absconding in 3 of 5 past cases"
     },
     "hi": {
-      "name": "रमेश गुप्ता",
-      "firstName": "रमेश",
-      "area": "द्वारका सेक्टर सात, दिल्ली",
-      "businessName": "गुप्ता गारमेंट्स",
-      "loanAmount": "पंद्रह लाख"
+      "name": "इमरान क़ुरैशी",
+      "firstName": "इमरान",
+      "area": "द्वारका सेक्टर बारह, दिल्ली",
+      "businessName": "क़ुरैशी इलेक्ट्रिकल्स",
+      "loanAmount": "दस लाख"
     }
   },
   {
-    "id": "sarthi_case_2",
-    "name": "Sunita Sharma",
-    "age": 45,
-    "area": "Karol Bagh, Delhi",
-    "areaKey": "Karol Bagh",
-    "business": "Sole proprietor kirana store",
-    "businessKey": "kirana_store",
-    "businessName": "Sharma General Store",
-    "businessVintage": "8 years",
-    "loanPurpose": "Expand business - add second outlet",
-    "loanAmountRequested": 800000,
+    "id": "sarthi_electrical_2",
+    "name": "Satish Verma",
+    "age": 47,
+    "area": "Vijay Nagar, Indore",
+    "areaKey": null,
+    "business": "Electrical contractor, Class B licence",
+    "businessKey": "electrical_contractor",
+    "businessName": "Verma Electrical Works",
+    "businessVintage": "15 years",
+    "loanPurpose": "Working capital while government bills are pending",
+    "loanAmountRequested": 2000000,
+    "declaredIncome": 150000,
+    "employment": "Self-employed",
+    "riskLevel": "medium",
+    "brief": {
+      "avgMonthlyCredit": 900000,
+      "bureauScore": 705,
+      "existingEMIs": 25000,
+      "runningLoans": [
+        {
+          "type": "Business loan",
+          "emi": 25000,
+          "remaining": 22
+        }
+      ],
+      "gstRegistered": true,
+      "gstVintage": "8 years",
+      "itrFiled": true,
+      "itrIncome": 1500000,
+      "bankStatementMonths": 12,
+      "largeDeposits": [
+        {
+          "month": "March",
+          "amount": 1800000,
+          "note": "Government RA bill payment (PWD)"
+        }
+      ],
+      "missingDocs": [
+        "Latest work orders",
+        "Electrical contractor licence copy"
+      ],
+      "areaDefaultRate": 0.1,
+      "kyc": {
+        "aadhaarLast4": "2046",
+        "aadhaarCheck": "OTP eKYC done",
+        "pan": "AFKPV6671R",
+        "nameOnPan": "SATISH VERMA",
+        "dob": "1979-05-23",
+        "address": "Vijay Nagar, Indore, MP"
+      },
+      "bureau": {
+        "bureau": "CIBIL",
+        "pulledOn": "2026-09-23",
+        "enquiries6m": 2,
+        "worstDpd": "60+ days late once (2024)",
+        "activeAccounts": 3,
+        "oldestAccountYears": 12
+      },
+      "bank": {
+        "name": "State Bank of India",
+        "type": "Current",
+        "source": "Account Aggregator (Finvu), 12 months",
+        "avgBalance": 210000,
+        "bounces": 1,
+        "cashCreditPct": 5,
+        "upiCreditPct": 10
+      },
+      "docsSubmitted": [
+        "Aadhaar (eKYC)",
+        "PAN",
+        "Current account via AA — 12 months",
+        "GST returns — 12 months",
+        "ITR FY 2024-25 and 2025-26"
+      ],
+      "digInto": [
+        "Credits are lumpy — one Rs 18 lakh government bill in March; ask what is pending now and since when",
+        "Licence copy and work orders not submitted — confirm the Class B licence and the supervisor",
+        "60+ day late payment in 2024 — was it when a government bill was delayed?",
+        "How much retention money is held back on running jobs?"
+      ],
+      "creditsAre": "turnover"
+    },
+    "riskPatternMatch": {
+      "patternId": "IND-CONTRACT-005",
+      "matchReason": "Contractor with government receivables",
+      "failureRate": 0.3,
+      "pastCause": "Government bills delayed past 6 months"
+    },
+    "hi": {
+      "name": "सतीश वर्मा",
+      "firstName": "सतीश",
+      "area": "विजय नगर, इंदौर",
+      "businessName": "वर्मा इलेक्ट्रिकल वर्क्स",
+      "loanAmount": "बीस लाख"
+    }
+  },
+  {
+    "id": "sarthi_mobile_1",
+    "name": "Arjun Mehta",
+    "age": 27,
+    "area": "Sector 18, Noida",
+    "areaKey": "Noida Sector 18",
+    "business": "Mobile shop and repair",
+    "businessKey": "mobile_electronics",
+    "businessName": "Mehta Mobile Point",
+    "businessVintage": "4 years",
+    "loanPurpose": "Accessories stock and a repair counter upgrade",
+    "loanAmountRequested": 400000,
+    "declaredIncome": 60000,
+    "employment": "Self-employed",
+    "riskLevel": "low",
+    "brief": {
+      "avgMonthlyCredit": 650000,
+      "bureauScore": 768,
+      "existingEMIs": 0,
+      "runningLoans": [],
+      "gstRegistered": true,
+      "gstVintage": "3 years",
+      "itrFiled": true,
+      "itrIncome": 640000,
+      "bankStatementMonths": 12,
+      "largeDeposits": [],
+      "missingDocs": [],
+      "areaDefaultRate": 0.09,
+      "kyc": {
+        "aadhaarLast4": "6612",
+        "aadhaarCheck": "OTP eKYC done",
+        "pan": "BWGPM8812N",
+        "nameOnPan": "ARJUN MEHTA",
+        "dob": "1999-02-11",
+        "address": "Sector 22, Noida, UP"
+      },
+      "bureau": {
+        "bureau": "CIBIL",
+        "pulledOn": "2026-09-23",
+        "enquiries6m": 0,
+        "worstDpd": "None — one closed loan, paid on time",
+        "activeAccounts": 1,
+        "oldestAccountYears": 4
+      },
+      "bank": {
+        "name": "Kotak Mahindra Bank",
+        "type": "Current",
+        "source": "Account Aggregator (Finvu), 12 months",
+        "avgBalance": 95000,
+        "bounces": 0,
+        "cashCreditPct": 15,
+        "upiCreditPct": 75
+      },
+      "docsSubmitted": [
+        "Aadhaar (eKYC)",
+        "PAN",
+        "Current account via AA — 12 months",
+        "GST returns — 12 months",
+        "ITR FY 2025-26",
+        "Shop rent agreement"
+      ],
+      "digInto": [
+        "Clean file — check how much of the Rs 6.5 lakh monthly turnover is phone sales (thin margin) vs accessories and repair",
+        "Is he a finance partner store (Bajaj or others)? That money passes through his account"
+      ],
+      "creditsAre": "turnover"
+    },
+    "riskPatternMatch": null,
+    "hi": {
+      "name": "अर्जुन मेहता",
+      "firstName": "अर्जुन",
+      "area": "सेक्टर अठारह, नोएडा",
+      "businessName": "मेहता मोबाइल पॉइंट",
+      "loanAmount": "चार लाख"
+    }
+  },
+  {
+    "id": "sarthi_mobile_2",
+    "name": "Salman Ansari",
+    "age": 31,
+    "area": "Kath Ghar, Moradabad",
+    "areaKey": null,
+    "business": "Mobile repair and second-hand phones",
+    "businessKey": "mobile_electronics",
+    "businessName": "Ansari Mobile Care",
+    "businessVintage": "5 years",
+    "loanPurpose": "Buy more second-hand phones for resale",
+    "loanAmountRequested": 600000,
+    "declaredIncome": 70000,
+    "employment": "Self-employed",
+    "riskLevel": "high",
+    "brief": {
+      "avgMonthlyCredit": 350000,
+      "bureauScore": 690,
+      "existingEMIs": 7000,
+      "runningLoans": [
+        {
+          "type": "Gold loan",
+          "emi": 7000,
+          "remaining": 6
+        }
+      ],
+      "gstRegistered": false,
+      "gstVintage": null,
+      "itrFiled": false,
+      "itrIncome": null,
+      "bankStatementMonths": 6,
+      "largeDeposits": [
+        {
+          "month": "May",
+          "amount": 180000,
+          "note": "Many small UPI credits from unrelated people in one week"
+        }
+      ],
+      "missingDocs": [
+        "Purchase bills for second-hand phones",
+        "Shop rent agreement"
+      ],
+      "areaDefaultRate": 0.15,
+      "kyc": {
+        "aadhaarLast4": "5590",
+        "aadhaarCheck": "OTP eKYC done",
+        "pan": "DRSPA4402H",
+        "nameOnPan": "SALMAN ANSARI",
+        "dob": "1995-09-30",
+        "address": "Kath Ghar, Moradabad, UP"
+      },
+      "bureau": {
+        "bureau": "CIBIL",
+        "pulledOn": "2026-09-24",
+        "enquiries6m": 3,
+        "worstDpd": "None",
+        "activeAccounts": 1,
+        "oldestAccountYears": 3
+      },
+      "bank": {
+        "name": "Axis Bank",
+        "type": "Savings",
+        "source": "Account Aggregator (OneMoney), 6 months",
+        "avgBalance": 12000,
+        "bounces": 1,
+        "cashCreditPct": 40,
+        "upiCreditPct": 55
+      },
+      "docsSubmitted": [
+        "Aadhaar (eKYC)",
+        "PAN",
+        "Savings account via AA — 6 months"
+      ],
+      "digInto": [
+        "Second-hand phones: how does he check a phone is not stolen (IMEI check, seller ID, bill)?",
+        "Rs 1.8 lakh of small UPI credits from unrelated people in one week in May — what were they?",
+        "No ITR and no GST; running the business through a savings account",
+        "Declared income (70k) is 150% above what Rs 3.5 lakh of monthly turnover supports at a phone-trade margin — repair and resale margins would have to explain it"
+      ],
+      "creditsAre": "turnover"
+    },
+    "riskPatternMatch": {
+      "patternId": "MBD-USEDPHONE-004",
+      "matchReason": "Second-hand phone trade",
+      "failureRate": 0.4,
+      "pastCause": "Stock seized as stolen; business shut"
+    },
+    "hi": {
+      "name": "सलमान अंसारी",
+      "firstName": "सलमान",
+      "area": "काठ घर, मुरादाबाद",
+      "businessName": "अंसारी मोबाइल केयर",
+      "loanAmount": "छह लाख"
+    }
+  },
+  {
+    "id": "sarthi_mobile_3",
+    "name": "Deepak Chauhan",
+    "age": 35,
+    "area": "Mansarovar, Jaipur",
+    "areaKey": null,
+    "business": "Mobile showroom, Bajaj Finance partner store",
+    "businessKey": "mobile_electronics",
+    "businessName": "Chauhan Mobiles",
+    "businessVintage": "7 years",
+    "loanPurpose": "Open a second showroom",
+    "loanAmountRequested": 1500000,
     "declaredIncome": 120000,
     "employment": "Self-employed",
     "riskLevel": "medium",
     "brief": {
-      "avgMonthlyCredit": 105000,
-      "bureauScore": 720,
-      "existingEMIs": 12000,
+      "avgMonthlyCredit": 950000,
+      "bureauScore": 725,
+      "existingEMIs": 32000,
       "runningLoans": [
         {
-          "type": "Business Loan",
-          "emi": 12000,
-          "remaining": 8
+          "type": "Business loan",
+          "emi": 22000,
+          "remaining": 18
+        },
+        {
+          "type": "Car loan",
+          "emi": 10000,
+          "remaining": 30
         }
       ],
       "gstRegistered": true,
       "gstVintage": "6 years",
       "itrFiled": true,
-      "itrIncome": 110000,
+      "itrIncome": 1100000,
       "bankStatementMonths": 12,
       "largeDeposits": [],
-      "missingDocs": [],
-      "areaDefaultRate": 0.12,
+      "missingDocs": [
+        "Rent agreement for the second showroom"
+      ],
+      "areaDefaultRate": 0.1,
+      "kyc": {
+        "aadhaarLast4": "8143",
+        "aadhaarCheck": "OTP eKYC done",
+        "pan": "AMBPC3375Q",
+        "nameOnPan": "DEEPAK CHAUHAN",
+        "dob": "1991-04-17",
+        "address": "Mansarovar, Jaipur, Rajasthan"
+      },
+      "bureau": {
+        "bureau": "CIBIL",
+        "pulledOn": "2026-09-24",
+        "enquiries6m": 2,
+        "worstDpd": "None in 36 months",
+        "activeAccounts": 3,
+        "oldestAccountYears": 8
+      },
+      "bank": {
+        "name": "Axis Bank",
+        "type": "Current",
+        "source": "Account Aggregator (Finvu), 12 months",
+        "avgBalance": 180000,
+        "bounces": 2,
+        "cashCreditPct": 10,
+        "upiCreditPct": 35
+      },
+      "docsSubmitted": [
+        "Aadhaar (eKYC)",
+        "PAN",
+        "Current account via AA — 12 months",
+        "GST returns — 12 months",
+        "ITR FY 2025-26"
+      ],
       "digInto": [
-        "Income declaration fairly consistent with bank credits",
-        "Second outlet location not specified - verify viability",
-        "Good bureau score but existing EMI reduces capacity"
-      ]
+        "Rs 9.5 lakh monthly credits include finance-company disbursals for customer EMIs — how much is his own margin?",
+        "2 cheque bounces in 12 months despite a high balance — why?",
+        "Second showroom: rent agreement not submitted, and who runs the first one meanwhile?"
+      ],
+      "creditsAre": "turnover"
     },
     "riskPatternMatch": null,
     "hi": {
-      "name": "सुनीता शर्मा",
-      "firstName": "सुनीता",
-      "area": "करोल बाग, दिल्ली",
-      "businessName": "शर्मा जनरल स्टोर",
-      "loanAmount": "आठ लाख"
-    }
-  },
-  {
-    "id": "sarthi_case_3",
-    "name": "Vikram Patel",
-    "age": 32,
-    "area": "Noida Sector 18, UP",
-    "areaKey": "Noida Sector 18",
-    "business": "IT freelancer - web development",
-    "businessKey": "it_freelancer",
-    "businessName": "Vikram Tech Solutions",
-    "businessVintage": "4 years",
-    "loanPurpose": "Buy equipment - laptops and monitors",
-    "loanAmountRequested": 500000,
-    "declaredIncome": 180000,
-    "employment": "Self-employed (Professional)",
-    "riskLevel": "low",
-    "brief": {
-      "avgMonthlyCredit": 175000,
-      "bureauScore": 780,
-      "existingEMIs": 0,
-      "runningLoans": [],
-      "gstRegistered": true,
-      "gstVintage": "3.5 years",
-      "itrFiled": true,
-      "itrIncome": 175000,
-      "bankStatementMonths": 12,
-      "largeDeposits": [],
-      "missingDocs": [],
-      "areaDefaultRate": 0.08,
-      "digInto": [
-        "Income consistent across bank, ITR, and declaration",
-        "No existing debt - good capacity",
-        "Verify client base stability - freelance income can be irregular"
-      ]
-    },
-    "riskPatternMatch": null,
-    "hi": {
-      "name": "विक्रम पटेल",
-      "firstName": "विक्रम",
-      "area": "नोएडा सेक्टर अठारह, यूपी",
-      "businessName": "विक्रम टेक सॉल्यूशंस",
-      "loanAmount": "पाँच लाख"
+      "name": "दीपक चौहान",
+      "firstName": "दीपक",
+      "area": "मानसरोवर, जयपुर",
+      "businessName": "चौहान मोबाइल्स",
+      "loanAmount": "पंद्रह लाख"
     }
   }
 ]

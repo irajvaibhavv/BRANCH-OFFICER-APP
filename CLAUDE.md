@@ -147,11 +147,12 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   eligibility number, and `validator.js` strips any finding whose citation does not resolve.
   Keep new facts in the JSON files, new fields in `pdSchema.json`, new verdicts in the verifier — never
   in a prompt.
-- **Voice**: Sarthi has its own voice (`services/sarthi/voice.js` — Murf `hi-IN-kabir`), passed per `speak()` call so
+- **Voice**: Sarthi has its own voice (`services/sarthi/voice.js` — ElevenLabs Flash v2.5 with `language_code: 'hi'`, Murf
+  `hi-IN-kabir` when only a Murf key exists), passed per `speak()` call so
   SAARTHI AI keeps the app-default voice from `.env`. Captions are Hinglish but the TTS is fed Devanagari
   (`speech` on each script step, a ```speech``` block from Agent 1): a Hindi voice reads romanized Hindi with
   English pronunciation. Scripted lines are pre-rendered to `public/sarthi-audio/` by `npm run sarthi:voice`
-  and played from disk via `voiceManifest.json`, so a demo makes no TTS call — **re-run it after editing any
+  and played from disk via `voiceManifest.json` (Murf only — `PRERENDERED` skips them on ElevenLabs so the voice never switches mid-call), so a demo makes no TTS call — **re-run it after editing any
   question or the voice config**, or that line silently falls back to a live API call. The manifest only
   covers scripted lines: **live mode writes novel text every turn, so it always pays the TTS round trip.**
   The question text appears when the voice starts (`onStart` from `speak()`), not while TTS renders —

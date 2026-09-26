@@ -12,9 +12,11 @@ const MURF_VOICE = ENV.VITE_MURF_VOICE || 'en-IN-arohi';
 const MURF_URL = 'https://api.murf.ai/v1/speech/generate';
 
 const forced = ENV.VITE_TTS_ENGINE;
+// The wanted engine if its key exists, else whichever cloud engine has one — browser TTS is the last resort.
 const pickEngine = (want) => (want === 'browser' ? 'browser'
-  : (want === 'elevenlabs' || !want) && ELEVEN_KEY ? 'elevenlabs'
-  : (want === 'murf' || !want) && MURF_KEY ? 'murf'
+  : want === 'murf' && MURF_KEY ? 'murf'
+  : ELEVEN_KEY ? 'elevenlabs'
+  : MURF_KEY ? 'murf'
   : 'browser');
 const engine = pickEngine(forced);
 const CLOUD = engine !== 'browser';
@@ -24,12 +26,16 @@ export const canListen = !!SR;
 export const ttsEngine = CLOUD ? engine : synth ? 'browser' : 'none';
 
 // Per-call voice profile; callers passing nothing get the .env default.
-export function voiceProfile({ engine: want, voiceId, style, speed } = {}) {
+// voiceId may be a map per engine, since a fallback engine cannot use the other's voice ids.
+export function voiceProfile({ engine: want, voiceId, style, speed, model, lang } = {}) {
+  const engine = pickEngine(want ?? forced);
   return {
-    engine: pickEngine(want ?? forced),
-    voiceId: voiceId ?? null,
+    engine,
+    voiceId: (voiceId && typeof voiceId === 'object' ? voiceId[engine] : voiceId) ?? null,
     style: style ?? null,
     speed: Number(speed) || SPEED,
+    model: model ?? null,
+    lang: lang ?? null,
   };
 }
 const DEFAULT_PROFILE = voiceProfile();
@@ -57,7 +63,12 @@ function fetchEleven(text, p) {
   return fetch(`https://api.elevenlabs.io/v1/text-to-speech/${p.voiceId || ELEVEN_VOICE}?output_format=mp3_22050_32`, {
     method: 'POST',
     headers: { 'xi-api-key': ELEVEN_KEY, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
-    body: JSON.stringify({ text, model_id: 'eleven_multilingual_v2', voice_settings: { stability: 0.6, similarity_boost: 0.8, style: 0.1, speed: p.speed } }),
+    body: JSON.stringify({
+      text,
+      model_id: p.model || ENV.VITE_ELEVENLABS_MODEL || 'eleven_multilingual_v2',
+      ...(p.lang && { language_code: p.lang }),
+      voice_settings: { stability: 0.6, similarity_boost: 0.8, style: 0.1, speed: p.speed },
+    }),
   })
     .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`ElevenLabs ${r.status}`))))
     .then((b) => URL.createObjectURL(b));
@@ -65,7 +76,7 @@ function fetchEleven(text, p) {
 
 function audioUrl(text, p) {
   const clean_ = clean(text);
-  const key = `${p.engine}|${p.voiceId}|${p.style}|${p.speed}|${clean_}`;
+  const key = `${p.engine}|${p.voiceId}|${p.style}|${p.speed}|${p.model}|${clean_}`;
   if (!cache.has(key)) {
     const req = p.engine === 'elevenlabs' ? fetchEleven(clean_, p) : fetchMurf(clean_, p);
     cache.set(key, req.catch((e) => { cache.delete(key); throw e; }));

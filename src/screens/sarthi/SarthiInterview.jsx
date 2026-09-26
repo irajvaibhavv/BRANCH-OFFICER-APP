@@ -22,7 +22,7 @@ import { checkUpload, liveProvenance } from '../../services/sarthi/photoCheck';
 import { stopSpeaking, listen, canListen, canSpeak } from '../../services/voice';
 import { speakStreamed } from '../../services/sarthi/stream';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { SARTHI_VOICE } from '../../services/sarthi/voice';
+import { SARTHI_VOICE, PRERENDERED } from '../../services/sarthi/voice';
 import voiceManifest from '../../data/sarthi/voiceManifest.json';
 import { useSarthiReports } from '../../hooks/useSarthiReports';
 import styles from './SarthiInterview.module.css';
@@ -146,7 +146,7 @@ export default function SarthiInterview() {
     // Scripted lines play pre-rendered audio; live text is streamed sentence by sentence.
     speakStreamed(line, {
       voice: SARTHI_VOICE,
-      src: voiceManifest[line],
+      src: PRERENDERED ? voiceManifest[line] : undefined,
       onStart: show,
       onEnd: () => { show(); setAvatar('idle'); (then ?? beginListening)(); },
     });
@@ -301,7 +301,7 @@ export default function SarthiInterview() {
           setAsked((n) => n + 1);
           speakStreamed(early, {
             voice: SARTHI_VOICE,
-            src: voiceManifest[early],
+            src: PRERENDERED ? voiceManifest[early] : undefined,
             onStart: () => { voiceOn = true; setAvatar('speaking'); showCaption(pending); },
             onEnd: () => { voiceOn = true; showCaption(pending); audioDone = true; advance(); },
           });

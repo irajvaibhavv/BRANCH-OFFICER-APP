@@ -124,6 +124,7 @@ export default function SarthiInterview() {
       onFinal: (t) => { if (t.trim()) handleAnswer(t.trim()); },
       onError: () => { setAvatar('idle'); setTypeMode(true); },
       onEnd: () => { stopListen.current = null; },
+      endAfterMs: 1200,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeMode]);

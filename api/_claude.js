@@ -11,6 +11,12 @@ export const claudeLabel = () => `${MODEL} (report ${REPORT_MODEL})`;
 // Only the report asks for thinking; on Claude it gets the stronger model instead.
 const modelFor = (thinkingBudget) => (thinkingBudget > 0 ? REPORT_MODEL : MODEL);
 
+// Claude 5 models reject `temperature` outright; only the 4.x generation still takes it.
+const takesTemperature = (model) => /-4-|-4|3-/.test(model);
+
+// The app sends JPEG, but the declared type must match the bytes or the call is refused.
+const mediaType = (b64) => (b64.startsWith('iVBOR') ? 'image/png' : b64.startsWith('UklGR') ? 'image/webp' : 'image/jpeg');
+
 // The controller appends "## THIS TURN" last, so everything before it is identical across turns and cacheable.
 function systemBlocks(systemPrompt) {
   if (!systemPrompt) return undefined;
@@ -56,20 +62,25 @@ async function fail(response) {
   return err;
 }
 
-const chatBody = ({ systemPrompt, messages, temperature, maxTokens, thinkingBudget }) => ({
-  model: modelFor(thinkingBudget),
-  max_tokens: maxTokens,
-  temperature: Math.min(temperature, 1),
-  system: systemBlocks(systemPrompt),
-  messages: alternate(messages),
-});
+function chatBody({ systemPrompt, messages, temperature, maxTokens, thinkingBudget }) {
+  const model = modelFor(thinkingBudget);
+  return {
+    model,
+    max_tokens: maxTokens,
+    ...(takesTemperature(model) && { temperature: Math.min(temperature, 1) }),
+    system: systemBlocks(systemPrompt),
+    messages: alternate(messages),
+  };
+}
+
+const logUsage = (model, u = {}) =>
+  console.log(`[claude] ${model} in ${u.input_tokens} (cache read ${u.cache_read_input_tokens ?? 0}, written ${u.cache_creation_input_tokens ?? 0}) out ${u.output_tokens ?? '…'}`);
 
 export async function callClaude(opts) {
   const response = await request(chatBody(opts));
   if (!response.ok) throw await fail(response);
   const data = await response.json();
-  const u = data.usage ?? {};
-  console.log(`[claude] ${data.model} in ${u.input_tokens} (cached ${u.cache_read_input_tokens ?? 0}) out ${u.output_tokens}`);
+  logUsage(data.model, data.usage);
   return (data.content ?? []).map((b) => (b.type === 'text' ? b.text : '')).join('');
 }
 
@@ -93,6 +104,7 @@ export async function streamClaude(opts, { start, write, end }) {
         try {
           const json = JSON.parse(line.slice(5).trim());
           if (json.type === 'content_block_delta' && json.delta?.type === 'text_delta') write(json.delta.text);
+          else if (json.type === 'message_start') logUsage(json.message?.model, json.message?.usage);
         } catch { /* ping or partial frame */ }
       }
     }
@@ -104,11 +116,11 @@ export async function visionClaude({ image, prompt, maxTokens }) {
   const response = await request({
     model: MODEL,
     max_tokens: maxTokens,
-    temperature: 0.3,
+    ...(takesTemperature(MODEL) && { temperature: 0.3 }),
     messages: [{
       role: 'user',
       content: [
-        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } },
+        { type: 'image', source: { type: 'base64', media_type: mediaType(image), data: image } },
         { type: 'text', text: prompt },
       ],
     }],

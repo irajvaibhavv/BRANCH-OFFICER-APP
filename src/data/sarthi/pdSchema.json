@@ -4,7 +4,7 @@
       "id": "greeting",
       "label": "Opening",
       "type": "fixed",
-      "action": "Greet warmly, explain you will ask some questions about their loan application. Confirm their name.",
+      "action": "Greet in two short, friendly sentences — say you'd like to know a little about them and their kaam, with a few easy questions. Confirm their name.",
       "required": false,
       "minTurns": 1
     },

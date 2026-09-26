@@ -159,21 +159,31 @@ export function stopSpeaking() {
  * Listen once. onInterim(text) streams partial words, onFinal(text) fires with the sentence.
  * Returns a stop() function.
  */
-export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN' }) {
+export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN', endAfterMs = 0 }) {
   if (!SR) { onError?.('unsupported'); return () => {}; }
   const r = new SR();
   r.lang = lang; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
   let final = '';
+  let heard = '';
+  let quiet = null;
+  let quietEnded = false;
   r.onresult = (e) => {
     let interim = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const t = e.results[i][0].transcript;
       if (e.results[i].isFinal) final += t; else interim += t;
     }
-    onInterim?.((final + interim).trim());
+    heard = (final + interim).trim();
+    onInterim?.(heard);
+    // The browser's own end-of-speech wait is ~2s on phones; endAfterMs closes the turn sooner.
+    if (endAfterMs && heard) {
+      clearTimeout(quiet);
+      quiet = setTimeout(() => { quietEnded = true; try { r.stop(); } catch { /* ignore */ } }, endAfterMs);
+    }
   };
   r.onerror = (e) => onError?.(e.error);
-  r.onend = () => { if (final.trim()) onFinal?.(final.trim()); onEnd?.(); };
+  // The silence stop can land before the last words are marked final; keep what was on screen.
+  r.onend = () => { clearTimeout(quiet); const text = final.trim() || (quietEnded ? heard : ''); if (text) onFinal?.(text); onEnd?.(); };
   try { r.start(); } catch (e) { onError?.(String(e)); }
-  return () => { try { r.stop(); } catch { /* ignore */ } };
+  return () => { clearTimeout(quiet); try { r.stop(); } catch { /* ignore */ } };
 }

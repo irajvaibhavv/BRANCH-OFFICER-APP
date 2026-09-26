@@ -158,6 +158,7 @@
   background: #eaf6ef;
   border: 1px solid #cfe8da;
 }
+.echoBelow { margin-top: 12px; }
 [data-theme='dark'] .echo { background: rgba(110, 231, 168, 0.1); border-color: rgba(110, 231, 168, 0.28); }
 .echoLabel {
   display: block;
@@ -305,7 +306,7 @@
 .controls {
   display: flex;
   justify-content: center;
-  gap: 22px;
+  gap: 12px;
   flex-shrink: 0;
   padding: 6px 0 2px;
 }

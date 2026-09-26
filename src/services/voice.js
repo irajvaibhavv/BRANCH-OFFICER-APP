@@ -95,6 +95,13 @@ const queue = [];
 let current = null; // { audio, gen }
 let playing = false;
 let gen = 0;        // bumped by stopSpeaking() so stale fetches never play
+let silent = false;
+
+// Mute by volume, not by skipping lines: onStart/onEnd still fire, so callers waiting on them carry on.
+export function setSilent(on) {
+  silent = on;
+  if (current?.audio) current.audio.volume = on ? 0 : 1;
+}
 
 async function drain() {
   if (playing) return;
@@ -108,6 +115,7 @@ async function drain() {
     if (myGen !== gen) { playing = false; return; } // stopped while fetching
     const audio = new Audio(url);
     audio.playbackRate = item.rate;
+    audio.volume = silent ? 0 : 1;
     current = { audio };
     audio.onended = finish;
     audio.onerror = finish;
@@ -137,7 +145,7 @@ function browserSpeak(text, { rate = 1, onEnd, onStart } = {}) {
   const u = new SpeechSynthesisUtterance(clean(text));
   if (voice) u.voice = voice;
   u.lang = voice?.lang || 'en-IN';
-  u.rate = rate; u.pitch = 1;
+  u.rate = rate; u.pitch = 1; u.volume = silent ? 0 : 1;
   u.onstart = () => onStart?.();
   u.onend = () => onEnd?.();
   u.onerror = () => onEnd?.();

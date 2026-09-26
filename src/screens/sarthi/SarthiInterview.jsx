@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FiX } from 'react-icons/fi';
-import { IoCall, IoCamera, IoMic, IoMicOff, IoSend, IoVolumeHigh } from 'react-icons/io5';
+import { IoCall, IoCamera, IoMic, IoMicOff, IoRefresh, IoSend, IoVolumeHigh, IoVolumeMute } from 'react-icons/io5';
 import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { getCase, briefForCitation, buildNewCase, CUSTOM_CASES_KEY } from '../../services/sarthi/knowledge';
@@ -19,7 +19,7 @@ import PhotoCapture from '../../components/sarthi/PhotoCapture';
 import { startFrameCapture, stopCamera, pauseCamera, resumeCamera, getObservations, resetObservations } from '../../services/sarthi/video';
 import { downscale, analysePhoto, PHOTO_ASKS } from '../../services/sarthi/photo';
 import { checkUpload, liveProvenance } from '../../services/sarthi/photoCheck';
-import { stopSpeaking, listen, canListen, canSpeak } from '../../services/voice';
+import { stopSpeaking, listen, canListen, canSpeak, setSilent } from '../../services/voice';
 import { speakStreamed } from '../../services/sarthi/stream';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { SARTHI_VOICE, PRERENDERED } from '../../services/sarthi/voice';
@@ -39,6 +39,11 @@ const SECTION_BY_ID = Object.fromEntries(pdSchema.sections.map((sec) => [sec.id,
 const save = (key, value) => {
   try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* quota — prototype */ }
 };
+
+const CAPTION_FALLBACK_MS = 3000;
+
+// One topic = one schema field (or fixed section / verification task), so re-asks don't advance the count.
+const topicKey = (a) => `${a?.section ?? 'x'}:${a?.missingFields?.[0] ?? a?.verificationTask ?? ''}`;
 
 export default function SarthiInterview() {
   const { id } = useParams();
@@ -64,8 +69,14 @@ export default function SarthiInterview() {
 
   const [phase, setPhase] = useState('connecting'); // connecting · live · generating · failed
   const [avatar, setAvatar] = useState('idle');     // idle · speaking · listening · thinking
-  const [caption, setCaption] = useState({ who: 'ai', text: '' });
+  // The question stays on screen while they answer; only the next question replaces it.
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState('');
+  const setCaption = useCallback(({ who, text }) => {
+    if (who === 'ai') { setQuestion(text); setAnswer(''); } else setAnswer(text);
+  }, []);
   const [muted, setMuted] = useState(false);
+  const [silenced, setSilenced] = useState(false);
   const [typeMode, setTypeMode] = useState(!canListen);
   const [draft, setDraft] = useState('');
   const [confirmEnd, setConfirmEnd] = useState(false);
@@ -95,12 +106,21 @@ export default function SarthiInterview() {
   const caseRef = useRef(null);
   const demoRef = useRef(false);
   const mutedRef = useRef(false);
+  // The counter counts topics, not questions: a re-ask of the same field is not a new sawaal.
+  const topics = useRef(new Set());
+  const countTopic = (key) => {
+    if (topics.current.has(key)) return;
+    topics.current.add(key);
+    setAsked(topics.current.size);
+  };
   const doneRef = useRef(false);
   const stopListen = useRef(null);
   const cameraRef = useRef(false);
   const liveRef = useRef(false); // proxy reachable → vision frames are worth sending
 
   useEffect(() => { mutedRef.current = muted; }, [muted]);
+  // The mute lives in the shared voice module — never let it leak into the rest of the app.
+  useEffect(() => () => setSilent(false), []);
   useEffect(() => { startedAt.current = Date.now(); }, []);
 
   /* ---------------------------------------------------------------- teardown */
@@ -129,9 +149,9 @@ export default function SarthiInterview() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeMode]);
 
-  const say = useCallback((text, { then, speech, again } = {}) => {
+  const say = useCallback((text, { then, speech, again, topic } = {}) => {
     lastLine.current = { text, speech };
-    if (!again) setAsked((n) => n + 1);
+    if (!again) countTopic(topic ?? `line:${text}`);
     setAvatar('speaking');
     if (!canSpeak) {
       setCaption({ who: 'ai', text });
@@ -143,6 +163,8 @@ export default function SarthiInterview() {
     // The question appears with the voice, not seconds before it while TTS renders.
     let shown = false;
     const show = () => { if (!shown) { shown = true; setCaption({ who: 'ai', text }); } };
+    // If the phone blocks audio the voice never starts; the question must still appear.
+    setTimeout(show, CAPTION_FALLBACK_MS);
     // Scripted lines play pre-rendered audio; live text is streamed sentence by sentence.
     speakStreamed(line, {
       voice: SARTHI_VOICE,
@@ -297,8 +319,9 @@ export default function SarthiInterview() {
           const early = peekSpeech(full);
           if (!early) return;
           spokenYet = true;
+          setTimeout(() => { if (!voiceOn) { voiceOn = true; showCaption(pending); } }, CAPTION_FALLBACK_MS);
           lastLine.current = { text: caption, speech: early };
-          setAsked((n) => n + 1);
+          countTopic(topicKey(action));
           speakStreamed(early, {
             voice: SARTHI_VOICE,
             src: PRERENDERED ? voiceManifest[early] : undefined,
@@ -356,7 +379,7 @@ export default function SarthiInterview() {
         // No speech fence arrived mid-stream — speak the finished turn.
         streamDone = true;
         audioDone = true;
-        say(display, { speech, ...(after ? { then: after } : {}) });
+        say(display, { speech, topic: topicKey(action), ...(after ? { then: after } : {}) });
       }
     } catch (e) {
       // Borrow one scripted question and retry live next turn; only a permanent error locks to the script.
@@ -580,7 +603,7 @@ export default function SarthiInterview() {
         memory.current = recordTurn(memory.current, 'assistant', display);
         history.current.push({ role: 'assistant', content: raw });
         transcript.current.push({ role: 'assistant', content: display });
-        say(display, { speech });
+        say(display, { speech, topic: topicKey(opening) });
         return;
       } catch (e) {
         if (cancelled) return;
@@ -661,7 +684,7 @@ export default function SarthiInterview() {
 
       <section className={styles.sheet}>
         <div className={styles.sheetHead}>
-          <span className={styles.step}>{asked > 0 ? `Sawaal ${Math.min(asked, total)} / ${total}` : 'Shuru ho raha hai'}</span>
+          <span className={styles.step}>{asked > 0 ? `Sawaal ${asked}` : 'Shuru ho raha hai'}</span>
           <span className={styles.progress} aria-hidden="true">
             <span className={styles.progressFill} style={{ width: `${Math.min(96, covered?.filled ? covered.pct : (asked / total) * 100)}%` }} />
           </span>
@@ -669,21 +692,36 @@ export default function SarthiInterview() {
 
         <div className={styles.body}>
           <AnimatePresence mode="wait">
-            {caption.text && (
+            {question && (
               <motion.div
                 // Keyed per turn, not per text: a streamed caption changes many times a second, and
                 // remounting on each change stalls AnimatePresence "wait" on a stale question.
-                key={`${caption.who}:${asked}`}
-                className={caption.who === 'borrower' ? styles.echo : styles.question}
+                key={`q:${asked}`}
+                className={styles.question}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
               >
-                {caption.who === 'borrower' && <span className={styles.echoLabel}>Aapne kaha</span>}
-                <span className={caption.text.length > 110 ? styles.qLong : caption.text.length > 64 ? styles.qMed : styles.qBig}>
-                  {caption.text}
+                <span className={question.length > 110 || answer ? styles.qLong : question.length > 64 ? styles.qMed : styles.qBig}>
+                  {question}
                 </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {answer && (
+              <motion.div
+                key="answer"
+                className={`${styles.echo} ${styles.echoBelow}`}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                <span className={styles.echoLabel}>Aapne kaha</span>
+                <span className={styles.qLong}>{answer}</span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -731,8 +769,20 @@ export default function SarthiInterview() {
 
         <div className={styles.controls}>
           <button className={styles.ctrl} onClick={repeat} disabled={!lastLine.current.text}>
-            <span className={styles.disc}><IoVolumeHigh size={12} /></span>
+            <span className={styles.disc}><IoRefresh size={12} /></span>
             Phir se
+          </button>
+
+          <button
+            className={styles.ctrl}
+            onClick={() => { const next = !silenced; setSilenced(next); setSilent(next); }}
+            disabled={!canSpeak}
+            aria-pressed={silenced}
+          >
+            <span className={`${styles.disc} ${silenced ? styles.discOff : ''}`}>
+              {silenced ? <IoVolumeMute size={12} /> : <IoVolumeHigh size={12} />}
+            </span>
+            {silenced ? 'Awaaz band' : 'Awaaz'}
           </button>
 
           <button

@@ -229,8 +229,8 @@ export function presenceLines(c) {
       speech: `अच्छा, धन्यवाद। लोन के लिए ${hi} जी का ख़ुद यहाँ होना ज़रूरी है। क्या आप उन्हें अभी बुला सकते हैं?`,
     },
     later: {
-      text: `Chaliye, koi baat nahi. Jab ${first} ji aa jaayein aur unhe time mile, hum tab baat karenge. Dhanyawaad!`,
-      speech: `चलिए, कोई बात नहीं। जब ${hi} जी आ जाएँ, और उन्हें टाइम मिले, हम तब बात करेंगे। धन्यवाद!`,
+      text: `Arre, koi baat nahi, bilkul chinta mat kijiye! Jab ${first} ji aa jaayein aur unhe fursat mile, tab hum aaram se baat kar lenge. Aapne itna time diya, bahut shukriya — unko hamari taraf se namaste kahiyega!`,
+      speech: `अरे, कोई बात नहीं, बिल्कुल चिंता मत कीजिए! जब ${hi} जी आ जाएँ, और उन्हें फ़ुरसत मिले, तब हम आराम से बात कर लेंगे। आपने इतना टाइम दिया, बहुत शुक्रिया। उनको हमारी तरफ़ से नमस्ते कहिएगा!`,
     },
     handover: {
       text: `Bahut achha. Phone ${first} ji ko de dijiye. ${first} ji, namaste! Apna poora naam bataiye?`,

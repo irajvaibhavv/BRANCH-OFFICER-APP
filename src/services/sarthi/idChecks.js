@@ -156,6 +156,22 @@ export function detectForeignId(text = '') {
   };
 }
 
+// Saying they live in / are a citizen of a country India cannot lend into — no document needed to stop the PD.
+// Needs the country AND a living/belonging verb, and not "border ke paas" (a Punjab or Rajasthan resident says that).
+const FOREIGN_COUNTRY = /\b(pakistan|bangladesh|afghanistan)(i|ee)?\b|पाकिस्तान|बांग्लादेश|बांगलादेश|अफ़गानिस्तान|अफगानिस्तान/i;
+const LIVES_THERE = /\b(rehta|rehti|rehte|rahta|rahti|rahte|rehna|rahna|reh raha|rah raha|se hoon|se hu|se hun|ka hoon|ka hu|ki hoon|ka hun|citizen|nagrik|naagrik|live|living|from|wala hoon|wali hoon|ka rehne wala|ki rehne wali)\b|रहता|रहती|रहते|से हूँ|से हूं|का हूँ|का हूं|नागरिक/i;
+const NEAR_ONLY = /\b(border|seema|ke paas|ke pass|nazdeek|najdeek)\b|बॉर्डर|सीमा|के पास/i;
+
+/** "Pakistan mein rehta hoon" → the country; null for anything else, including "Pakistan border ke paas". */
+export function detectForeignResidence(text = '') {
+  const s = String(text);
+  const m = FOREIGN_COUNTRY.exec(s);
+  if (!m || !LIVES_THERE.test(s) || NEAR_ONLY.test(s)) return null;
+  const raw = m[0].toLowerCase();
+  const country = /pak|पाक/.test(raw) ? 'Pakistan' : /bang|बांग/.test(raw) ? 'Bangladesh' : 'Afghanistan';
+  return { country };
+}
+
 // A failed or foreign document outranks a passing one, so the report can never show only the good news.
 export function pickIdentity({ foreignId, aadhaarCheck, panCheck } = {}) {
   return foreignId ?? [panCheck, aadhaarCheck].find((c) => c && !c.ok) ?? panCheck ?? aadhaarCheck ?? null;

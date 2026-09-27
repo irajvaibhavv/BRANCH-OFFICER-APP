@@ -14,7 +14,7 @@ import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness, ty
 import pdSchema from '../../data/sarthi/pdSchema.json';
 import { getNextAction, directiveText, checkContradictions, checkInternalConsistency, getInterviewConfig, assessIncome } from '../../services/sarthi/controller';
 import { validateReport, extractRecommendation } from '../../services/sarthi/validator';
-import { validateAadhaar, validatePan, detectForeignId, pickIdentity, identitySummary } from '../../services/sarthi/idChecks';
+import { validateAadhaar, validatePan, detectForeignId, detectForeignResidence, pickIdentity, identitySummary } from '../../services/sarthi/idChecks';
 import PhotoCapture from '../../components/sarthi/PhotoCapture';
 import { startFrameCapture, stopCamera, pauseCamera, resumeCamera, getObservations, resetObservations } from '../../services/sarthi/video';
 import { downscale, analysePhoto, PHOTO_ASKS } from '../../services/sarthi/photo';
@@ -42,6 +42,8 @@ const save = (key, value) => {
 };
 
 const CAPTION_FALLBACK_MS = 3000;
+// The borrower ending the call themselves.
+const LEAVING = /(bye|alvida|band karo|band kar do|rehne do|nahi karna|cut karo|cut kar raha|mujhe jaana hai)|अलविदा|बाय|बंद करो/i;
 
 // One topic = one schema field (or fixed section / verification task), so re-asks don't advance the count.
 const topicKey = (a) => `${a?.section ?? 'x'}:${a?.crossOf ? `cross_${a.crossOf}` : a?.missingFields?.[0] ?? a?.verificationTask ?? a?.tradeProbe ?? ''}`;
@@ -141,13 +143,33 @@ export default function SarthiInterview() {
     if (mutedRef.current || !canListen || typeMode) { setAvatar('idle'); return; }
     setAvatar('listening');
     setCaption({ who: 'borrower', text: '' });
-    stopListen.current = listen({
-      onInterim: (t) => setCaption({ who: 'borrower', text: t }),
-      onFinal: (t) => { if (t.trim()) handleAnswer(t.trim()); },
-      onError: () => { setAvatar('idle'); setTypeMode(true); },
-      onEnd: () => { stopListen.current = null; },
-      endAfterMs: 1200,
-    });
+    // Laptop Chrome ends a recognition session on its own — a few seconds of silence, a network blip — often with no
+    // error, so the screen said "boliye" while the mic was off and answers were lost. A session that ends with nothing
+    // heard is restarted; only a real failure (no permission, no mic, repeated errors) falls back to typing.
+    let failures = 0;
+    const session = () => {
+      let cancelled = false;
+      let answered = false;
+      const stop = listen({
+        onInterim: (t) => setCaption({ who: 'borrower', text: t }),
+        // A session stopped on purpose (Sarthi speaking, mic muted, answer typed) must not submit a half-heard line.
+        onFinal: (t) => { if (t.trim() && !cancelled) { answered = true; handleAnswer(t.trim()); } },
+        onError: (err) => {
+          if (err === 'no-speech' || err === 'aborted') return; // onEnd restarts it
+          failures += 1;
+          if (err === 'not-allowed' || err === 'service-not-allowed' || err === 'audio-capture' || failures >= 3) {
+            cancelled = true; setAvatar('idle'); setTypeMode(true);
+          }
+        },
+        onEnd: () => {
+          if (cancelled || answered || doneRef.current || mutedRef.current) { if (!answered) stopListen.current = null; return; }
+          setTimeout(() => { if (!cancelled && !doneRef.current) session(); }, 250);
+        },
+        endAfterMs: 1200,
+      });
+      stopListen.current = () => { cancelled = true; stop(); };
+    };
+    session();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeMode]);
 
@@ -236,6 +258,22 @@ export default function SarthiInterview() {
     return true;
   };
 
+  // Living in or belonging to a country India cannot lend into ends the PD, whatever the model says next.
+  const stopForForeignResidence = (text, turn) => {
+    const foreign = detectForeignResidence(text);
+    if (!foreign) return false;
+    memory.current = addFlags(memory.current, [{
+      type: 'identity_document', field: 'foreign_residence', severity: 'high', turn,
+      detail: `Said they live in or are from ${foreign.country} ("${text}"). The interview was stopped here.`,
+    }]);
+    const line = 'Dhanyawaad. Yeh loan sirf Bharat mein rehne wale Indian naagrikon ke liye hai. Branch officer aapse khud baat karenge.';
+    const speech = 'धन्यवाद। यह लोन सिर्फ़ भारत में रहने वाले, इंडियन नागरिकों के लिए है। ब्रांच ऑफ़िसर आपसे ख़ुद बात करेंगे।';
+    transcript.current.push({ role: 'assistant', content: line });
+    memory.current = recordTurn(memory.current, 'assistant', line);
+    say(line, { speech, then: finish });
+    return true;
+  };
+
   /* ---------------------------------------------------------------- one borrower answer */
   const handleAnswer = useCallback(async (text) => {
     if (doneRef.current) return;
@@ -266,6 +304,7 @@ export default function SarthiInterview() {
         setCollected({ ...intake.current });
       }
       if (['aadhaar', 'pan'].includes(step?.collect) && stopForForeignId(text, borrowerTurn)) return;
+      if (stopForForeignResidence(text, borrowerTurn)) return;
 
       stepRef.current += 1;
       const next = scriptRef.current[stepRef.current];
@@ -282,6 +321,7 @@ export default function SarthiInterview() {
     }
 
     memory.current = recordTurn(memory.current, 'user', text);
+    if (stopForForeignResidence(text, borrowerTurn)) return;
 
     try {
       // Extract first, then pick the next topic, so the controller decides on THIS turn's facts.
@@ -413,7 +453,8 @@ export default function SarthiInterview() {
       transcript.current.push({ role: 'assistant', content: display });
 
       // Only the controller ends a PD. In live runs the model said goodbye with 20 fields still open and the documents unasked.
-      const reallyDone = complete && getNextAction(memory.current, subject).action === 'end_interview';
+      // Or the borrower is leaving ("ok bye", "band karo") and the model has closed — holding them there helps nobody.
+      const reallyDone = complete && (getNextAction(memory.current, subject).action === 'end_interview' || LEAVING.test(text));
       if (complete && !reallyDone) console.warn('[sarthi] model tried to end the interview early — ignored');
       after = photo ? () => setPhotoAsk(photo) : reallyDone ? finish : null;
 

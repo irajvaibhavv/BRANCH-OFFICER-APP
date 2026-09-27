@@ -238,11 +238,12 @@ export function checkContradictions(memory, facts, caseData) {
   }
 
   // A PD is only a PD if the applicant is the one answering.
-  if (facts.stated_name && !caseData?.isNew && namesMatch(facts.stated_name, caseData?.name) === false) {
+  const statedName = facts.stated_name ?? facts.applicant_name;
+  if (statedName && !caseData?.isNew && namesMatch(statedName, caseData?.name) === false) {
     flags.push({
       type: 'identity_mismatch', field: 'stated_name', severity: 'high',
-      declared: facts.stated_name, known: caseData.name,
-      detail: `Application is in the name of ${caseData.name}, but the person on the call gave their name as "${facts.stated_name}"`,
+      declared: statedName, known: caseData.name,
+      detail: `Application is in the name of ${caseData.name}, but the person on the call gave their name as "${statedName}"`,
       turn: memory.turnCount,
     });
   }

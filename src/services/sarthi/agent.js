@@ -25,7 +25,8 @@ async function proxyError(res) {
   try {
     const body = await res.json();
     detail = body?.error ?? '';
-    const m = /retryDelay[^0-9]*([0-9.]+)s/i.exec(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    // Gemini says "retryDelay: 4s", Groq "Please try again in 4.56s".
+    const m = /(?:retryDelay|try again in)[^0-9]*([0-9.]+)s/i.exec(typeof detail === 'string' ? detail : JSON.stringify(detail));
     if (m) retryAfterMs = Math.round(parseFloat(m[1]) * 1000);
   } catch { /* not JSON */ }
 

@@ -36,7 +36,8 @@ const groq = ({ systemPrompt, messages, temperature, maxTokens }) =>
     }),
   }).then(async (r) => {
     const data = await r.json();
-    if (!r.ok) throw new Error(data?.error?.message || `Groq ${r.status}`);
+    // Keep the status: a Groq 429 sent on as a 500 was never recognised as rate limiting by the client.
+    if (!r.ok) throw Object.assign(new Error(data?.error?.message || `Groq ${r.status}`), { status: r.status });
     return data.choices?.[0]?.message?.content || '';
   });
 

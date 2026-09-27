@@ -70,6 +70,13 @@ export function updateMemory(memory, facts = {}) {
     collected[key] = value;
   });
 
+  // One answer, two keys: a seeded file asks stated_name and a walk-in applicant_name, but the extractor files the
+  // greeting's name under either. Unmirrored, a walk-in's applicant_name stayed empty and the controller asked for it
+  // every turn while the model ignored it.
+  for (const [from, to] of [['stated_name', 'applicant_name'], ['applicant_name', 'stated_name']]) {
+    if (collected[to] == null && collected[from] != null) collected[to] = collected[from];
+  }
+
   if (facts.monthly_income != null && facts.monthly_income !== '') {
     incomeMentions = [
       ...memory.income_mentions,

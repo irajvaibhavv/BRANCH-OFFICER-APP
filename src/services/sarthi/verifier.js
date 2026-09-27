@@ -67,12 +67,13 @@ export function toNumber(v) {
 
 /** "1.5 years" / "8 saal" / "do saal" → 1.5 / 8 / 2 */
 export function toYears(v) {
-  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
-  const s = String(v).toLowerCase();
+  const s = String(v ?? '').toLowerCase();
   const digit = s.match(/-?\d+(\.\d+)?/);
   const word = s.split(/[^a-z]+/).find((w) => w in WORD_NUM);
   const n = digit ? parseFloat(digit[0]) : word ? WORD_NUM[word] : NaN;
   if (!Number.isFinite(n)) return null;
+  // "2012 mein shuru kiya" is a start year, not 2012 years.
+  if (n >= 1950 && n <= 2100) return Math.max(0, new Date().getFullYear() - n);
   return /month|mahin|maheen/.test(s) ? n / 12 : n;
 }
 
@@ -95,7 +96,19 @@ const RULES = {
     return { status: 'unverified', detail: `${Math.round(diff)}% difference from ${label} (${fmt(base)})`, verified: fmt(base), source: src };
   },
 
-  turnover: (claimed, ctx) => RULES.income(claimed, ctx),
+  // Sales against the bank's sales, never against income: comparing ₹9 lakh of sales with ₹76k of margin-derived income
+  // called every honest shop "1084% above".
+  turnover: (claimed, ctx) => {
+    const bank = bankIncome(ctx.caseData);
+    if (!bank?.marginPct) return RULES.income(claimed, ctx);
+    const value = toNumber(claimed);
+    if (value == null) return { status: 'unverified', detail: 'No numeric turnover stated' };
+    const diff = ((value - bank.credits) / bank.credits) * 100;
+    const src = 'Brief: avgMonthlyCredit (bank turnover)';
+    if (Math.abs(diff) <= THRESHOLDS.incomeMatchPct) return { status: 'confirmed', detail: `Within ${THRESHOLDS.incomeMatchPct}% of bank turnover (${fmt(bank.credits)})`, verified: fmt(bank.credits), source: src };
+    if (diff > THRESHOLDS.incomeOverstatePct) return { status: 'contradicted', detail: `${Math.round(diff)}% above bank turnover (${fmt(bank.credits)})`, verified: fmt(bank.credits), source: src };
+    return { status: 'unverified', detail: `${Math.round(diff)}% difference from bank turnover (${fmt(bank.credits)})`, verified: fmt(bank.credits), source: src };
+  },
 
   existingEmi: (claimed, { brief }) => {
     const value = toNumber(claimed);
@@ -204,25 +217,30 @@ export function verifyClaims(claims = [], caseData) {
 function findFlags(claims, evidence) {
   const flags = [];
 
+  // Grouped by unit too: a day's sales and a month's sales are different questions, not a drifting answer.
+  // Vintage is compared in years, so "12 saal" and "2012 mein" agree.
   const byType = {};
   claims.forEach((c) => {
     const key = ruleKey(c.claim_type);
     if (!key) return;
-    (byType[key] ??= []).push(c);
+    (byType[`${key}|${c.unit ?? ''}`] ??= []).push(c);
   });
 
-  Object.entries(byType).forEach(([key, list]) => {
+  Object.entries(byType).forEach(([group, list]) => {
+    const key = group.split('|')[0];
     if (list.length < 2) return;
-    const nums = list.map((c) => toNumber(c.stated_value)).filter((n) => n != null);
+    const nums = list.map((c) => (key === 'vintage' ? toYears(c.stated_value) : toNumber(c.stated_value))).filter((n) => n != null);
     if (nums.length < 2) return;
     const lo = Math.min(...nums);
     const hi = Math.max(...nums);
     if (lo > 0 && ((hi - lo) / lo) * 100 > THRESHOLDS.coachingDriftPct) {
+      const show = key === 'vintage' ? (n) => `${n} years` : fmt;
       flags.push({
         type: 'inconsistency',
         claimType: key,
+        severity: 'medium',
         label: `${LABEL[key]} stated differently across the interview`,
-        detail: `${fmt(lo)} and ${fmt(hi)} given for the same question`,
+        detail: `${LABEL[key]}: ${show(lo)} and ${show(hi)} given for the same question`,
         turns: list.map((c) => c.turn).filter(Boolean),
       });
     }
@@ -230,7 +248,7 @@ function findFlags(claims, evidence) {
 
   evidence.filter((e) => e.status === 'contradicted').forEach((e) => {
     // claimType lets the caller tell that this flag and a controller flag are the same finding.
-    flags.push({ type: 'contradiction', claimType: e.claimType, label: `${e.claim} contradicted`, detail: e.detail, turns: e.turn ? [e.turn] : [] });
+    flags.push({ type: 'contradiction', claimType: e.claimType, severity: 'medium', label: `${e.claim} contradicted`, detail: `${e.claim}: ${e.detail}`, turns: e.turn ? [e.turn] : [] });
   });
 
   return flags;

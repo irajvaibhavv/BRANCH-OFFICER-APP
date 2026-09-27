@@ -160,6 +160,12 @@ export function lookupBusiness(businessKey) {
   return best;
 }
 
+// The file's trade first — the borrower's own words ("Bajaj showroom") often match nothing, which silently dropped a
+// mobile shop's insider questions in a live run. A walk-in has no file, so their words are all there is.
+export function tradeOf(collected = {}, caseData = {}) {
+  return lookupBusiness(caseData?.businessKey) ?? lookupBusiness(collected.business_type) ?? lookupBusiness(caseData?.business);
+}
+
 /**
  * What the bank statement says they earn. Credits into a shop's account are its SALES, so when the brief marks
  * them as turnover they are cut to the trade's typical margin — treating turnover as income made a mobile

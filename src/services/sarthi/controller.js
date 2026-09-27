@@ -1,7 +1,7 @@
 // Decides WHAT to ask by walking pdSchema.json; the model only decides how to phrase it. No model calls here.
 import pdSchema from '../../data/sarthi/pdSchema.json';
-import { lookupLocation, lookupBusiness, hasAreaDetail, bankIncome } from './knowledge';
-import { getMissingFields, knownFacts, enterSection, FIELD_DEFS as FIELD_DEFS_BY_KEY } from './memory';
+import { lookupLocation, tradeOf, hasAreaDetail, bankIncome } from './knowledge';
+import { getMissingFields, knownFacts, enterSection, gaveUp, FIELD_DEFS as FIELD_DEFS_BY_KEY } from './memory';
 import { toNumber, toYears } from './verifier';
 import { namesMatch } from './idChecks';
 import { nextTradeProbe, nextTradeField, tradeProbes, purposeSignals } from './probes';
@@ -40,7 +40,8 @@ function sectionComplete(memory, section) {
   if (section.type === 'fixed') return servedTime;
 
   if (section.type === 'verification') {
-    return verificationTasks(memory, section).every((t) => memory.collected[`${t.key}_score`] != null);
+    // A score the model never reported must not hold the call open: a live run said goodbye for 20 turns here.
+    return verificationTasks(memory, section).every((t) => memory.collected[`${t.key}_score`] != null || gaveUp(memory, `${t.key}_score`));
   }
 
   if (section.type === 'coaching_check') {
@@ -59,7 +60,11 @@ function sectionComplete(memory, section) {
 const MAX_CROSS = 7;
 const MAX_LOW_CROSS = 1;
 
+// However the conversation goes, a PD ends: a loop the guards miss must not keep a borrower on the phone forever.
+const MAX_TURNS = 90;
+
 export function getNextAction(memory, caseData) {
+  if (memory.turnCount >= MAX_TURNS) return { action: 'end_interview' };
   const config = getInterviewConfig(caseData);
   const sections = activeSections(config);
 
@@ -100,12 +105,14 @@ export function getNextAction(memory, caseData) {
   const raised = new Set((instruction.contradictions ?? []).map((f) => f.detail));
   const next = enterSection(memory, section.id);
   const flags = raised.size ? next.flags.map((f) => (raised.has(f.detail) ? { ...f, followedUp: true } : f)) : next.flags;
-  return { ...instruction, memory: { ...next, flags } };
+  const target = instruction.missingFields?.[0];
+  const askCount = target ? { ...next.askCount, [target]: (next.askCount?.[target] ?? 0) + 1 } : next.askCount;
+  return { ...instruction, memory: { ...next, flags, askCount } };
 }
 
 function buildInstruction(memory, section, caseData, config) {
   const area = lookupLocation(caseData.areaKey || caseData.area);
-  const biz = lookupBusiness(memory.collected.business_type || caseData.businessKey || caseData.business);
+  const biz = tradeOf(memory.collected, caseData);
 
   const instruction = {
     action: 'ask_question',
@@ -118,8 +125,9 @@ function buildInstruction(memory, section, caseData, config) {
     instruction.directive = section.action;
   } else if (section.type === 'verification') {
     const tasks = verificationTasks(memory, section);
-    const task = tasks.find((t) => memory.collected[`${t.key}_score`] == null) ?? tasks[0];
+    const task = tasks.find((t) => memory.collected[`${t.key}_score`] == null && !gaveUp(memory, `${t.key}_score`)) ?? tasks[0];
     instruction.verificationTask = task.key;
+    instruction.missingFields = [`${task.key}_score`]; // counted like a field, so it too is given up after MAX_ASKS
 
     if (task.source === 'locationKnowledge') {
       instruction.directive = hasAreaDetail(caseData.areaKey || caseData.area)
@@ -158,12 +166,12 @@ function buildInstruction(memory, section, caseData, config) {
     instruction.previousMention = memory.income_mentions[0] ?? null;
   } else {
     const missing = getMissingFields(memory, section);
-    // Naming the next two fields lets the model bridge naturally; it still asks one.
     instruction.missingFields = missing.map((f) => f.key);
-    const [first, second] = missing;
+    const [first] = missing;
     const ask = first.ask.replace('{applicant}', caseData.name);
     instruction.directive = `Ask about: ${first.label}. Plain-words example: "${ask}"`
-      + (second ? ` Next after that: ${second.label}.` : '')
+      // Naming the next field made the model skip ahead to it; one topic only.
+      + ` This turn's question is about ${first.label} only — no other topic.`
       + ' Ask ONE thing at a time, in your own words, as simply as the example.';
     if (section.id === 'documents') {
       instruction.directive += ' These are verbal cross-checks only — never say or imply the document is being verified.';
@@ -264,8 +272,9 @@ export function checkContradictions(memory, facts, caseData) {
   }
 
   // Shop rent only: house rent is never compared with shop rent ranges.
+  // 0 is an owned shop, not a suspiciously cheap one.
   const rent = toNumber(facts.shop_rent);
-  if (rent != null) {
+  if (rent) {
     const area = lookupLocation(caseData?.areaKey || caseData?.area);
     if (area?.avgShopRent && rent < area.avgShopRent.min * 0.5) {
       flags.push({
@@ -327,7 +336,7 @@ export function checkContradictions(memory, facts, caseData) {
 export function checkInternalConsistency(memory, caseData) {
   const flags = [];
   const c = memory.collected;
-  const biz = lookupBusiness(c.business_type || caseData?.businessKey || caseData?.business);
+  const biz = tradeOf(c, caseData);
 
   const customers = toNumber(c.customers_per_day);
   const bill = toNumber(c.avg_bill_value);
@@ -401,7 +410,7 @@ export function assessIncome(memory, caseData) {
   const declared = toNumber(c.monthly_income) ?? toNumber(caseData?.declaredIncome);
 
   if (customers != null && bill != null) {
-    const biz = lookupBusiness(c.business_type || caseData?.businessKey || caseData?.business);
+    const biz = tradeOf(c, caseData);
     const sales = customers * bill * 30;
     const margin = biz?.typicalMarginPct
       ? (biz.typicalMarginPct.min + biz.typicalMarginPct.max) / 2 / 100

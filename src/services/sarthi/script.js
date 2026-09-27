@@ -16,8 +16,8 @@ export function buildScript(c) {
 
   const steps = [
     {
-      text: `Namaste ${c.name} ji. Main Sarthi hoon, SMFG India Credit se. Kuch sawaal poochhunga — bas 5 minute. Shuru karein?`,
-      speech: `नमस्ते ${hi.name ?? ''} जी। मैं सारथी हूँ, एसएमएफजी इंडिया क्रेडिट से। कुछ सवाल पूछूँगा, बस पाँच मिनट। शुरू करें?`,
+      text: `Namaste ${c.name} ji. Main Sarthi hoon, branch se. Kuch sawaal poochhunga — bas 5 minute. Shuru karein?`,
+      speech: `नमस्ते ${hi.name ?? ''} जी। मैं सारथी हूँ, ब्रांच से। कुछ सवाल पूछूँगा, बस पाँच मिनट। शुरू करें?`,
     },
     {
       text: `Sabse pehle confirm kar lein — aap ${c.area} mein rehte hain aur ${c.businessName} chalate hain, sahi hai?`,
@@ -96,8 +96,8 @@ export function buildScript(c) {
 export function buildIntakeScript() {
   return [
     {
-      text: 'Namaste! Main Sarthi hoon, SMFG India Credit se. Aapka poora naam kya hai?',
-      speech: 'नमस्ते! मैं सारथी हूँ, एसएमएफजी इंडिया क्रेडिट से। आपका पूरा नाम क्या है?',
+      text: 'Namaste! Main Sarthi hoon, branch se. Aapka poora naam kya hai?',
+      speech: 'नमस्ते! मैं सारथी हूँ, ब्रांच से। आपका पूरा नाम क्या है?',
       collect: 'name',
     },
     { text: 'Shukriya. Aapki umar kitni hai?', speech: 'शुक्रिया। आपकी उम्र कितनी है?', collect: 'age' },

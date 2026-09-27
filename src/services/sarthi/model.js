@@ -2,6 +2,7 @@
 import { askAgent, askAgentStream, buildInterviewerPrompt, INTERVIEWER_TEMP } from './agent';
 import { EXTRACTABLE_KEYS, FIELD_DEFS } from './memory';
 import { reconcile } from './hindiNumbers';
+import { toNumber } from './verifier';
 import { MOCKS_ON, mockExtractFacts, mockTurn } from './mocks';
 
 // Measured routing rationale lives in CLAUDE.md (Sarthi → routing). Override per task via env.
@@ -55,6 +56,13 @@ Rules:
 - Convert Hindi number words to digits: "teen lakh" -> 300000, "paanch saal" -> 5,
   "dedh lakh" -> 150000, "pachas" -> 50.
 - Money is a plain number of rupees: 300000, not "3 lakh".
+- Every number field is ONE plain number. A range ("8 se 10 lakh", "2-2.5 lakh", "30-40 grahak") is its LOWER
+  figure: 800000, 200000, 30.
+- customers_per_day is per DAY. Never add different things together ("15 bike aur 5 car") and never put a
+  monthly count in it — if they only gave a monthly count, leave it out.
+- monthly_sales and monthly_income are a usual month. Today's or yesterday's sales, this month so far, the
+  weakest month (that is worst_month_sales) or income they hope for after the loan are NOT monthly_sales or
+  monthly_income.
 - Enum fields take exactly one of their options:
 ${ENUM_GUIDE}
 - monthly_rent is HOUSE rent; shop_rent is the rent of the shop or business premises.
@@ -103,12 +111,26 @@ function reconcileNumbers(facts, answerText) {
   return out;
 }
 
+// "8 se 10 lakh" → 800000: the lower figure, carrying the scale word the range shares.
+function lowerOfRange(text) {
+  const [low, ...rest] = String(text).split(/\s*(?:–|-|\bse\b|\bto\b)\s*/i);
+  if (!rest.length) return toNumber(text);
+  const scale = /(lakh|lac|hazaar|hazar|thousand|crore|\bk\b)/i.exec(rest.join(' '));
+  return toNumber(scale && !/(lakh|lac|hazaar|hazar|thousand|crore|\bk\b)/i.test(low) ? `${low} ${scale[1]}` : low);
+}
+
 function clean(raw) {
   const out = {};
   for (const [key, value] of Object.entries(raw)) {
     if (!EXTRACTABLE_KEYS.includes(key)) continue;
     if (value === null || value === undefined || value === '') continue;
-    out[key] = typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value.trim()) ? Number(value) : value;
+    // A number field given as text ("200000-250000", "2 lakh") is read in code; unreadable text is dropped, not stored.
+    if (FIELD_DEFS[key]?.type === 'number' && typeof value === 'string') {
+      const n = /^-?\d+(\.\d+)?$/.test(value.trim()) ? Number(value) : lowerOfRange(value);
+      if (n != null) out[key] = n;
+      continue;
+    }
+    out[key] = value;
   }
   return out;
 }

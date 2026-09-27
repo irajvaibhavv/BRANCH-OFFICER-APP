@@ -9,7 +9,7 @@ export const OFFICER = {
   branch: 'Pune – Shivajinagar',
   branchCode: 'PN-014',
   phone: '+91 98765 43210',
-  email: 'rajesh.kumar@smfg.example',
+  email: 'rajesh.kumar@branch.example',
 };
 
 const AuthContext = createContext(null);

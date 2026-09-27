@@ -219,6 +219,17 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   data matches what inference sends. Extraction labels are checked against `hindiNumbers.js`; interviewer turns are
   speech-fence-first with Devanagari-only speech. Change the extractor prompt, the user message in `extractFacts`
   or the schema → rebuild. `REPORT.md` lists label fixes and thin fields.
+- **Guards found by live runs (2026-09-27, `claude-haiku` borrower personas against the real loop):**
+  (1) a field asked `MAX_ASKS` (2) times and still empty is left for the officer (`memory.askCount`) — one unextractable
+  "2-2.5 lakh" once pinned the controller to `monthly_income` for 20 turns while the model improvised and skipped the
+  documents; (2) `acceptedFacts` lets an answer overwrite an already-filled field only if that field was asked
+  (`missingFields`, or income on the recheck) — trade-probe and cross-question answers had replaced monthly purchase and
+  sales; (3) only the controller ends a PD — the model's `[INTERVIEW_COMPLETE]` is ignored unless `getNextAction` agrees
+  (a "20-25 questions" line in the prompt made it say goodbye with the documents unasked); (4) `stated_name` and
+  `applicant_name` mirror each other; (5) `trade_math` flags replace their previous result instead of stacking;
+  (6) turnover claims are checked against bank turnover (`bank.credits`), not the margin-derived income, and drift is
+  grouped by unit, with a four-digit vintage read as a start year. Number fields given as text are parsed in `clean()`
+  (a range is its lower figure).
 - **Cross-questions** (schema `cross` on a field): the first time a field is answered, `updateMemory` queues it and
   the controller asks ONE follow-up straight away — the code picks WHEN (`cross.when`), the model phrases it from
   `cross.hint` and the area data, and must ask it open (never "Blue Line wale side?" — that hands a faker the

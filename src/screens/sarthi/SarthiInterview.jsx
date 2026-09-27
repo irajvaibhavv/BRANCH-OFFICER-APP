@@ -10,7 +10,7 @@ import { parseClaims, peekSpeech, peekDisplay, writeReport, VISION_URL, COMPLETE
 import { extractFacts, askTurn } from '../../services/sarthi/model';
 import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../services/sarthi/script';
 import { verifyClaims, computeEligibility, toNumber } from '../../services/sarthi/verifier';
-import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor, recordTradeAnswer, recordCrossAnswer } from '../../services/sarthi/memory';
+import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor, recordTradeAnswer, recordCrossAnswer, acceptedFacts } from '../../services/sarthi/memory';
 import pdSchema from '../../data/sarthi/pdSchema.json';
 import { getNextAction, directiveText, checkContradictions, checkInternalConsistency, getInterviewConfig, assessIncome } from '../../services/sarthi/controller';
 import { validateReport, extractRecommendation } from '../../services/sarthi/validator';
@@ -287,6 +287,8 @@ export default function SarthiInterview() {
       // Extract first, then pick the next topic, so the controller decides on THIS turn's facts.
       // Snapshot before merging: checkContradictions and coaching detection compare against prior state.
       const before = memory.current;
+      // The question this answer replies to — lastAction moves on to the next one before the fence is read.
+      const answered = lastAction.current;
       // An insider trade question is answered verbatim — the words ARE the evidence.
       if (lastAction.current?.tradeProbeDef) {
         memory.current = recordTradeAnswer(memory.current, lastAction.current.tradeProbeDef, text, borrowerTurn);
@@ -306,6 +308,7 @@ export default function SarthiInterview() {
         // Not fatal: the question call's facts fence is the backstop. Never abandon the turn.
         console.warn(`[sarthi] fact extraction failed (${e?.message}) — relying on the facts fence`);
       }
+      facts = acceptedFacts(memory.current, facts, answered);
       if (Object.keys(facts).length) memory.current = updateMemory(memory.current, { ...facts, _verbatim: text });
 
       // Checked on their own words, not the extraction — the model filed a CNIC under pan_number.
@@ -367,7 +370,7 @@ export default function SarthiInterview() {
       claims.current.push(...found);
 
       // Gap-fill from the question call's facts fence, then run the code-only checks.
-      const gapFill = Object.fromEntries(Object.entries(fenced).filter(([k]) => !(k in facts)));
+      const gapFill = acceptedFacts(memory.current, Object.fromEntries(Object.entries(fenced).filter(([k]) => !(k in facts))), answered);
       memory.current = updateMemory(memory.current, { ...gapFill, _verbatim: text });
       facts = { ...gapFill, ...facts };
       // Check a document the moment it is given, exactly as the scripted intake does.
@@ -409,7 +412,10 @@ export default function SarthiInterview() {
       history.current.push({ role: 'assistant', content: raw });
       transcript.current.push({ role: 'assistant', content: display });
 
-      after = photo ? () => setPhotoAsk(photo) : complete ? finish : null;
+      // Only the controller ends a PD. In live runs the model said goodbye with 20 fields still open and the documents unasked.
+      const reallyDone = complete && getNextAction(memory.current, subject).action === 'end_interview';
+      if (complete && !reallyDone) console.warn('[sarthi] model tried to end the interview early — ignored');
+      after = photo ? () => setPhotoAsk(photo) : reallyDone ? finish : null;
 
       if (spokenYet) {
         showCaption(display);

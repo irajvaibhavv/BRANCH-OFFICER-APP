@@ -34,6 +34,7 @@ export function createEmptyMemory(caseData) {
     crossQueue: [], // fields just answered that earn one cross-question (schema "cross")
     crossAsked: [],
     crossAnswers: [],
+    askCount: {}, // times the controller has asked each field — see MAX_ASKS
     transcript: [],
     currentSection: 'greeting',
     sectionStartTurn: { greeting: 0 },
@@ -87,6 +88,23 @@ export function updateMemory(memory, facts = {}) {
   return { ...memory, collected, income_mentions: incomeMentions, crossQueue: queue };
 }
 
+/**
+ * Facts an answer may write. A field already filled is only overwritten by an answer to ITS question: in live runs a
+ * trade question's "30-40 litre doodh" replaced a monthly purchase of 1.5 lakh with 180, "is mahine abhi tak 70 hazaar"
+ * (a cross-question) replaced monthly sales, and a hoped-for future income became a coaching flag. Income is also
+ * taken on the income recheck, which exists to hear it a second time.
+ */
+export function acceptedFacts(memory, facts = {}, action = null) {
+  const asked = new Set(action?.missingFields ?? []);
+  if (action?.section === 'income_recheck') asked.add('monthly_income');
+  return Object.fromEntries(Object.entries(facts).filter(([k]) => k.startsWith('_') || asked.has(k)
+    || (memory.collected[k] == null && !ASKED_ONLY.has(k))));
+}
+
+// Income and sales drive eligibility and most flags, so they are taken only from their own question: a son's salary,
+// given when asked about other earners, once became the applicant's income and the real figure was then refused.
+const ASKED_ONLY = new Set(['monthly_income', 'monthly_sales']);
+
 export function recordCrossAnswer(memory, key, question, text, turn) {
   return { ...memory, crossAnswers: [...(memory.crossAnswers ?? []), { field: key, value: memory.collected[key], asked: question, answer: text, turn }] };
 }
@@ -95,8 +113,12 @@ export function addFlag(memory, flag) {
   return { ...memory, flags: [...memory.flags, flag] };
 }
 
+// A hisaab check is recomputed every turn; its latest result replaces the last one rather than stacking beside it.
 export function addFlags(memory, flags = []) {
-  return flags.length ? { ...memory, flags: [...memory.flags, ...flags] } : memory;
+  if (!flags.length) return memory;
+  const recomputed = new Set(flags.filter((f) => f.type === 'trade_math').map((f) => f.field));
+  const kept = memory.flags.filter((f) => !(f.type === 'trade_math' && recomputed.has(f.field)));
+  return { ...memory, flags: [...kept, ...flags] };
 }
 
 export function recordTurn(memory, role, text) {
@@ -136,9 +158,14 @@ function conditionMet(field, memory) {
   return true;
 }
 
+// Asked this many times and still empty, a field is left for the officer. Without a cap one unextractable answer
+// ("2-2.5 lakh") pinned the controller to that field for 20 turns while the model improvised around it.
+export const MAX_ASKS = 2;
+export const gaveUp = (memory, key) => (memory.askCount?.[key] ?? 0) >= MAX_ASKS;
+
 export function getMissingFields(memory, section) {
   if (!section?.fields) return [];
-  return section.fields.filter((f) => memory.collected[f.key] == null && conditionMet(f, memory));
+  return section.fields.filter((f) => memory.collected[f.key] == null && !gaveUp(memory, f.key) && conditionMet(f, memory));
 }
 
 // Document numbers are typed, not spoken — speech recognition mangles them.

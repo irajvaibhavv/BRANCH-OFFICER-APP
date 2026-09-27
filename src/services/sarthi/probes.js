@@ -1,5 +1,5 @@
 // Where the interview must dig instead of moving on: trade insider questions and loan-purpose signals.
-import { lookupBusiness, bankIncome } from './knowledge';
+import { lookupBusiness, bankIncome, tradeOf } from './knowledge';
 import { toNumber, pickProduct } from './verifier';
 import { emi, PRODUCT_RATES } from '../../utils/loanCalc';
 import { readNumbers } from './hindiNumbers';
@@ -13,7 +13,7 @@ const STRETCH_MONTHS = 24;
 
 export function tradeFor(memory) {
   const c = memory.caseData ?? {};
-  return lookupBusiness(memory.collected.business_type || c.businessKey || c.business);
+  return tradeOf(memory.collected, c);
 }
 
 export function tradeProbes(memory) {
@@ -35,7 +35,7 @@ export function judgeAnswer(probe, text) {
 
 // The trade's arithmetic needs these figures, so they are asked of every applicant, not only walk-ins.
 export function nextTradeField(memory) {
-  return (tradeFor(memory)?.hisaab?.fields ?? []).find((k) => memory.collected[k] == null) ?? null;
+  return (tradeFor(memory)?.hisaab?.fields ?? []).find((k) => memory.collected[k] == null && (memory.askCount?.[k] ?? 0) < 2) ?? null;
 }
 
 /**
@@ -186,7 +186,8 @@ function worstMonth(memory, sales, add) {
 
   const { rate, maxTenure } = PRODUCT_RATES[pickProduct(c.loan_purpose || caseData.loanPurpose)];
   const newEmi = emi(amount, rate, maxTenure);
-  const existing = toNumber(c.existing_emi) ?? caseData.brief?.existingEMIs ?? 0;
+  // The larger of declared and bureau: an understated EMI must not make the weak month look serviceable.
+  const existing = Math.max(toNumber(c.existing_emi) ?? 0, caseData.brief?.existingEMIs ?? 0);
   const lean = income * (worst / sales);
   const total = newEmi + existing;
   add('worst_month', total <= lean * WORST_MONTH_EMI_SHARE,
@@ -196,7 +197,7 @@ function worstMonth(memory, sales, add) {
 
 export function purposeSignals(collected, caseData) {
   const purpose = String(collected.loan_purpose ?? '');
-  const current = lookupBusiness(collected.business_type || caseData?.businessKey || caseData?.business);
+  const current = tradeOf(collected, caseData);
   const target = purpose ? lookupBusiness(purpose) : null;
   const otherTrade = !!target && target.id !== current?.id;
   const newVenture = !!purpose && (otherTrade || NEW_VENTURE.test(purpose));

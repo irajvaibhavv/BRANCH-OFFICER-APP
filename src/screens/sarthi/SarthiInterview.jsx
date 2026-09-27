@@ -370,6 +370,14 @@ export default function SarthiInterview() {
       memory.current = recordTurn(memory.current, 'user', text);
       if (presence.current === 'relation' || presence.current === 'call') { handlePresence(text); return; }
       if (stopForRelative(text, borrowerTurn)) return;
+      // Scripted mode asks the name too, so a wrong person is stopped with or without the model.
+      if (step?.collect === 'stated_name' && !isIntake && presence.current !== 'done') {
+        const stated = nameFromWords(text) ?? text;
+        memory.current = updateMemory(memory.current, { stated_name: stated });
+        const same = namesMatch(stated, caseData.name);
+        if (same === false) { startPresence(stated, borrowerTurn); return; }
+        if (same === true) presence.current = 'done';
+      }
       if (step?.collect) memory.current = updateMemory(memory.current, { [step.collect]: text, _verbatim: text });
       setCovered(completeness(memory.current));
 

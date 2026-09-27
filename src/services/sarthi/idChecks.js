@@ -239,25 +239,39 @@ export function presenceLines(c) {
   };
 }
 
-const KIN = '(beta|beti|bete|son|daughter|pati|husband|patni|wife|bhai|brother|behen|bahen|sister|bahu|damaad|pota|poti|nati|devar|bhatija|bhatiji|naukar|helper|munim|employee)';
-const ELDER = '(mummy|mumy|mummi|mumma|maa|mom|mother|mata ?ji|papa|pitaji|father|dad|daddy|pati|husband|patni|wife|bhaiya|didi|chacha|chachi|dadi|nani)';
-const AWAY = '(bahar|baahar|ghar pe nahi|ghar par nahi|nahi hai|nahi hain|nhi hai|gayi|gaye|gai hai|busy|so rahi|so rahe|market|bazaar|mandir|kaam pe|outside|not here)';
+const KIN = '(beta|beti|bete|son|daughter|ladka|ladki|larka|larki|putra|putri|bachcha|bachchi|pati|husband|patni|wife|bhai|brother|behen|bahen|sister|bahu|damaad|pota|poti|nati|grandson|granddaughter|nephew|niece|devar|bhatija|bhatiji|naukar|helper|munim|employee|worker|staff|relative|rishtedar)';
+const ELDER = '(mummy|mumy|mummi|mumma|maa|mom|mother|mata ?ji|papa|pitaji|father|dad|daddy|pati|husband|patni|wife|bhaiya|didi|chacha|chachi|dadi|nani|uncle|aunty)';
+const AWAY = '(bahar|baahar|ghar pe nahi|ghar par nahi|nahi hai|nahi hain|nhi hai|gayi|gaye|gai hai|busy|so rahi|so rahe|market|bazaar|mandir|kaam pe|outside|not here|not at home|out)';
+// Speech recognition sometimes returns Hindi in Devanagari.
+const KIN_HI = '(बेटा|बेटी|लड़का|लड़की|लडका|लडकी|पत्नी|पति|भाई|बहन|बहू|नौकर|रिश्तेदार)';
+const ELDER_HI = '(पापा|मम्मी|माँ|मां|पिताजी|पिता जी|माता जी|पति|पत्नी)';
 
 /**
- * The person answering says they are the applicant's relative or helper — "Rekha Devi ka beta", "meri mummy ka loan",
- * "mummy bahar hai". Their own name alone can still share a word with the file ("Raj, Rekha ka beta"), so this is read
- * from the words, not the name. Only used before the applicant has confirmed their own name: after that, "mere pati"
- * is the applicant speaking about her husband. `away` = they also said the applicant is not there.
+ * The person answering says they are the applicant's relative or helper — "Rekha Devi ka beta", "I am his son",
+ * "main unka ladka hoon", "meri mummy ka loan", "papa bahar hai". Their own name can share a word with the file ("Raj,
+ * Rekha ka beta"), and the extractor has filed "I am his son" under the father's name, so this reads the words, not the
+ * name. Used only before the applicant confirms their own name: after that, "mere pati" is the applicant talking about
+ * her husband. `away` = they also said the applicant is not there.
  */
 export function speakerIsSomeoneElse(text = '', applicantName = '') {
   const s = String(text).toLowerCase();
   const first = applicantName.split(' ')[0]?.toLowerCase();
-  const whose = first ? `|${first}(\\s+\\w+)?\\s+(ji\\s+)?(ka|ki|ke)` : '';
-  const ofThem = new RegExp(`\\b(unka|unki|unke|inka|inki|inke${whose})\\s+${KIN}\\b`);
-  const mine = new RegExp(`\\b(meri|mere|my)\\s+${ELDER}\\b`);
-  const elderAway = new RegExp(`\\b${ELDER}\\b.{0,25}\\b${AWAY}`);
-  const hit = ofThem.exec(s) ?? mine.exec(s) ?? elderAway.exec(s);
+  const whose = first ? `|${first}'s|${first}\\s+\\w+'s|${first}(\\s+\\w+)?\\s+(ji\\s+)?(ka|ki|ke)` : '';
+  const patterns = [
+    // "unka beta", "his son", "Mahesh ka ladka", "Mahesh's son"
+    new RegExp(`\\b(unka|unki|unke|inka|inki|inke|his|her|their${whose})\\s+${KIN}\\b`),
+    // "son of Mahesh"
+    new RegExp(`\\b${KIN}\\s+of\\b`),
+    // "main beta hoon", "I am the son", "I'm his daughter" — the relation straight after "I am"
+    new RegExp(`\\b(main|mai|mein|i am|i'm|im)\\s+((unka|unki|unke|inka|inki|his|her|their|the|a)\\s+)?${KIN}\\b`),
+    new RegExp(`\\b(meri|mere|my)\\s+${ELDER}\\b`),
+    new RegExp(`(मैं|में)\\s*(उनका|उनकी|उनके|इनका|इनकी)?\\s*${KIN_HI}`),
+    new RegExp(`(उनका|उनकी|उनके|इनका|इनकी)\\s*${KIN_HI}`),
+    new RegExp(`(मेरी|मेरे)\\s*${ELDER_HI}`),
+  ];
+  const elderAway = [new RegExp(`\\b${ELDER}\\b.{0,25}\\b${AWAY}\\b`), new RegExp(`${ELDER_HI}.{0,25}(बाहर|नहीं|गए|गई|बिज़ी)`)];
+  const hit = patterns.map((re) => re.exec(s)).find(Boolean) ?? elderAway.map((re) => re.exec(s)).find(Boolean);
   if (!hit) return null;
   const relation = relationOf(hit[0]);
-  return { relation: relation === 'other' ? 'family' : relation, away: elderAway.test(s) };
+  return { relation: relation === 'other' ? 'family' : relation, away: elderAway.some((re) => re.test(s)) };
 }

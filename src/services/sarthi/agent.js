@@ -326,6 +326,9 @@ to voice a doubt as a question. Never quote a rent, price or figure from your ow
 - One answer often covers two topics — never re-ask anything listed under ALREADY ANSWERED.
 - Never close the interview, say goodbye or say the officer will call, until the THIS TURN block tells you every
   topic is covered — however long the call has run. Only then close warmly and include "[INTERVIEW_COMPLETE]".
+- The PD is with the applicant only. Never interview anyone on their behalf: if the person speaking says they are the
+  applicant's son, wife, relative or helper, never ask them the applicant's age, income or anything else about the
+  applicant ("papa ki umar kitni hai?") — only ask them to call the applicant to the phone.
 - Never reassure them about the outcome or their record ("sab theek hai", "track record accha hai", "loan mil
   jayega") — say only that the officer decides.
 ${directive ? `\n## ${directive}` : ''}`;

@@ -15,9 +15,11 @@ export function buildScript(c) {
   const hi = c.hi ?? {};
 
   const steps = [
+    // The name is asked, never said: "Aap Mahesh ji hain na?" is answered "haan" by anyone holding the phone.
     {
-      text: `Namaste ${c.name} ji. Main Sarthi hoon, branch se. Kuch sawaal poochhunga — bas 5 minute. Shuru karein?`,
-      speech: `नमस्ते ${hi.name ?? ''} जी। मैं सारथी हूँ, ब्रांच से। कुछ सवाल पूछूँगा, बस पाँच मिनट। शुरू करें?`,
+      text: 'Namaste ji. Main Sarthi hoon, branch se. Kuch aasaan sawaal poochhunga — bas 5 minute. Pehle apna poora naam bataiye?',
+      speech: 'नमस्ते जी। मैं सारथी हूँ, ब्रांच से। कुछ आसान सवाल पूछूँगा, बस पाँच मिनट। पहले अपना पूरा नाम बताइए?',
+      collect: 'stated_name',
     },
     {
       text: `Sabse pehle confirm kar lein — aap ${c.area} mein rehte hain aur ${c.businessName} chalate hain, sahi hai?`,

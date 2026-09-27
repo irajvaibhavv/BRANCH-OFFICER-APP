@@ -40,6 +40,7 @@ import SarthiNewCase from '../screens/sarthi/SarthiNewCase';
 import SarthiBrief from '../screens/sarthi/SarthiBrief';
 import SarthiInterview from '../screens/sarthi/SarthiInterview';
 import SarthiReport from '../screens/sarthi/SarthiReport';
+import SarthiOfficer from '../screens/sarthi/SarthiOfficer';
 
 /** Persistent tab bar — on every screen after login (hidden only during auth). */
 export function PersistentTabBar() {
@@ -113,6 +114,7 @@ export function AnimatedRoutes() {
           <Route path="/sarthi/brief/:id" element={<SarthiBrief />} />
           <Route path="/sarthi/interview/:id" element={<SarthiInterview />} />
           <Route path="/sarthi/report/:id" element={<SarthiReport />} />
+          <Route path="/sarthi/officer/:id" element={<SarthiOfficer />} />
           <Route path="/visits/new" element={<VisitLogger />} />
           <Route path="/prompter" element={<Prompter />} />
           <Route path="/record" element={<MeetingRecorder />} />

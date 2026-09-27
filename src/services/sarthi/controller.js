@@ -1,6 +1,6 @@
 // Decides WHAT to ask by walking pdSchema.json; the model only decides how to phrase it. No model calls here.
 import pdSchema from '../../data/sarthi/pdSchema.json';
-import { lookupLocation, tradeOf, hasAreaDetail, bankIncome } from './knowledge';
+import { lookupLocation, tradeOf, hasAreaDetail, bankIncome, ventureArea } from './knowledge';
 import { getMissingFields, knownFacts, enterSection, gaveUp, FIELD_DEFS as FIELD_DEFS_BY_KEY } from './memory';
 import { toNumber, toYears } from './verifier';
 import { namesMatch } from './idChecks';
@@ -53,6 +53,92 @@ function sectionComplete(memory, section) {
   return getMissingFields(memory, section).length === 0;
 }
 
+// A place they name is tested the way an officer on a site visit would: our area data where we have it, and otherwise
+// the model's own knowledge of that city — which may be dated, so a mismatch is voiced as a doubt, never a verdict.
+function locationCross(memory, caseData, key, def, rest, asked, sections) {
+  const place = memory.collected[key];
+  const area = key === 'venture_location' ? ventureArea(memory.collected, caseData) : lookupLocation(caseData?.areaKey || caseData?.area || place);
+  const surveyed = area?.source === 'specific';
+  const section = sections.find((s) => s.id === memory.currentSection);
+  return {
+    action: 'ask_question',
+    section: memory.currentSection,
+    sectionLabel: section?.label ?? '',
+    crossOf: key,
+    context: surveyed ? { area: area.areaKey, knownMarkets: area.knownMarkets, landmarks: area.landmarks, nearestMetro: area.nearestMetro } : null,
+    directive: `Before moving on, ask ONE cross-question about the place they named (${def.label}: "${place}"). ${def.cross.hint}`
+      + (surveyed
+        ? ` REFERENCE DATA below lists markets and landmarks of ${area.areaKey} we have surveyed — real, but not a complete list,`
+          + ' so a place missing from it is not proof of anything; add your general knowledge of the city.'
+        : ` We hold no surveyed data for it, so use your own general knowledge of that city: which markets, main roads and`
+          + ' commercial areas it has, and which sectors or colonies are only residential.')
+      + ' If what they named does not fit — no market or shops there, a residential-only sector, a place not in that city —'
+      + ' say so gently as a doubt and ask them to clarify, e.g. "Mere hisaab se Sector 21 mein zyada market nahi hai — aap'
+      + ' kaunsi jagah ki baat kar rahe hain?". Your knowledge can be out of date: never state it as certain, never accuse.'
+      + ' If it fits, ask it open — never put the answer in the question, never offer choices. One question only.',
+    known: knownFacts(memory),
+    memory: { ...memory, crossQueue: rest, crossAsked: [...asked, key] },
+  };
+}
+
+// Quick PD (`quickPd` on a file): greeting → each listed question once (a field re-asked once if it came back empty)
+// → closing. Everything else — schema, trade depth, cross-questions, file questions — is skipped; rechecks are not.
+export function quickAction(memory, caseData) {
+  const steps = caseData.quickPd;
+  const asked = memory.quickAsked ?? [];
+  const greeting = SECTIONS.find((s) => s.id === 'greeting');
+  const base = { action: 'ask_question', sectionLabel: 'Quick PD', known: knownFacts(memory) };
+  if (!asked.includes('greeting')) {
+    return { ...base, section: 'greeting', directive: greeting.action, memory: { ...enterSection(memory, 'greeting'), quickAsked: [...asked, 'greeting'] } };
+  }
+  const due = steps.find((st) => (st.field
+    ? memory.collected[st.field] == null && !gaveUp(memory, st.field)
+    : !asked.includes(st.key)));
+  if (due) {
+    const id = due.field ?? due.key;
+    const def = due.field ? FIELD_DEFS_BY_KEY[due.field] : null;
+    const next = enterSection(memory, 'quick');
+    return {
+      ...base,
+      section: 'quick',
+      ...(due.field ? { missingFields: [due.field] } : { quickStep: due }),
+      directive: `Ask about: ${def?.label ?? due.label}. Plain-words example: "${due.ask}"`
+        + ' Ask ONE thing, in your own simple words. This is a short interview — no other topic, no small talk.'
+        + (due.scores ? ` Judge how confidently they answer and report ${due.scores} as high, medium or low in the facts block.` : ''),
+      memory: {
+        ...next,
+        quickAsked: asked.includes(id) ? asked : [...asked, id],
+        askCount: due.field ? { ...next.askCount, [due.field]: (next.askCount?.[due.field] ?? 0) + 1 } : next.askCount,
+      },
+    };
+  }
+  if (!asked.includes('closing')) {
+    const closing = SECTIONS.find((s) => s.id === 'closing');
+    return { ...base, section: 'closing', directive: closing.action, memory: { ...enterSection(memory, 'closing'), quickAsked: [...asked, 'closing'] } };
+  }
+  return { action: 'end_interview' };
+}
+
+// File questions (prep.js) belong to a section; anything unplaced is asked with the loan purpose, before the checks.
+const HOT_SECTIONS = new Set(['personal', 'business', 'financial', 'documents', 'loan_purpose']);
+export function nextHot(memory, sectionId) {
+  const asked = new Set(memory.hotAsked ?? []);
+  return (memory.hot ?? []).find((h) => !asked.has(h.id) && (HOT_SECTIONS.has(h.section) ? h.section : 'loan_purpose') === sectionId) ?? null;
+}
+
+// A file question that stands in for standard fields is asked where the first of them would have been; the rest wait
+// for the end of the section.
+function hotDue(memory, section) {
+  const asked = new Set(memory.hotAsked ?? []);
+  const pending = (memory.hot ?? []).filter((h) => !asked.has(h.id) && (HOT_SECTIONS.has(h.section) ? h.section : 'loan_purpose') === section.id);
+  if (!pending.length) return null;
+  if (sectionComplete(memory, section)) return pending[0];
+  if (!section.fields || section.type) return null;
+  const at = (k) => section.fields.findIndex((f) => f.key === k);
+  const next = at(getMissingFields(memory, section)[0]?.key);
+  return pending.find((h) => h.covers?.length && Math.min(...h.covers.map(at).filter((i) => i >= 0)) < next) ?? null;
+}
+
 // The interview ends when the schema is satisfied, not when the model thinks it is done.
 // A branch officer tests an answer before moving on; this many per interview keeps it a conversation,
 // and "low" priority ones (residence, vintage, staff, rents) may take only one, so location, ownership, sales, income,
@@ -61,12 +147,50 @@ const MAX_CROSS = 7;
 const MAX_LOW_CROSS = 1;
 
 // However the conversation goes, a PD ends: a loop the guards miss must not keep a borrower on the phone forever.
-const MAX_TURNS = 90;
+// A full kirana PD with the file's questions, the shop photo and a recheck runs ~75 turns.
+const MAX_TURNS = 110;
 
 export function getNextAction(memory, caseData) {
   if (memory.turnCount >= MAX_TURNS) return { action: 'end_interview' };
   const config = getInterviewConfig(caseData);
   const sections = activeSections(config);
+  const here = () => sections.find((s) => s.id === memory.currentSection);
+
+  // Figures that do not add up are shown to them straight away, while the answer is fresh — people forget and round.
+  if (memory.recheckQueue?.length) {
+    const [recheck, ...rest] = memory.recheckQueue;
+    return {
+      action: 'ask_question',
+      section: memory.currentSection,
+      sectionLabel: here()?.label ?? '',
+      recheckOf: recheck.field,
+      recheck,
+      missingFields: [recheck.field], // so a corrected figure may replace the one they gave
+      directive: `FRIENDLY RECHECK — the numbers they gave do not add up. Tell them both figures, in your own warm words, like a friend who noticed while doing the hisaab: "${recheck.say}"`
+        + ' Give them the benefit of the doubt — people forget, round off, or leave out cash. Never say they are wrong or lying,'
+        + ' never mention the loan decision, never name a score. Ask only this; no other topic this turn.',
+      known: knownFacts(memory),
+      memory: { ...memory, recheckQueue: rest, recheckAsked: [...(memory.recheckAsked ?? []), recheck.field] },
+    };
+  }
+
+  // A short PD for a demo with no time: a fixed list of questions from the file, still rechecked live.
+  if (caseData?.quickPd?.length) return quickAction(memory, caseData);
+
+  // At the shop → its photo now, while they are standing in it.
+  const c = memory.collected;
+  if (!memory.shopPhotoAsked && (c.at_business_place === 'yes' || c.reached_business_place === 'yes')) {
+    return {
+      action: 'ask_question',
+      section: memory.currentSection,
+      sectionLabel: here()?.label ?? '',
+      photo: 'shop',
+      directive: 'Ask them to take one photo of their shop from the front now — board, counter and maal in view — for the'
+        + " officer's record. Say the camera will open on their phone. Output the ```photo shop``` fence. No other question this turn.",
+      known: knownFacts(memory),
+      memory: { ...memory, shopPhotoAsked: true },
+    };
+  }
 
   // A field just answered for the first time may earn one cross-question (schema "cross"), asked now.
   if (memory.crossQueue?.length) {
@@ -74,8 +198,10 @@ export function getNextAction(memory, caseData) {
     const def = FIELD_DEFS_BY_KEY[key];
     const asked = memory.crossAsked ?? [];
     const lowUsed = asked.filter((k) => FIELD_DEFS_BY_KEY[k]?.cross?.priority === 'low').length;
-    const room = def?.cross && asked.length < MAX_CROSS && (def.cross.priority !== 'low' || lowUsed < MAX_LOW_CROSS);
+    // A field a file question stood in for already had its deeper question.
+    const room = def?.cross && !(memory.hot ?? []).some((h) => h.covers?.includes(key)) && asked.length < MAX_CROSS && (def.cross.priority !== 'low' || lowUsed < MAX_LOW_CROSS);
     if (!room) return getNextAction({ ...memory, crossQueue: rest }, caseData);
+    if (def?.cross?.knowledge === 'location') return locationCross(memory, caseData, key, def, rest, asked, sections);
     if (def?.cross) {
       const section = sections.find((s) => s.id === memory.currentSection);
       return {
@@ -96,7 +222,7 @@ export function getNextAction(memory, caseData) {
   const idx = Math.max(0, sections.findIndex((s) => s.id === memory.currentSection));
 
   let cursor = idx;
-  while (cursor < sections.length && sectionComplete(memory, sections[cursor])) cursor += 1;
+  while (cursor < sections.length && sectionComplete(memory, sections[cursor]) && !nextHot(memory, sections[cursor].id)) cursor += 1;
   if (cursor >= sections.length) return { action: 'end_interview' };
 
   const section = sections[cursor];
@@ -105,9 +231,10 @@ export function getNextAction(memory, caseData) {
   const raised = new Set((instruction.contradictions ?? []).map((f) => f.detail));
   const next = enterSection(memory, section.id);
   const flags = raised.size ? next.flags.map((f) => (raised.has(f.detail) ? { ...f, followedUp: true } : f)) : next.flags;
+  const hotAsked = instruction.hot ? [...(next.hotAsked ?? []), instruction.hot.id] : next.hotAsked;
   const target = instruction.missingFields?.[0];
   const askCount = target ? { ...next.askCount, [target]: (next.askCount?.[target] ?? 0) + 1 } : next.askCount;
-  return { ...instruction, memory: { ...next, flags, askCount } };
+  return { ...instruction, memory: { ...next, flags, askCount, hotAsked } };
 }
 
 function buildInstruction(memory, section, caseData, config) {
@@ -121,7 +248,17 @@ function buildInstruction(memory, section, caseData, config) {
     isNewApplicant: config.isNewApplicant,
   };
 
-  if (section.type === 'fixed') {
+  // The section's own schema is done; the questions prepared from this file for it come next.
+  const hot = hotDue(memory, section);
+  if (hot) {
+    instruction.hot = hot;
+    const open = (hot.covers ?? []).filter((k) => memory.collected[k] == null);
+    // Its answer may fill the standard fields it stands in for — income and sales included.
+    if (open.length) instruction.missingFields = open;
+    instruction.directive = `This question was prepared from their loan file before the call. Ask it in your own simple words: "${hot.q}"`
+      + (open.length ? ` It replaces the standard questions on ${open.map((k) => FIELD_DEFS_BY_KEY[k]?.label ?? k).join(', ')} — make sure the answer gives those.` : '')
+      + ` (Why the officer wants it — never say this to them: ${hot.why}.) Never say it comes from a file or a list.`;
+  } else if (section.type === 'fixed') {
     instruction.directive = section.action;
   } else if (section.type === 'verification') {
     const tasks = verificationTasks(memory, section);
@@ -214,7 +351,7 @@ export function getHyperLocalInstruction(memory, caseData) {
 const DENIAL = /^\s*(no|none|false|nahi|nahin|nhi|na|nope|koi nahi|kahin nahi|kuch nahi|never)\b/i;
 
 // Compares new facts with the brief. Pass memory as it was BEFORE this turn's facts were merged.
-export function checkContradictions(memory, facts, caseData) {
+export function checkContradictions(memory, facts, caseData, { recheck = null } = {}) {
   const flags = [];
   const brief = caseData?.brief ?? {};
 
@@ -225,7 +362,7 @@ export function checkContradictions(memory, facts, caseData) {
     if (facts.loan_purpose && p.newVenture && p.current) {
       flags.push({
         type: 'loan_purpose', field: 'loan_purpose', severity: p.target ? 'high' : 'medium',
-        detail: `Runs a ${p.current} but wants the loan for "${p.purpose}"${p.target ? ` (${p.target})` : ''} — a new venture outside the business being assessed`,
+        detail: `Runs a ${p.current} but wants the loan for "${p.purpose}"${p.target ? ` (${p.target}) — a new venture outside the business being assessed` : ' — a new shop, separate from the one being assessed'}`,
         turn: memory.turnCount,
       });
     }
@@ -312,7 +449,8 @@ export function checkContradictions(memory, facts, caseData) {
   }
 
   // Coaching tell: the same figure, asked differently, comes back different.
-  if (income != null && memory.income_mentions.length) {
+  // A figure corrected after being shown the bank's is a correction, not a coached answer drifting.
+  if (income != null && memory.income_mentions.length && recheck !== 'monthly_income') {
     const first = toNumber(memory.income_mentions[0].value);
     if (first) {
       const drift = Math.abs(((income - first) / first) * 100);

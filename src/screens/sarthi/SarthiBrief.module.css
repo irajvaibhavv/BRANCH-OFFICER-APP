@@ -257,3 +257,54 @@
 .docs li { font-size: 12.5px; line-height: 1.45; overflow-wrap: anywhere; }
 .docIn { color: var(--s-ink-2); }
 .docOut { color: var(--s-stamp); font-weight: 500; }
+
+/* ---------------------------------------------------------------- questions for this file */
+.head:has(.redo) { display: flex; align-items: center; justify-content: space-between; }
+.redo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--s-ink-3);
+}
+.redo:disabled { opacity: 0.6; }
+.hotWait { font-size: 13px; line-height: 1.5; color: var(--s-ink-3); margin-top: 8px; }
+.hot { margin: 0; padding: 0; list-style: none; counter-reset: hot; }
+.hot li {
+  counter-increment: hot;
+  position: relative;
+  padding: 11px 0 11px 28px;
+  border-bottom: 1px solid var(--s-line);
+}
+.hot li::before {
+  content: counter(hot);
+  position: absolute;
+  left: 0;
+  top: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--s-ink-3);
+}
+.hotQ { display: block; font-size: 14px; line-height: 1.45; color: var(--s-ink); font-weight: 500; }
+.hotWhy { display: block; font-size: 12px; line-height: 1.45; color: var(--s-ink-3); margin-top: 3px; }
+
+/* ---------------------------------------------------------------- who takes the PD */
+.choices { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  text-align: left;
+  font-family: inherit;
+  color: var(--text-1);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.choice svg { flex: none; margin-top: 2px; }
+.choice b { display: block; font-size: 15px; margin-bottom: 3px; }
+.choice small { display: block; font-size: 12.5px; line-height: 1.45; color: var(--text-2); }

@@ -65,6 +65,11 @@ Rules:
   monthly_income.
 - Enum fields take exactly one of their options:
 ${ENUM_GUIDE}
+- at_business_place is whether they are at their shop or place of work RIGHT NOW. reached_business_place is "yes"
+  only once they say they have got there ("pahunch gaya"); "aa raha hoon" is "no".
+- venture_* fields are about a NEW shop they plan to open with the loan: venture_location is the place they name,
+  venture_rent is that shop's monthly rent, venture_sales_estimate its expected monthly sales, venture_setup_cost the
+  total to start it. Never put these in shop_rent, monthly_sales or business_location, which are the current shop.
 - monthly_rent is HOUSE rent; shop_rent is the rent of the shop or business premises.
 - informal_loans, repayment_history, assets, purpose_reason, purpose_experience, current_business_plan and
   amount_basis are short text in their words, e.g. "committee 2000 mahina".

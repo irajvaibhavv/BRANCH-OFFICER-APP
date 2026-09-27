@@ -10,11 +10,14 @@ import { parseClaims, peekSpeech, peekDisplay, writeReport, VISION_URL, COMPLETE
 import { extractFacts, askTurn } from '../../services/sarthi/model';
 import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../services/sarthi/script';
 import { verifyClaims, computeEligibility, toNumber } from '../../services/sarthi/verifier';
-import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor, recordTradeAnswer, recordCrossAnswer, acceptedFacts } from '../../services/sarthi/memory';
+import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor, recordTradeAnswer, recordCrossAnswer, recordHotAnswer, acceptedFacts } from '../../services/sarthi/memory';
+import { queueRechecks, recordRecheckAnswer } from '../../services/sarthi/recheck';
+import { loadHot, ruleHotQuestions } from '../../services/sarthi/prep';
+import { readNumbers } from '../../services/sarthi/hindiNumbers';
 import pdSchema from '../../data/sarthi/pdSchema.json';
 import { getNextAction, directiveText, checkContradictions, checkInternalConsistency, getInterviewConfig, assessIncome } from '../../services/sarthi/controller';
 import { validateReport, extractRecommendation } from '../../services/sarthi/validator';
-import { validateAadhaar, validatePan, detectForeignId, detectForeignResidence, pickIdentity, identitySummary } from '../../services/sarthi/idChecks';
+import { validateAadhaar, validatePan, detectForeignId, detectForeignResidence, pickIdentity, identitySummary, namesMatch, nameFromWords, relationOf, applicantComing, presenceLines } from '../../services/sarthi/idChecks';
 import PhotoCapture from '../../components/sarthi/PhotoCapture';
 import { startFrameCapture, stopCamera, pauseCamera, resumeCamera, getObservations, resetObservations } from '../../services/sarthi/video';
 import { downscale, analysePhoto, PHOTO_ASKS } from '../../services/sarthi/photo';
@@ -46,7 +49,7 @@ const CAPTION_FALLBACK_MS = 3000;
 const LEAVING = /(bye|alvida|band karo|band kar do|rehne do|nahi karna|cut karo|cut kar raha|mujhe jaana hai)|अलविदा|बाय|बंद करो/i;
 
 // One topic = one schema field (or fixed section / verification task), so re-asks don't advance the count.
-const topicKey = (a) => `${a?.section ?? 'x'}:${a?.crossOf ? `cross_${a.crossOf}` : a?.missingFields?.[0] ?? a?.verificationTask ?? a?.tradeProbe ?? ''}`;
+const topicKey = (a) => `${a?.section ?? 'x'}:${a?.crossOf ? `cross_${a.crossOf}` : a?.recheckOf ? `recheck_${a.recheckOf}` : a?.hot ? `hot_${a.hot.id}` : a?.photo ? `photo_${a.photo}` : a?.missingFields?.[0] ?? a?.verificationTask ?? a?.tradeProbe ?? ''}`;
 
 export default function SarthiInterview() {
   const { id } = useParams();
@@ -118,6 +121,7 @@ export default function SarthiInterview() {
     setAsked(topics.current.size);
   };
   const doneRef = useRef(false);
+  const presence = useRef(null); // null · relation · call · handover · done — someone other than the applicant answered
   const stopListen = useRef(null);
   const cameraRef = useRef(false);
   const liveRef = useRef(false); // proxy reachable → vision frames are worth sending
@@ -274,6 +278,52 @@ export default function SarthiInterview() {
     return true;
   };
 
+  // A fixed line, outside the model: recorded everywhere a model line would be, so a live turn after it has the context.
+  const sayFixed = (line, opts = {}) => {
+    transcript.current.push({ role: 'assistant', content: line.text });
+    history.current.push({ role: 'assistant', content: line.text });
+    memory.current = recordTurn(memory.current, 'assistant', line.text);
+    say(line.text, { speech: line.speech, ...opts });
+  };
+
+  // The applicant is not on the call: no PD, no report — back to the case list until they can talk.
+  const leaveForLater = () => {
+    doneRef.current = true;
+    teardown();
+    navigate('/sarthi', { replace: true });
+  };
+
+  // Someone else gave their name. The code asks who they are and asks for the applicant; the model never improvises it.
+  const startPresence = (stated, turn) => {
+    const lines = presenceLines(caseData);
+    if (presence.current === 'handover') { presence.current = 'done'; sayFixed(lines.later, { then: leaveForLater }); return; }
+    memory.current = addFlags(memory.current, [{
+      type: 'identity_mismatch', field: 'stated_name', severity: 'high', declared: stated, known: caseData.name, turn,
+      detail: `Application is in the name of ${caseData.name}, but the person on the call gave their name as "${stated}"`,
+    }]);
+    presence.current = 'relation';
+    sayFixed(lines.relation);
+  };
+
+  const handlePresence = (text) => {
+    const lines = presenceLines(caseData);
+    if (presence.current === 'relation') {
+      memory.current = updateMemory(memory.current, { speaker_relation: relationOf(text) });
+      presence.current = 'call';
+      sayFixed(lines.call);
+      return;
+    }
+    if (applicantComing(text)) {
+      // The applicant takes the phone and is asked their own name; that answer runs through the normal loop.
+      presence.current = 'handover';
+      memory.current = { ...memory.current, collected: { ...memory.current.collected, stated_name: null, applicant_name: null } };
+      sayFixed(lines.handover);
+      return;
+    }
+    presence.current = 'done';
+    sayFixed(lines.later, { then: leaveForLater });
+  };
+
   /* ---------------------------------------------------------------- one borrower answer */
   const handleAnswer = useCallback(async (text) => {
     if (doneRef.current) return;
@@ -322,6 +372,7 @@ export default function SarthiInterview() {
 
     memory.current = recordTurn(memory.current, 'user', text);
     if (stopForForeignResidence(text, borrowerTurn)) return;
+    if (presence.current === 'relation' || presence.current === 'call') { handlePresence(text); return; }
 
     try {
       // Extract first, then pick the next topic, so the controller decides on THIS turn's facts.
@@ -336,6 +387,16 @@ export default function SarthiInterview() {
       if (lastAction.current?.crossOf) {
         const asked = transcript.current.filter((t) => t.role === 'assistant').at(-1)?.content ?? '';
         memory.current = recordCrossAnswer(memory.current, lastAction.current.crossOf, asked, text, borrowerTurn);
+      }
+      if (lastAction.current?.hot) memory.current = recordHotAnswer(memory.current, lastAction.current.hot, text, borrowerTurn);
+      // A quick-PD question with no schema field is kept verbatim; "sau pe das" becomes the margin the recheck uses.
+      const quick = lastAction.current?.quickStep;
+      if (quick) {
+        memory.current = recordHotAnswer(memory.current, { id: quick.key, q: quick.ask, why: quick.why ?? quick.label }, text, borrowerTurn);
+        if (quick.key === 'margin_per_100') {
+          const pct = readNumbers(text).map((n) => n.value).find((v) => v > 0 && v < 100);
+          if (pct) memory.current = { ...memory.current, statedMarginPct: pct };
+        }
       }
 
       let facts = {};
@@ -355,8 +416,33 @@ export default function SarthiInterview() {
       const docDue = memory.current.currentSection === 'documents' || facts.aadhaar_number || facts.pan_number;
       if (docDue && stopForForeignId(text, borrowerTurn)) return;
 
+      // The name answer is checked here, before any model call, so a wrong person never gets a business question.
+      if (!isIntake && presence.current !== 'done'
+        && (answered?.section === 'greeting' || answered?.missingFields?.[0] === 'stated_name' || presence.current === 'handover')) {
+        let stated = memory.current.collected.stated_name;
+        if (!stated) {
+          stated = nameFromWords(text);
+          if (stated) memory.current = updateMemory(memory.current, { stated_name: stated });
+        }
+        // Speech can come back in Devanagari ("राज"), which namesMatch cannot read — compare with the Hindi name on file.
+        const same = namesMatch(stated, caseData.name)
+          ?? (stated && /[ऀ-ॿ]/.test(stated) && caseData.hi?.firstName ? String(stated).includes(caseData.hi.firstName) : null);
+        if (stated && same === false) { startPresence(stated, borrowerTurn); return; }
+        if (stated && presence.current === 'handover') {
+          presence.current = 'done';
+          memory.current = {
+            ...memory.current,
+            flags: memory.current.flags.map((f) => (f.type === 'identity_mismatch'
+              ? { ...f, severity: 'low', followedUp: true, detail: `${f.detail}. The applicant then came to the phone and gave their own name as "${stated}" (Turn ${borrowerTurn}).` }
+              : f)),
+          };
+        }
+      }
+
       if (isIntake) rebuildWalkIn();
       const subject = caseRef.current ?? caseData;
+      // The hisaab is done now, on this answer, so a figure that does not add up is asked about while it is fresh.
+      memory.current = queueRechecks(memory.current, subject, facts);
 
       const action = getNextAction(memory.current, subject);
       if (action.memory) memory.current = action.memory;
@@ -413,6 +499,12 @@ export default function SarthiInterview() {
       const gapFill = acceptedFacts(memory.current, Object.fromEntries(Object.entries(fenced).filter(([k]) => !(k in facts))), answered);
       memory.current = updateMemory(memory.current, { ...gapFill, _verbatim: text });
       facts = { ...gapFill, ...facts };
+      // Recorded after the gap-fill, so a corrected figure that only reached the facts fence still counts.
+      if (answered?.recheck) {
+        const asked = transcript.current.filter((t) => t.role === 'assistant').at(-1)?.content ?? '';
+        memory.current = recordRecheckAnswer(memory.current, answered.recheck, asked, text, borrowerTurn);
+      }
+      memory.current = queueRechecks(memory.current, subject, gapFill);
       // Check a document the moment it is given, exactly as the scripted intake does.
       if (facts.aadhaar_number) intake.current.aadhaarCheck = validateAadhaar(String(facts.aadhaar_number));
       if (facts.pan_number) {
@@ -436,7 +528,7 @@ export default function SarthiInterview() {
       memory.current = { ...memory.current, tradeMath: math.results };
       const found_flags = [
         ...math.flags,
-        ...checkContradictions(before, facts, subject),
+        ...checkContradictions(before, facts, subject, { recheck: answered?.recheckOf }),
         // A walk-in has nothing to check against, so their own numbers have to do the work.
         ...(config.isNewApplicant ? checkInternalConsistency(memory.current, subject) : []),
       ];
@@ -456,7 +548,9 @@ export default function SarthiInterview() {
       // Or the borrower is leaving ("ok bye", "band karo") and the model has closed — holding them there helps nobody.
       const reallyDone = complete && (getNextAction(memory.current, subject).action === 'end_interview' || LEAVING.test(text));
       if (complete && !reallyDone) console.warn('[sarthi] model tried to end the interview early — ignored');
-      after = photo ? () => setPhotoAsk(photo) : reallyDone ? finish : null;
+      // The shop photo is the controller's call (once they are at the shop); the model may only ask for the home.
+      const wantPhoto = action.photo ?? (photo === 'home' ? 'home' : null);
+      after = wantPhoto ? () => setPhotoAsk(wantPhoto) : reallyDone ? finish : null;
 
       if (spokenYet) {
         showCaption(display);
@@ -619,7 +713,7 @@ export default function SarthiInterview() {
 
     save(`bo_sarthi_transcript_${subject.id}`, turns);
     save(`bo_sarthi_claims_${subject.id}`, captured);
-    save(`bo_sarthi_evidence_${subject.id}`, { evidence, flags, eligibility, observations, collected: collectedFacts, understanding: depth, tradeMath: math.results });
+    save(`bo_sarthi_evidence_${subject.id}`, { evidence, flags, eligibility, observations, collected: collectedFacts, understanding: depth, tradeMath: math.results, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers });
     // Images are kept in their own key: base64 is heavy and must not risk the report's own write.
     save(`bo_sarthi_photos_${subject.id}`, photos.current);
 
@@ -630,7 +724,7 @@ export default function SarthiInterview() {
     if (!demoRef.current) {
       try {
         setProgress('Writing the PD report…');
-        const raw = await writeReport({ caseData: subject, transcript: turns, claims: captured, evidence, flags, collected: collectedFacts, verification: memory.current.verification, understanding: depth, tradeMath: math.results, crossAnswers: memory.current.crossAnswers, eligibility, observations, photos: photos.current, identity: subject.identity });
+        const raw = await writeReport({ caseData: subject, transcript: turns, claims: captured, evidence, flags, collected: collectedFacts, verification: memory.current.verification, understanding: depth, tradeMath: math.results, crossAnswers: memory.current.crossAnswers, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers, eligibility, observations, photos: photos.current, identity: subject.identity });
         setProgress('Checking every citation…');
         validation = validateReport(raw, turns, captured, briefForCitation(subject), eligibility, { flags, collected: collectedFacts });
         report = validation.cleanedReport;
@@ -642,7 +736,7 @@ export default function SarthiInterview() {
 
     if (!report) {
       setProgress('Writing the PD report…');
-      report = buildFallbackReport({ caseData: subject, transcript: turns, evidence, flags, eligibility, observations, photos: photos.current, identity: subject.identity, cameraOn: cameraRef.current, understanding: depth, tradeMath: math.results });
+      report = buildFallbackReport({ caseData: subject, transcript: turns, evidence, flags, eligibility, observations, photos: photos.current, identity: subject.identity, cameraOn: cameraRef.current, understanding: depth, tradeMath: math.results, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers });
       validation = validateReport(report, turns, captured, briefForCitation(subject), eligibility, { flags, collected: collectedFacts });
     }
 
@@ -678,7 +772,8 @@ export default function SarthiInterview() {
     let cancelled = false;
     resetObservations();
     scriptRef.current = isIntake ? buildIntakeScript() : buildScript(startCase);
-    memory.current = createEmptyMemory(startCase);
+    // The file's questions, prepared on the brief screen; if the officer started before they came back, the file's own.
+    memory.current = createEmptyMemory(startCase, { hot: isIntake || startCase.quickPd ? [] : (loadHot(startCase.id)?.questions ?? ruleHotQuestions(startCase)) });
     caseRef.current = startCase;
 
     (async () => {
@@ -781,7 +876,7 @@ export default function SarthiInterview() {
         <div className={styles.sheetHead}>
           <span className={styles.step}>{asked > 0 ? `Sawaal ${asked}` : 'Shuru ho raha hai'}</span>
           <span className={styles.progress} aria-hidden="true">
-            <span className={styles.progressFill} style={{ width: `${Math.min(96, covered?.filled ? covered.pct : (asked / total) * 100)}%` }} />
+            <span className={styles.progressFill} style={{ width: `${Math.min(96, caseData.quickPd ? (asked / (caseData.quickPd.length + 1)) * 100 : covered?.filled ? covered.pct : (asked / total) * 100)}%` }} />
           </span>
         </div>
 

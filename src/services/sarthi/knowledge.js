@@ -126,6 +126,19 @@ export function lookupLocation(areaKey) {
   return { ...AREA_TIERS.tier3_rural, source: 'default', tier: 'tier3_rural' };
 }
 
+/**
+ * Area data for where a NEW shop will open. The place alone first ("Dwarka Sector 21" hits Dwarka); a bare "Sector 21"
+ * is read against the applicant's own city. Tier data is indicative only, like everywhere else.
+ */
+export function ventureArea(collected = {}, caseData = {}) {
+  const place = collected.venture_location;
+  if (!place) return null;
+  const alone = lookupLocation(place);
+  if (alone.source !== 'default') return { ...alone, place };
+  const withCity = lookupLocation(`${place}, ${caseData?.area ?? ''}`);
+  return { ...withCity, place };
+}
+
 export function hasAreaDetail(areaKey) {
   return lookupLocation(areaKey).source === 'specific';
 }

@@ -230,11 +230,51 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   (6) turnover claims are checked against bank turnover (`bank.credits`), not the margin-derived income, and drift is
   grouped by unit, with a four-digit vintage read as a start year. Number fields given as text are parsed in `clean()`
   (a range is its lower figure).
+- **Friendly rechecks** (`recheck.js`, 2026-09-27): the arithmetic runs on every answer, and a figure that disagrees with
+  the bank or with their own figures is shown to them straight away — both numbers, said kindly ("aapne 18 hazaar
+  bataya, bank mein 3.8 lakh mahina aata hai… kuch chhoot toh nahi gaya?"). People under-state as often as they
+  over-state, so income is rechecked both ways. Checks: income vs bank-supported income (±40%), sales vs bank credits,
+  footfall × bill vs sales, footfall vs credits (implied bill vs the trade's `avgBillValue`), take-home vs
+  `netMarginMaxPct`, EMI below bureau, loan applications denied with enquiries on record. One per field, at most 4, asked
+  before anything else (`recheckQueue`), with the field in `missingFields` so a corrected figure may replace the old one.
+  A corrected income resets `income_mentions` and skips the coaching check — a correction is not a coached answer.
+  This is the one place the interviewer may point out a mismatch; the prompt still bans it everywhere else.
+- **At the shop, then its photo**: `at_business_place` is asked right after the name; "no" unlocks
+  `reached_business_place` ("pahunch kar bataiye"). Once either is yes, the controller asks for the shop photo
+  (`action.photo`). The model may only ask for the home photo itself — its own ```photo shop``` fence is ignored.
+- **Questions for this file** (`prep.js`): the brief screen drafts 12-15 file-specific questions with the LLM (cached in
+  `bo_sarthi_hotq_<case>`), each with a `why` for the officer and a `section`; with no model, `ruleHotQuestions` builds
+  them from the file's own figures (cash share, running loans, enquiries, ITR, GST threshold, deposits, purpose).
+  Start asks who takes the PD: **Sarthi AI** asks them at the end of their section (`nextHot`, `memory.hotAnswers`,
+  reported as "Questions prepared from the file"); **Branch Officer** opens `/sarthi/officer/:id`, a tick-and-note sheet
+  (`bo_sarthi_officer_<case>`). Walk-ins have no file, so no questions and no chooser. **No duplicates**: every file
+  question is asked, and one that also gets a standard fact lists it in `covers` — that standard question (and its
+  cross-question) is skipped, and the file question is asked where it would have been. Skipped only while the file
+  question is pending: if its answer did not give the fact, the standard one is asked after all. Mahesh: 75 → ~56 turns.
 - **Cross-questions** (schema `cross` on a field): the first time a field is answered, `updateMemory` queues it and
   the controller asks ONE follow-up straight away — the code picks WHEN (`cross.when`), the model phrases it from
   `cross.hint` and the area data, and must ask it open (never "Blue Line wale side?" — that hands a faker the
   answer). At most 7 per interview, only one `priority: "low"`, so location, ownership, sales, income, loans and
   the loan's end use (supplier, item, amount — never just "business ke liye") always get theirs. Answers go to `memory.crossAnswers` and the report weighs them.
+- **Quick PD** (`quickPd` on a file in `borrowers.json` — only Rakesh Kushwaha, for a demo with no time): `quickAction`
+  runs greeting → the listed questions → closing, and skips the schema, trade depth, cross-questions, the shop photo and
+  the suggested questions. Rechecks still run first, so the calculation happens on the call: `margin_per_100` ("sau pe
+  das") is parsed into `statedMarginPct`, and income above sales × that margin is shown back to them. A step with a
+  `field` is extracted like any field (re-asked once if empty); one with a `key` is kept verbatim in `hotAnswers`.
+- **New shop = a site visit on the call** (every interview except the quick PD): a purpose that opens a shop or
+  business (`NEW_VENTURE` in probes.js — kholna, open, nayi/doosri dukaan, outlet) unlocks `venture_location`,
+  `venture_rent`, `venture_sales_estimate`, `venture_competition`, `venture_setup_cost`. `ventureArea` resolves the
+  place (the place alone, then with the applicant's city). Rechecks do the officer's hisaab live: rent vs the area range
+  (quoted only for surveyed areas — tier ranges give a direction, not numbers), rent vs expected sales × the trade's margin,
+  setup cost vs the loan. Place cross-questions (`cross.knowledge: "location"`, also on `business_location`) let the model
+  use its **own** knowledge of any city's markets and sectors — the one exception to the grounding rule — but only to ask
+  and to voice a doubt as a question ("mere hisaab se Sector 21 mein market nahi hai…"), never a figure, and the report
+  lists such doubts as unverified. Surveyed `knownMarkets` are partial lists, so a place missing from them proves nothing.
+- **Applicant must be present** (live mode, seeded files): when the name given does not match the file, the code — not
+  the model — asks "aap unke kya lagte hain?", then asks them to call the applicant. "Bahar hai" / anything unclear →
+  "Chaliye, koi baat nahi… hum tab baat karenge", no report, back to `/sarthi`. Yes → "phone unhe de dijiye", the name is
+  asked again and, if it matches, the PD carries on with the mismatch flag downgraded and annotated. Regexes and lines are
+  in `idChecks.js` (`applicantComing`, `relationOf`, `presenceLines`). Built for the Rekha Devi demo, applies to every file.
 - **Identity**: the greeting asks the name openly (never "Aap Ramesh ji hain na?" — anyone can say haan). `stated_name`
   is compared with the file name in code (`namesMatch` in `idChecks.js`); a mismatch raises a high `identity_mismatch`
   flag and unlocks `speaker_relation` (condition `name_mismatch`). Walk-ins skip both — there is no name on file.

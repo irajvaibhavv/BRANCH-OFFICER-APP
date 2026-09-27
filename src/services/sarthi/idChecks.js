@@ -185,3 +185,56 @@ export function identitySummary(id) {
   if (id.ok) return `${label} ${id.masked} passed every offline check (${id.checks.map((c) => c.label.toLowerCase()).join(', ')}). Not verified against UIDAI/NSDL records.`;
   return `${label} ${id.masked} failed: ${failed.map((c) => c.detail).join('; ')}.`;
 }
+
+/* ---------------------------------------------------------------- Applicant present */
+// A PD is only a PD with the applicant on the call. When someone else answers, the code (not the model) asks who they
+// are, asks them to call the applicant, and ends the call politely if the applicant is not there.
+
+/** "Main Raj hoon" → "Raj", for when extraction returned nothing on the name question. */
+export function nameFromWords(text = '') {
+  const m = /(?:mera naam|my name is|naam hai|i am|i'm|main|mai|mein)\s+([a-z]{2,})/i.exec(String(text));
+  const name = m?.[1];
+  return name && !NAME_FILLER.has(name.toLowerCase()) ? name : null;
+}
+
+/** Their answer to "aap unke kya lagte hain?", as a speaker_relation option. */
+export function relationOf(text = '') {
+  const s = String(text);
+  if (/\b(beta|beti|son|daughter|pati|husband|patni|wife|bhai|brother|behen|bahen|sister|maa|mummy|mother|papa|father|devar|bahu|damaad|nati|pota|family|rishtedar)\b|बेटा|बेटी|पति|पत्नी|भाई|बहन|माँ|पापा|बहू/i.test(s)) return 'family';
+  if (/\b(naukar|employee|staff|helper|worker|kaam karta|kaam karti|munim)\b/i.test(s)) return 'employee';
+  if (/\b(agent|dsa|dalal|broker)\b/i.test(s)) return 'agent';
+  return 'other';
+}
+
+// "Bahar hai" / "abhi nahi" ends the call; checked before yes, since "haan, woh bahar hai" means she is not here.
+const NOT_HERE = /\b(bahar|baahar|nahi|nahin|nhi|not|outside|baad mein|later|busy|kaam pe|market|bazaar|mandi|gaon|mandir|kal|no)\b|बाहर|नहीं|बाद में|कल/i;
+const COMING = /\b(haan|han|ha|ji|yes|bulata|bulati|bula raha|bula rahi|bulaunga|aa gayi|aa gaye|aa rahi|aa rahe|yahin|yahan|ok|okay|theek)\b|हाँ|हां|बुला|आ गई|आ रही|यहीं/i;
+
+/** Will the applicant join now? Anything unclear counts as no — the PD waits for them. */
+export function applicantComing(text = '') {
+  const s = String(text);
+  return !NOT_HERE.test(s) && COMING.test(s);
+}
+
+export function presenceLines(c) {
+  const first = c.name.split(' ')[0];
+  const hi = c.hi?.firstName ?? first;
+  return {
+    relation: {
+      text: `Yeh application ${first} ji ke naam se hai. Aap unke kya lagte hain?`,
+      speech: `यह एप्लीकेशन ${hi} जी के नाम से है। आप उनके क्या लगते हैं?`,
+    },
+    call: {
+      text: `Achha, dhanyawaad. Loan ke liye ${first} ji ka khud yahan hona zaroori hai. Kya aap unhe abhi bula sakte hain?`,
+      speech: `अच्छा, धन्यवाद। लोन के लिए ${hi} जी का ख़ुद यहाँ होना ज़रूरी है। क्या आप उन्हें अभी बुला सकते हैं?`,
+    },
+    later: {
+      text: `Chaliye, koi baat nahi. Jab ${first} ji aa jaayein aur unhe time mile, hum tab baat karenge. Dhanyawaad!`,
+      speech: `चलिए, कोई बात नहीं। जब ${hi} जी आ जाएँ, और उन्हें टाइम मिले, हम तब बात करेंगे। धन्यवाद!`,
+    },
+    handover: {
+      text: `Bahut achha. Phone ${first} ji ko de dijiye. ${first} ji, namaste! Apna poora naam bataiye?`,
+      speech: `बहुत अच्छा। फ़ोन ${hi} जी को दे दीजिए। ${hi} जी, नमस्ते! अपना पूरा नाम बताइए?`,
+    },
+  };
+}

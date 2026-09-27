@@ -5,7 +5,7 @@ import { emi, PRODUCT_RATES } from '../../utils/loanCalc';
 import { readNumbers } from './hindiNumbers';
 
 // "kholna/shuru/start" or "naya kaam" — a new venture, not more stock for the shop they already run.
-const NEW_VENTURE = /(kholn|kholu|khol ke|shuru kar|start kar|open kar|naya (kaam|business|dhanda)|nayi dukaan)/i;
+const NEW_VENTURE = /(kholn|kholu|khol ke|shuru kar|start kar|open kar|open|opening|naya (kaam|business|dhanda)|nayi dukaan|nayi shop|new (shop|outlet|store)|second (shop|outlet|store)|doosri dukaan|dusri dukaan|outlet)/i;
 const PERSONAL = /(shaadi|shadi|wedding|ghar bana|makaan bana|gaadi|car lena|bike|ilaaj|medical|hospital|padhai|fees|purana loan|loan chuka|karz chuka)/i;
 
 // Two years of total income: past that, the amount needs a worked-out basis, not a round number.

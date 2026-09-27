@@ -35,6 +35,27 @@
           "ask": "Aapka poora naam kya hai?"
         },
         {
+          "key": "at_business_place",
+          "label": "At the shop / place of work right now",
+          "type": "enum",
+          "options": [
+            "yes",
+            "no"
+          ],
+          "ask": "Aap abhi apni dukaan pe hi hain na?"
+        },
+        {
+          "key": "reached_business_place",
+          "label": "Reached the shop for the photo",
+          "type": "enum",
+          "options": [
+            "yes",
+            "no"
+          ],
+          "condition": "at_business_place === 'no'",
+          "ask": "Koi baat nahi. Verification ke liye dukaan ki photo leni hai — dukaan pahunch kar bataiye, main intezaar karunga."
+        },
+        {
           "key": "age",
           "label": "Age",
           "type": "number",
@@ -116,7 +137,10 @@
           "label": "Shop or office location",
           "type": "text",
           "ask": "Aapki dukaan ya kaam ki jagah kahan hai?",
-          "cross": {"hint": "Ask for something only a person who sits there every day knows: the exact landmark, which gate or side of the place they named, or the shop next door. If AREA KNOWLEDGE lists landmarks, markets or a metro station for this area, ask about one of those."}
+          "cross": {
+            "knowledge": "location",
+            "hint": "Ask for something only a person who sits there every day knows: the exact landmark, which gate or side of the place they named, or the shop next door. If AREA KNOWLEDGE lists landmarks, markets or a metro station for this area, ask about one of those."
+          }
         },
         {
           "key": "shop_ownership",
@@ -451,6 +475,45 @@
           "type": "text",
           "condition": "amount_stretch",
           "ask": "Itne paise ka hisaab kaise banaya — kis cheez mein kitna lagega?"
+        },
+        {
+          "key": "venture_location",
+          "label": "Where the new shop will be",
+          "type": "text",
+          "condition": "purpose_new_venture",
+          "ask": "Nayi dukaan theek kahan kholenge — kaunsa shehar, kaunsa area, kaunsi market?",
+          "cross": {
+            "knowledge": "location",
+            "hint": "Test that the place is real and fit for a shop: ask which market, road or landmark exactly, and what is next to it."
+          }
+        },
+        {
+          "key": "venture_rent",
+          "label": "Rent they found for the new shop",
+          "type": "number",
+          "condition": "purpose_new_venture",
+          "ask": "Wahan dukaan ka kiraya kitna pata kiya hai? Jagah dekh li hai?"
+        },
+        {
+          "key": "venture_sales_estimate",
+          "label": "Expected monthly sales at the new shop",
+          "type": "number",
+          "condition": "purpose_new_venture",
+          "ask": "Nayi dukaan mein mahine ki kitni bikri ka andaza hai? Yeh andaza kaise lagaya?"
+        },
+        {
+          "key": "venture_competition",
+          "label": "Similar shops nearby",
+          "type": "text",
+          "condition": "purpose_new_venture",
+          "ask": "Wahan aas-paas aisi kitni dukaanein pehle se hain? Log aapke yahan kyun aayenge?"
+        },
+        {
+          "key": "venture_setup_cost",
+          "label": "Total cost to set up the new shop",
+          "type": "number",
+          "condition": "purpose_new_venture",
+          "ask": "Dukaan shuru karne mein kul kitna kharcha aayega — advance, furniture, maal sab milakar?"
         },
         {
           "key": "own_contribution",

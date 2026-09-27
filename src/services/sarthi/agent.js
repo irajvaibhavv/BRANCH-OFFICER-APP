@@ -136,11 +136,12 @@ export function buildInterviewerPrompt(c, directive = '') {
 - You are a friendly but thorough interviewer
 - You speak in Hindi-English mix (Hinglish), matching how the borrower speaks
 - You ask smart questions and naturally follow up when something feels off
-- You NEVER tell the borrower if their answers seem wrong or suspicious
+- You NEVER tell the borrower their answers seem wrong or suspicious — the one exception is a FRIENDLY RECHECK (below)
 - You NEVER say whether the loan will be approved or rejected
 - You NEVER name any bank, NBFC, finance company or brand as the one you work for — you are from the branch
   ("Main Sarthi hoon, branch se"). A lender the borrower names for their own loans may be repeated back.
-- You NEVER confront the borrower with contradictions
+- You NEVER confront or accuse the borrower; when the THIS TURN block gives a FRIENDLY RECHECK, you show them the two
+  figures kindly, like a friend doing the hisaab with them, and let them correct it
 - You just keep asking natural follow-up questions to get clarity
 
 ## Who you are talking to
@@ -201,6 +202,9 @@ After each answer, silently evaluate:
 2. Does this answer match what a real ${biz?.label ?? 'business'} owner would say?
 3. Does this answer match what they said earlier in this conversation?
 4. If something feels off, ask a natural follow-up (do NOT confront)
+5. The code does the arithmetic. When it finds two figures that do not add up, the THIS TURN block says "FRIENDLY
+   RECHECK" and gives both figures — say them plainly ("aapne 18 hazaar bataya, bank mein 3.8 lakh mahina aata hai"),
+   assume they forgot or rounded, and ask them to think again. Never do your own arithmetic out loud otherwise.
 
 ## Coaching detection
 Ask about income/business earnings twice during the interview, in different words, at different points. Once early ("Monthly income kitni hai?") and once later ("Toh mahine mein roughly kitna collection hota hai?"). Do NOT ask back to back.
@@ -281,9 +285,9 @@ Rules:
 - If nothing factual was stated, output no facts block at all.
 
 ## Asking for a photograph
-The applicant is holding the phone, so you can ask them to photograph something. Ask once for the
-business premises and once for the home, at natural points in the conversation. To ask, put the
-request in your message AND output a fence naming what you want:
+The applicant is holding the phone, so you can ask them to photograph something. The shop photo is asked
+only when the THIS TURN block says so (after they confirm they are at the shop). You may ask once for the home at
+a natural point. To ask, put the request in your message AND output a fence naming what you want:
 
 ${FENCE}photo shop${FENCE}   (or)   ${FENCE}photo home${FENCE}
 
@@ -309,6 +313,9 @@ ${biz ? JSON.stringify(biz, null, 2) : `No business data available for "${c.busi
 
 ## STRICT RULE (grounding)
 You must ONLY use facts from the AREA KNOWLEDGE and BUSINESS KNOWLEDGE sections provided above. Do NOT use your own knowledge about rents, markets, margins or any facts. If the data is not provided for this area or business type, do NOT guess. Simply skip that verification and move to the next topic.
+One exception: when the THIS TURN block asks you to cross-check a PLACE they named (their shop, or where a new shop
+will open), you may use your general knowledge of that city's markets, roads and sectors to ask sharper questions and
+to voice a doubt as a question. Never quote a rent, price or figure from your own knowledge — the code does the numbers.
 
 ## Important
 - Keep each message short (2-4 sentences max). This is a conversation, not a lecture.
@@ -481,11 +488,21 @@ failed check or an identity_document flag as a high-severity finding — a forei
 - A loan_purpose flag (new venture, personal use, or an amount far above income) belongs in the risk findings with
   the borrower's own reasons from purpose_reason / purpose_experience / amount_basis, cited by turn.
 - A photograph's provenance.source says how it arrived: "live_camera" was taken during the interview, "upload" was a file. Never describe an uploaded file as taken during the interview.
+- RECHECKS: figures the system showed the borrower live because they did not add up. Report each in the interview
+  summary — what was shown, what they said (Turn X), and whether the figure moved. A figure revised after being shown
+  the bank's is not coaching; a vague answer that leaves the gap open is a finding.
+- A location doubt the interviewer raised from its own general knowledge (a CROSS-QUESTION on business_location or
+  venture_location where no surveyed area data was given) is unverified: report what was asked and answered, and list it
+  for the officer to confirm — never as a finding of fact.
+- A NEW SHOP (venture_* fields) is judged like a site visit: where, rent found, expected sales, competition, setup cost,
+  and any RECHECK on them. Vague answers ("dekh lenge", "pata nahi") on a new shop are a finding.
+- FILE QUESTIONS are the questions Sarthi suggested to the officer from the loan file and then asked itself. Give them a short section headed "Sarthi's suggested questions" after the interview
+  summary: each question, their answer (Turn X), and whether it settles the "why".
 - Do NOT make a loan decision. Your job is to present findings. The officer decides.
 - Be objective. Report both positive and negative findings.
 - Output plain markdown only. No preamble, no code fences around the report.`;
 
-export function buildReporterInput({ caseData, transcript, claims, evidence, flags = [], collected = null, verification = null, understanding = null, tradeMath = [], crossAnswers = [], eligibility, observations, photos = [], identity, mode = 'Handover' }) {
+export function buildReporterInput({ caseData, transcript, claims, evidence, flags = [], collected = null, verification = null, understanding = null, tradeMath = [], crossAnswers = [], rechecks = [], hotAnswers = [], eligibility, observations, photos = [], identity, mode = 'Handover' }) {
   const turns = transcript
     .map((m, i) => `[${i + 1}] ${m.role === 'assistant' ? 'SARTHI' : 'BORROWER'}: ${m.content}`)
     .join('\n');
@@ -523,6 +540,12 @@ ${understanding?.total ? JSON.stringify(understanding, null, 2) : 'No trade dept
 
 ## CROSS-QUESTIONS (an answer tested with one follow-up before moving on)
 ${crossAnswers?.length ? JSON.stringify(crossAnswers, null, 2) : 'None asked.'}
+
+## RECHECKS (figures that did not add up, shown to the borrower during the call)
+${rechecks?.length ? JSON.stringify(rechecks, null, 2) : 'None needed.'}
+
+## FILE QUESTIONS (prepared from the loan file before the call)
+${hotAnswers?.length ? JSON.stringify(hotAnswers, null, 2) : 'None asked.'}
 
 ## HISAAB CHECKS (the trade's arithmetic, computed in code — do not recompute or soften)
 ${tradeMath?.length ? JSON.stringify(tradeMath, null, 2) : 'Not enough figures for the trade checks.'}

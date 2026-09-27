@@ -206,8 +206,14 @@ function depthLines(understanding, tradeMath) {
   return lines.join('\n');
 }
 
-export function buildFallbackReport({ caseData, transcript, evidence, flags, eligibility, observations, photos = [], identity, cameraOn, understanding = null, tradeMath = [], mode = 'Handover' }) {
+export function buildFallbackReport({ caseData, transcript, evidence, flags, eligibility, observations, photos = [], identity, cameraOn, understanding = null, tradeMath = [], rechecks = [], hotAnswers = [], mode = 'Handover' }) {
   const c = caseData;
+  const rechecked = rechecks.length
+    ? `\n\n**Figures rechecked during the call**\n${rechecks.map((r) => `- ${r.detail}. Shown both figures, they said: "${r.answer}"${r.changed ? ` — revised from ${r.before} to ${r.after}` : ' — figure unchanged'} (Turn ${r.turn})`).join('\n')}`
+    : '';
+  const fileQs = hotAnswers.length
+    ? `\n\n**Sarthi's suggested questions (prepared from the file)**\n${hotAnswers.map((h) => `- ${h.q} — "${h.answer}" (Turn ${h.turn}). Why asked: ${h.why}`).join('\n')}`
+    : '';
   const pattern = c.riskPatternMatch ? lookupRiskPattern(c.riskPatternMatch.patternId) : null;
   const biz = lookupBusiness(c.businessKey);
   const area = lookupLocation(c.areaKey || c.area);
@@ -263,7 +269,7 @@ ${observations?.length
       : '- Video analysis: No notable observations.'}
 
 ### 2. INTERVIEW SUMMARY
-${summary}
+${summary}${rechecked}${fileQs}
 
 ### 3. CLAIM VERIFICATION
 

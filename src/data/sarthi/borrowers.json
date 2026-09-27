@@ -252,6 +252,17 @@
       "creditsAre": "turnover"
     },
     "riskPatternMatch": null,
+    "quickPd": [
+      { "key": "pan_confirm", "label": "PAN is his own", "ask": "Aapka PAN card aapke hi naam pe hai na? Uspe naam kaise likha hai?", "why": "PAN 5th letter does not match the surname initial" },
+      { "field": "business_location", "ask": "Aapki dukaan Izzatnagar mein theek kis jagah pe hai?" },
+      { "key": "area_nearby", "label": "Nearest thana or station", "ask": "Dukaan ke sabse paas kaunsa thana ya railway station padta hai?", "why": "A real resident answers instantly", "scores": "area_knowledge_score" },
+      { "field": "business_age", "ask": "Wahan dukaan kitne saal se chala rahe hain?" },
+      { "field": "customers_per_day", "ask": "Roz lagbhag kitne grahak aate hain?" },
+      { "field": "monthly_sales", "ask": "Mahine ki kul bikri kitni ho jaati hai?" },
+      { "key": "margin_per_100", "label": "What is left on 100 rupees of sales", "ask": "Sau rupaye ka maal bechte hain, toh usme aapko kitna bachta hai?", "why": "Kirana nets 8-15 on 100; tests the income claim" },
+      { "field": "monthly_income", "ask": "Saara kharcha nikaal ke, mahine mein haath mein kitna bachta hai?" },
+      { "field": "existing_emi", "ask": "Abhi kaunse loan chal rahe hain, aur mahine ki kul kisht kitni jaati hai?" }
+    ],
     "hi": {
       "name": "राकेश कुशवाहा",
       "firstName": "राकेश",

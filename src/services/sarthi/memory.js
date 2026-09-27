@@ -18,7 +18,7 @@ export const KEY_GUIDE = EXTRACTABLE_KEYS
   .map((k) => (FIELD_DEFS[k]?.options ? `${k} (${FIELD_DEFS[k].options.join('|')})` : k))
   .join(', ');
 
-export function createEmptyMemory(caseData) {
+export function createEmptyMemory(caseData, { hot = [] } = {}) {
   const collected = {};
   FIELD_KEYS.forEach((k) => { collected[k] = null; });
   SCORE_KEYS.forEach((k) => { collected[k] = null; });
@@ -35,6 +35,13 @@ export function createEmptyMemory(caseData) {
     crossAsked: [],
     crossAnswers: [],
     askCount: {}, // times the controller has asked each field — see MAX_ASKS
+    recheckQueue: [], // figures that disagree, to be shown to them and asked again — see recheck.js
+    recheckAsked: [],
+    rechecks: [],
+    hot, // questions prepared from the file before the call — see prep.js
+    hotAsked: [],
+    hotAnswers: [],
+    shopPhotoAsked: false,
     transcript: [],
     currentSection: 'greeting',
     sectionStartTurn: { greeting: 0 },
@@ -105,6 +112,10 @@ export function acceptedFacts(memory, facts = {}, action = null) {
 // given when asked about other earners, once became the applicant's income and the real figure was then refused.
 const ASKED_ONLY = new Set(['monthly_income', 'monthly_sales']);
 
+export function recordHotAnswer(memory, hot, text, turn) {
+  return { ...memory, hotAnswers: [...(memory.hotAnswers ?? []), { id: hot.id, q: hot.q, why: hot.why, answer: text, turn }] };
+}
+
 export function recordCrossAnswer(memory, key, question, text, turn) {
   return { ...memory, crossAnswers: [...(memory.crossAnswers ?? []), { field: key, value: memory.collected[key], asked: question, answer: text, turn }] };
 }
@@ -163,9 +174,17 @@ function conditionMet(field, memory) {
 export const MAX_ASKS = 2;
 export const gaveUp = (memory, key) => (memory.askCount?.[key] ?? 0) >= MAX_ASKS;
 
+// Standard fields a question prepared from the file asks instead (prep.js `covers`). Skipped only while that question
+// is still to come: if its answer did not give the fact after all (income, say), the standard question is asked.
+export const coveredByHot = (memory) => {
+  const asked = new Set(memory.hotAsked ?? []);
+  return new Set((memory.hot ?? []).filter((h) => !asked.has(h.id)).flatMap((h) => h.covers ?? []));
+};
+
 export function getMissingFields(memory, section) {
   if (!section?.fields) return [];
-  return section.fields.filter((f) => memory.collected[f.key] == null && !gaveUp(memory, f.key) && conditionMet(f, memory));
+  const covered = coveredByHot(memory);
+  return section.fields.filter((f) => memory.collected[f.key] == null && !covered.has(f.key) && !gaveUp(memory, f.key) && conditionMet(f, memory));
 }
 
 // Document numbers are typed, not spoken — speech recognition mangles them.

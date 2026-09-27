@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiArrowRight } from 'react-icons/fi';
+import { FiArrowRight, FiCpu, FiRefreshCw, FiUser } from 'react-icons/fi';
+import BottomSheet from '../../components/ui/BottomSheet';
 import Page from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import EmptyState from '../../components/ui/EmptyState';
@@ -8,12 +10,32 @@ import { formatINR } from '../../utils/formatters';
 import { getCase, lookupRiskPattern, bankIncome } from '../../services/sarthi/knowledge';
 import { computeEligibility } from '../../services/sarthi/verifier';
 import { validatePan, maskPan } from '../../services/sarthi/idChecks';
+import { loadHot, prepareHotQuestions } from '../../services/sarthi/prep';
 import styles from './SarthiBrief.module.css';
 
 export default function SarthiBrief() {
   const { id } = useParams();
   const navigate = useNavigate();
   const c = getCase(id);
+  const [hot, setHot] = useState(() => loadHot(id));
+  const [preparing, setPreparing] = useState(false);
+  const [choose, setChoose] = useState(false);
+  const isNew = !!c?.isNew;
+
+  // Drafted once per case when the brief opens, so they are ready before the officer presses start.
+  const prepare = (fresh = false) => {
+    const subject = getCase(id);
+    if (!subject || subject.isNew) return () => {};
+    let live = true;
+    setPreparing(true);
+    prepareHotQuestions(subject, { fresh }).then((r) => { if (live) { setHot(r); setPreparing(false); } });
+    return () => { live = false; };
+  };
+  useEffect(() => {
+    if (hot?.questions?.length || isNew) return undefined;
+    return prepare();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   if (!c) {
     return (
@@ -157,15 +179,65 @@ export default function SarthiBrief() {
         </ul>
       </section>
 
+      {/* The file's own hot questions, drafted by Sarthi before the call */}
+      {!isNew && (
+        <section>
+          <h2 className={styles.head}>
+            <span>Sarthi suggests you ask{hot?.questions?.length ? ` · ${hot.questions.length}` : ''}</span>
+            <button className={styles.redo} onClick={() => prepare(true)} disabled={preparing} aria-label="Prepare the questions again">
+              <FiRefreshCw size={12} /> {preparing ? 'Preparing…' : 'Redo'}
+            </button>
+          </h2>
+          {!hot?.questions?.length
+            ? <p className={styles.hotWait}>Sarthi is reading the file and preparing questions for you…</p>
+            : (
+              <ol className={styles.hot}>
+                {hot.questions.map((h) => (
+                  <li key={h.id}>
+                    <span className={styles.hotQ}>{h.q}</span>
+                    {h.why && <span className={styles.hotWhy}>{h.why}</span>}
+                  </li>
+                ))}
+              </ol>
+            )}
+          <p className={styles.hotWait}>
+            {hot?.source === 'file'
+              ? 'Sarthi could not reach the AI, so these come straight from the figures in the file.'
+              : 'Sarthi read the file and prepared these to help your PD. If you hand the interview to Sarthi, it asks them itself.'}
+          </p>
+        </section>
+      )}
+
       <div className={styles.handover}>
-        <p className={styles.handoverNote}>
-          Once you start, the phone belongs to {c.name.split(' ')[0]}. Nothing else in the app is reachable
-          until the interview ends.
-        </p>
-        <motion.button className={styles.start} whileTap={{ scale: 0.98 }} onClick={() => navigate(`/sarthi/interview/${c.id}`)}>
+        <motion.button className={styles.start} whileTap={{ scale: 0.98 }} onClick={() => (isNew ? navigate(`/sarthi/interview/${c.id}`) : setChoose(true))}>
           Start the interview <FiArrowRight size={18} />
         </motion.button>
       </div>
+
+      <BottomSheet open={choose} onClose={() => setChoose(false)} title="Who will take this PD?">
+        <div className={styles.choices}>
+          <button className={styles.choice} onClick={() => navigate(`/sarthi/interview/${c.id}`)}>
+            <FiCpu size={20} />
+            <span>
+              <b>Sarthi AI</b>
+              <small>
+                {c.quickPd
+                  ? <>Hand the phone to {c.name.split(' ')[0]}. Sarthi runs a short {c.quickPd.length + 1}-question PD — identity, location, business and income — and checks every figure live.</>
+                  : <>Hand the phone to {c.name.split(' ')[0]}. Sarthi runs the full PD and also asks the
+                    {hot?.questions?.length ? ` ${hot.questions.length}` : ''} questions it suggested above.</>}
+                {' '}Nothing else in the app is reachable until it ends.
+              </small>
+            </span>
+          </button>
+          <button className={styles.choice} onClick={() => navigate(`/sarthi/officer/${c.id}`)}>
+            <FiUser size={20} />
+            <span>
+              <b>Branch Officer (you)</b>
+              <small>Take it yourself, with Sarthi&apos;s suggested questions on screen to tick off and note answers against.</small>
+            </span>
+          </button>
+        </div>
+      </BottomSheet>
     </Page>
   );
 }

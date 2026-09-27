@@ -54,8 +54,9 @@ function sectionComplete(memory, section) {
 
 // The interview ends when the schema is satisfied, not when the model thinks it is done.
 // A branch officer tests an answer before moving on; this many per interview keeps it a conversation,
-// and "low" priority ones (residence, vintage, staff, rents) may take only one, so location, ownership, sales, income and loans always get theirs.
-const MAX_CROSS = 6;
+// and "low" priority ones (residence, vintage, staff, rents) may take only one, so location, ownership, sales, income,
+// loans and the loan's end use always get theirs.
+const MAX_CROSS = 7;
 const MAX_LOW_CROSS = 1;
 
 export function getNextAction(memory, caseData) {
@@ -202,6 +203,8 @@ export function getHyperLocalInstruction(memory, caseData) {
   };
 }
 
+const DENIAL = /^\s*(no|none|false|nahi|nahin|nhi|na|nope|koi nahi|kahin nahi|kuch nahi|never)\b/i;
+
 // Compares new facts with the brief. Pass memory as it was BEFORE this turn's facts were merged.
 export function checkContradictions(memory, facts, caseData) {
   const flags = [];
@@ -285,6 +288,17 @@ export function checkContradictions(memory, facts, caseData) {
         turn: memory.turnCount,
       });
     }
+  }
+
+  // Loan shopping: denies other applications while the bureau shows fresh enquiries. Walk-ins keep the answer for a later pull.
+  const enquiries = brief.bureau?.enquiries6m;
+  if (facts.recent_loan_applications != null && enquiries >= 2 && DENIAL.test(String(facts.recent_loan_applications))) {
+    flags.push({
+      type: 'contradiction', field: 'recent_loan_applications', severity: enquiries >= 4 ? 'high' : 'medium',
+      declared: facts.recent_loan_applications, known: enquiries,
+      detail: `Says no loan was applied for elsewhere, but the bureau shows ${enquiries} enquiries in the last 6 months`,
+      turn: memory.turnCount,
+    });
   }
 
   // Coaching tell: the same figure, asked differently, comes back different.

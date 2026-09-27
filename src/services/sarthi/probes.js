@@ -1,6 +1,7 @@
 // Where the interview must dig instead of moving on: trade insider questions and loan-purpose signals.
-import { lookupBusiness } from './knowledge';
-import { toNumber } from './verifier';
+import { lookupBusiness, bankIncome } from './knowledge';
+import { toNumber, pickProduct } from './verifier';
+import { emi, PRODUCT_RATES } from '../../utils/loanCalc';
 import { readNumbers } from './hindiNumbers';
 
 // "kholna/shuru/start" or "naya kaam" — a new venture, not more stock for the shop they already run.
@@ -95,12 +96,31 @@ function percentOf(text) {
 export function checkTradeMath(memory) {
   const pack = tradeFor(memory);
   const h = pack?.hisaab;
-  if (!h) return { results: [], flags: [] };
   const c = memory.collected;
   const sales = toNumber(c.monthly_sales);
   const results = [];
-  const add = (check, pass, detail) => results.push({ check, pass, detail });
+  const add = (check, pass, detail, severity) => results.push({ check, pass, detail, severity });
   const answerOf = (key) => (memory.tradeAnswers ?? []).filter((a) => a.key === key || a.key === `${key}:followup`).map((a) => a.answer).join(' ');
+
+  worstMonth(memory, sales, add);
+  if (!h) return { results, flags: toFlags(results) };
+
+  // Profit they say they keep, as a share of what they say they sell, against the trade's researched net margin.
+  const income = toNumber(c.monthly_income);
+  if (h.netMarginMaxPct && income && sales) {
+    const pct = (income / sales) * 100;
+    add('net_margin', pct <= h.netMarginMaxPct, `Keeps ${inr(income)} a month from ${inr(sales)} of sales — ${Math.round(pct)}% net; for ${pack.label} it is usually ${h.netMarginExpect}, and above ${h.netMarginMaxPct}% needs checking.`);
+  }
+
+  // A chai stall's cups must be made from the milk it buys.
+  const cups = h.cupsPerLitre ? readNumbers(answerOf('cups_per_day')).map((x) => x.value).find((v) => v > 0 && v < 5000) : null;
+  const chaiMilk = cups ? milkPerDay(answerOf('milk_per_day')) : null;
+  if (cups && chaiMilk) {
+    const litres = chaiMilk.unit === 'litre' ? chaiMilk.n : chaiMilk.n / 2;
+    const perLitre = cups / litres;
+    const pass = perLitre >= h.cupsPerLitre.min && perLitre <= h.cupsPerLitre.max;
+    add('cups_vs_milk', pass, `${cups} cups a day from about ${litres} litres of milk is ${Math.round(perLitre)} cups a litre; expect ${h.cupsPerLitre.expect}.`);
+  }
 
   const purchase = toNumber(c.monthly_purchase);
   if (h.purchaseToSales && purchase && sales) {
@@ -142,10 +162,36 @@ export function checkTradeMath(memory) {
     add(`range_${range.probe}`, quoted >= range.min && quoted <= range.max, `Quoted ${inr(quoted)} for ${range.what}; the market is about ${range.expect}.`);
   }
 
-  const flags = results.filter((r) => !r.pass).map((r) => ({
-    type: 'trade_math', field: `math_${r.check}`, severity: 'medium', detail: r.detail,
+  return { results, flags: toFlags(results) };
+}
+
+function toFlags(results) {
+  return results.filter((r) => !r.pass).map((r) => ({
+    type: 'trade_math', field: `math_${r.check}`, severity: r.severity ?? 'medium', detail: r.detail,
   }));
-  return { results, flags };
+}
+
+// The EMI has to be paid in the weakest month too. Cap: all EMIs within 60% of that month's income (profit/DSCR method).
+const WORST_MONTH_EMI_SHARE = 0.6;
+
+function worstMonth(memory, sales, add) {
+  const c = memory.collected;
+  const caseData = memory.caseData ?? {};
+  const worst = toNumber(c.worst_month_sales);
+  const declared = toNumber(c.monthly_income);
+  const bank = bankIncome(caseData)?.income ?? null;
+  const income = declared != null && bank != null ? Math.min(declared, bank) : declared ?? bank;
+  const amount = toNumber(c.loan_amount) ?? caseData.loanAmountRequested;
+  if (worst == null || !sales || !income || !amount || worst > sales) return;
+
+  const { rate, maxTenure } = PRODUCT_RATES[pickProduct(c.loan_purpose || caseData.loanPurpose)];
+  const newEmi = emi(amount, rate, maxTenure);
+  const existing = toNumber(c.existing_emi) ?? caseData.brief?.existingEMIs ?? 0;
+  const lean = income * (worst / sales);
+  const total = newEmi + existing;
+  add('worst_month', total <= lean * WORST_MONTH_EMI_SHARE,
+    `Weakest month sells ${inr(worst)} against a usual ${inr(sales)}, so income drops to about ${inr(lean)}. The ${inr(amount)} loan's kisht (about ${inr(newEmi)} at ${rate}% over ${maxTenure} months) plus ${inr(existing)} running is ${inr(total)} — ${Math.round((total / lean) * 100)}% of that month's income; up to ${WORST_MONTH_EMI_SHARE * 100}% is serviceable.`,
+    total > lean ? 'high' : 'medium');
 }
 
 export function purposeSignals(collected, caseData) {

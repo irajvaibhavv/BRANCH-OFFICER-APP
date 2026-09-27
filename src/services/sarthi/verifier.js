@@ -245,6 +245,8 @@ export function pickProduct(loanPurpose = '') {
   return 'Business Loan';
 }
 
+const TURNOVER_CAP = 0.15;
+
 // Income from bank credits, EMIs from the bureau — the AI never computes these.
 export function computeEligibility(caseData, assessed = null) {
   const { brief } = caseData;
@@ -279,7 +281,11 @@ export function computeEligibility(caseData, assessed = null) {
     };
   }
   const capacity = Math.max(0, assessedIncome * FOIR - existingEmi);
-  const eligible = Math.min(maxAmt, Math.round(maxLoan(assessedIncome, existingEmi, rate, maxTenure)));
+  // Turnover method: an unsecured loan is at most ~15% of a year's turnover, whatever the EMI room says.
+  const turnover = bank?.marginPct ? bank.credits * 12 : null;
+  const turnoverCap = turnover && product !== 'Loan Against Property' ? Math.round(turnover * TURNOVER_CAP) : null;
+  const byEmi = Math.min(maxAmt, Math.round(maxLoan(assessedIncome, existingEmi, rate, maxTenure)));
+  const eligible = turnoverCap != null ? Math.min(byEmi, turnoverCap) : byEmi;
   const requested = caseData.loanAmountRequested;
   const gap = Math.max(0, requested - eligible);
 
@@ -300,10 +306,12 @@ export function computeEligibility(caseData, assessed = null) {
     rate,
     tenureMonths: maxTenure,
     maxEligible: eligible,
+    turnoverCap,
     emiOnEligible: Math.round(emi(eligible, rate, maxTenure)),
     requested,
     emiOnRequested: Math.round(emi(requested, rate, maxTenure)),
     gap,
-    formula: `${rebuilt ? 'Income rebuilt from the interview, not from a statement. ' : ''}EMI capacity = ${fmt(assessedIncome)} × ${FOIR * 100}% − ${fmt(existingEmi)} = ${fmt(Math.round(capacity))}/month at ${rate}% for ${maxTenure} months`,
+    formula: `${rebuilt ? 'Income rebuilt from the interview, not from a statement. ' : ''}EMI capacity = ${fmt(assessedIncome)} × ${FOIR * 100}% − ${fmt(existingEmi)} = ${fmt(Math.round(capacity))}/month at ${rate}% for ${maxTenure} months`
+      + (turnoverCap != null && turnoverCap < byEmi ? `; capped at ${TURNOVER_CAP * 100}% of yearly bank turnover (${fmt(turnover)}) = ${fmt(turnoverCap)} for an unsecured loan` : ''),
   };
 }

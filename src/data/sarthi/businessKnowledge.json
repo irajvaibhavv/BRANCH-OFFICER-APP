@@ -119,7 +119,9 @@
       "udhaarPctOfSales": { "max": 50 },
       "milkPricePerPacket": 30,
       "milkPricePerLitre": 60,
-      "milkMaxPctOfSales": 60
+      "milkMaxPctOfSales": 60,
+      "netMarginMaxPct": 15,
+      "netMarginExpect": "4-12% of sales after rent, staff and wastage"
     }
   },
 
@@ -166,7 +168,53 @@
         "flag": "Claims no seasonal variation or extreme numbers",
         "qHi": "सीज़न में, जैसे दिवाली या ईद। तब मंथली सेल, कितना बढ़ जाता है?"
       }
-    ]
+    ],
+    "depth": [
+      {
+        "key": "sourcing",
+        "ask": "Maal kahan se laate hain — Surat, Delhi ya yahin ke wholesale se? Kitne din mein jaate hain?",
+        "qHi": "माल कहाँ से लाते हैं — सूरत, दिल्ली, या यहीं के होलसेल से? कितने दिन में जाते हैं?",
+        "expect": "Names the source market or wholesaler and how often they buy.",
+        "redFlag": "Cannot name where the stock comes from.",
+        "onVague": { "ask": "Pichhli baar maal kab aur kahan se laaye the?", "qHi": "पिछली बार माल कब और कहाँ से लाए थे?" }
+      },
+      {
+        "key": "markup",
+        "ask": "Ek piece pe aam taur par kitna bachta hai — jaise ek kurta kitne mein aata hai aur kitne mein bikta hai?",
+        "qHi": "एक पीस पे आम तौर पर कितना बचता है — जैसे एक कुर्ता कितने में आता है, और कितने में बिकता है?",
+        "expect": "A 40-100% markup on cost is common.",
+        "redFlag": "Cannot give a buying and a selling price for a single item.",
+        "onVague": {
+          "ask": "Aaj jo sabse zyada bika, woh kitne ka aaya tha aur kitne mein becha?",
+          "qHi": "आज जो सबसे ज़्यादा बिका, वो कितने का आया था, और कितने में बेचा?"
+        }
+      },
+      {
+        "key": "season_gap",
+        "ask": "Shaadi aur Diwali ke season mein, aur khaali mahino mein, bikri mein kitna farak hota hai?",
+        "qHi": "शादी और दिवाली के सीज़न में, और खाली महीनों में, बिक्री में कितना फ़र्क होता है?",
+        "expect": "Diwali and weddings can bring 3-4 times the sales of a quiet month.",
+        "redFlag": "Claims sales are flat all year.",
+        "redFlagMatch": "(koi farak nahi|koi fark nahi|sab barabar|ek jaisa|same rehta)",
+        "onRedFlag": {
+          "ask": "Pichhle saal Diwali ke mahine mein kitni bikri hui thi?",
+          "qHi": "पिछले साल दिवाली के महीने में कितनी बिक्री हुई थी?"
+        },
+        "onVague": {
+          "ask": "Pichhle saal Diwali ke mahine mein kitni bikri hui thi?",
+          "qHi": "पिछले साल दिवाली के महीने में कितनी बिक्री हुई थी?"
+        }
+      },
+      {
+        "key": "wedding_credit",
+        "ask": "Shaadi ke bade order pe udhaar dete hain? Abhi aisa kitna baaki hai?",
+        "qHi": "शादी के बड़े ऑर्डर पे उधार देते हैं? अभी ऐसा कितना बाकी है?",
+        "expect": "Wedding orders often go on credit; the owner knows what is outstanding.",
+        "redFlag": "Does not know how much is outstanding.",
+        "onVague": { "ask": "Sabse bada baaki udhaar kiska hai, aur kitna?", "qHi": "सबसे बड़ा बाकी उधार किसका है, और कितना?" }
+      }
+    ],
+    "hisaab": { "fields": ["stock_value"] }
   },
 
   "it_freelancer": {
@@ -268,8 +316,8 @@
         "key": "margin_mix",
         "ask": "Naye phone, cover-charger jaisi accessories, aur repair — inmein sabse zyada kismein bachta hai?",
         "qHi": "नए फ़ोन, कवर-चार्जर जैसी एक्सेसरीज़, और रिपेयर — इनमें सबसे ज़्यादा किसमें बचता है?",
-        "expect": "New handsets earn thin margins that keep shrinking; accessories (covers, chargers, tempered glass, power banks) earn 30-40%+; repair labour is mostly margin. A real owner names accessories or repair, never new phones.",
-        "redFlag": "Says new phones give the most margin, or cannot rank the three.",
+        "expect": "New smartphones earn only 3-10% (distributor discount often 3-4%, about Rs 500-2,000 a phone); accessories (covers, chargers, earphones, tempered glass) 50-80%; repair 30-50% gross. A real owner names accessories or repair, never new phones.",
+        "redFlag": "Says new phones give the most margin, claims 20-25% on a new phone, or cannot rank the three.",
         "redFlagMatch": "(naye phone|new phone|phone mein|mobile mein|handset)",
         "unlessMatch": "(cover|charger|accessor|repair|glass|tempered|guard)",
         "onRedFlag": {
@@ -621,7 +669,58 @@
     "knowledgeQuestions": [
       { "q": "Din bhar mein kitni chai ban jaati hai?", "expect": "A confident cup count", "flag": "Cannot say" },
       { "q": "Ek cylinder kitne din chalta hai?", "expect": "A specific number of days", "flag": "Does not know" }
-    ]
+    ],
+    "depth": [
+      {
+        "key": "cups_per_day",
+        "ask": "Roz lagbhag kitne cup chai bik jaati hai?",
+        "qHi": "रोज़ लगभग कितने कप चाय बिक जाती है?",
+        "expect": "Knows the daily count — cups are the revenue.",
+        "redFlag": "Cannot give a number.",
+        "onVague": { "ask": "Kal kitne cup bike the?", "qHi": "कल कितने कप बिके थे?" }
+      },
+      {
+        "key": "milk_per_day",
+        "ask": "Roz kitna doodh lagta hai?",
+        "qHi": "रोज़ कितना दूध लगता है?",
+        "expect": "Knows the daily milk in litres or packets, and it fits the cups they sell.",
+        "redFlag": "Cannot say, or the milk is far too little for the cups claimed.",
+        "onVague": { "ask": "Aaj subah kitne litre doodh aaya?", "qHi": "आज सुबह कितने लीटर दूध आया?" }
+      },
+      {
+        "key": "cost_per_cup",
+        "ask": "Ek cup chai banane mein aapka kitna kharcha aata hai?",
+        "qHi": "एक कप चाय बनाने में आपका कितना ख़र्चा आता है?",
+        "expect": "Usually Rs 4-6 a cup.",
+        "redFlag": "Cannot say, or far outside that range.",
+        "onVague": {
+          "ask": "Doodh, chai-patti aur cheeni milake ek cup mein kitna lagta hai?",
+          "qHi": "दूध, चाय-पत्ती और चीनी मिलाके एक कप में कितना लगता है?"
+        }
+      },
+      {
+        "key": "peak_hours",
+        "ask": "Sabse zyada bheed kis waqt hoti hai?",
+        "qHi": "सबसे ज़्यादा भीड़ किस वक़्त होती है?",
+        "expect": "Morning 8-10 and evening 4-7 are genuine answers.",
+        "redFlag": "Cannot say.",
+        "onVague": { "ask": "Subah zyada bikti hai ya shaam ko?", "qHi": "सुबह ज़्यादा बिकती है या शाम को?" }
+      }
+    ],
+    "hisaab": {
+      "fields": [],
+      "cupsPerLitre": { "min": 6, "max": 30, "expect": "roughly 10-20 cups for each litre of milk" },
+      "answerRanges": [
+        {
+          "probe": "cost_per_cup",
+          "min": 3,
+          "max": 8,
+          "parseMin": 1,
+          "what": "the cost of one cup",
+          "expect": "Rs 4-6 a cup"
+        }
+      ]
+    }
   },
 
   "beauty_salon": {
@@ -696,7 +795,7 @@
   "repair_shop": {
     "id": "repair_shop",
     "label": "Repair Shop (mobile / AC / appliance)",
-    "aliases": ["repair", "mechanic", "service centre", "ac repair", "appliance repair", "mobile repair"],
+    "aliases": ["repair", "service centre", "ac repair", "appliance repair", "mobile repair"],
     "typicalMarginPct": { "min": 35, "max": 60 },
     "monthlyIncomeRange": { "small": { "min": 10000, "max": 28000 }, "medium": { "min": 28000, "max": 75000 }, "large": { "min": 75000, "max": 200000 } },
     "dailyCustomers": { "min": 3, "max": 25 },
@@ -714,6 +813,151 @@
       { "q": "Ek din mein kitne repair nikal jaate hain?", "expect": "A realistic job count", "flag": "Impossible for the staff size" },
       { "q": "Parts ka kharcha alag hai ya usi mein jodte ho?", "expect": "Separates parts from labour", "flag": "Counts full bill as income" }
     ]
+  },
+
+  "garage_mechanic": {
+    "id": "garage_mechanic",
+    "label": "Garage / Vehicle Mechanic",
+    "aliases": [
+      "garage",
+      "mechanic",
+      "motor garage",
+      "car repair",
+      "bike repair",
+      "two wheeler repair",
+      "scooter repair",
+      "car workshop",
+      "bike service",
+      "auto workshop"
+    ],
+    "typicalMarginPct": { "min": 10, "max": 20 },
+    "marginNote": "Net, not gross: gross is 50-60% but technician salaries take most of it. Figures are for car workshops; no two-wheeler data was found.",
+    "monthlyIncomeRange": {
+      "small": { "min": 10000, "max": 40000 },
+      "medium": { "min": 40000, "max": 150000 },
+      "large": { "min": 150000, "max": 400000 }
+    },
+    "dailyCustomers": { "min": 3, "max": 15 },
+    "avgBillValue": { "min": 500, "max": 6000 },
+    "commonExpenses": ["technician salaries", "spare parts", "rent", "tools and equipment", "electricity"],
+    "creditPeriodDays": "Parts on 7-30 days from local dealers; insurance claims pay late",
+    "peakSeason": "Monsoon brings more repairs",
+    "rentPctOfIncome": { "min": 8, "max": 25 },
+    "redFlags": [
+      "Net profit claimed above about 25% of revenue",
+      "Cannot name the parts suppliers or the local spares market",
+      "Says parts, not labour, earn most of the money"
+    ],
+    "knowledgeQuestions": [
+      {
+        "q": "Labour se zyada kamate ho ya parts se?",
+        "expect": "Labour — it earns 70-80%, parts 20-40%",
+        "flag": "Says parts",
+        "qHi": "लेबर से ज़्यादा कमाते हो, या पार्ट्स से?"
+      },
+      {
+        "q": "Spare parts kahan se lete ho?",
+        "expect": "Names the local spares market or dealer instantly",
+        "flag": "Cannot name one",
+        "qHi": "स्पेयर पार्ट्स कहाँ से लेते हो?"
+      }
+    ],
+    "depth": [
+      {
+        "key": "labour_vs_parts",
+        "ask": "Kamai zyada kismein hoti hai — labour mein ya parts bechne mein?",
+        "qHi": "कमाई ज़्यादा किसमें होती है — लेबर में, या पार्ट्स बेचने में?",
+        "expect": "Labour earns about 70-80%, parts about 20-40% (a 50-100% markup on parts is common). A real mechanic says labour.",
+        "redFlag": "Says parts earn the most, or cannot say.",
+        "redFlagMatch": "\\b(parts?|spare|spares|saamaan|samaan)\\b",
+        "unlessMatch": "(labour|labor|mazdoori|majdoori|kaam se|service se)",
+        "onRedFlag": {
+          "ask": "Achha? Ek brake pad pe kitna bachta hai, aur use lagane ka kitna lete hain?",
+          "qHi": "अच्छा? एक ब्रेक पैड पे कितना बचता है, और उसे लगाने का कितना लेते हैं?"
+        },
+        "onVague": {
+          "ask": "Pichhli service ka bill kitna bana tha — usmein labour kitna tha?",
+          "qHi": "पिछली सर्विस का बिल कितना बना था — उसमें लेबर कितना था?"
+        }
+      },
+      {
+        "key": "vehicles_per_day",
+        "ask": "Roz kitni gaadiyan aati hain, aur sabse zyada kaunsa kaam hota hai?",
+        "qHi": "रोज़ कितनी गाड़ियाँ आती हैं, और सबसे ज़्यादा कौन सा काम होता है?",
+        "expect": "A small car garage sees 3-8 vehicles a day; the common jobs are oil change, brake pads and general service.",
+        "redFlag": "No number, or a count far beyond what the technicians they named could handle.",
+        "onVague": { "ask": "Kal kitni gaadiyan aayi thi?", "qHi": "कल कितनी गाड़ियाँ आई थीं?" }
+      },
+      {
+        "key": "oil_rate",
+        "ask": "Ek litre engine oil wholesale mein kitne ka padta hai, aur kaunsi company ka lete hain?",
+        "qHi": "एक लीटर इंजन ऑयल होलसेल में कितने का पड़ता है, और कौन सी कंपनी का लेते हैं?",
+        "expect": "A working mechanic knows the wholesale rate and the brand without thinking.",
+        "redFlag": "Cannot give a rate or a brand.",
+        "onVague": { "ask": "Aakhri baar oil ka dabba kitne ka laaye the?", "qHi": "आख़िरी बार ऑयल का डब्बा कितने का लाए थे?" }
+      },
+      {
+        "key": "parts_supplier",
+        "ask": "Spare parts kahan se lete hain — kaunsi market ya kaunsi dukaan?",
+        "qHi": "स्पेयर पार्ट्स कहाँ से लेते हैं — कौन सी मार्केट, या कौन सी दुकान?",
+        "expect": "Names the local spares market or a dealer instantly.",
+        "redFlag": "Cannot name a market or a dealer.",
+        "redFlagMatch": "(kahin se bhi|jahan mil jaaye|jahan se mil)",
+        "onRedFlag": {
+          "ask": "Pichhli baar brake pad kis dukaan se laaye the?",
+          "qHi": "पिछली बार ब्रेक पैड किस दुकान से लाए थे?"
+        },
+        "onVague": {
+          "ask": "Pichhli baar brake pad kis dukaan se laaye the?",
+          "qHi": "पिछली बार ब्रेक पैड किस दुकान से लाए थे?"
+        }
+      },
+      {
+        "key": "labour_rate",
+        "ask": "Ek ghante ke kaam ka labour kitna lete hain?",
+        "qHi": "एक घंटे के काम का लेबर कितना लेते हैं?",
+        "expect": "About Rs 200-500 an hour depending on the city.",
+        "redFlag": "Cannot say, or a rate far outside the local range.",
+        "onVague": {
+          "ask": "Ek general service mein labour ka kitna lete hain?",
+          "qHi": "एक जनरल सर्विस में लेबर का कितना लेते हैं?"
+        }
+      },
+      {
+        "key": "insurance_claims",
+        "ask": "Insurance claim wala kaam bhi karte hain? Uska paisa kitne din mein aata hai?",
+        "qHi": "इंश्योरेंस क्लेम वाला काम भी करते हैं? उसका पैसा कितने दिन में आता है?",
+        "expect": "Claim work is a big revenue source for garages that do it; the owner knows the surveyor step and how long the insurer takes to pay.",
+        "redFlag": "Claims large insurance work but cannot say how or when it pays.",
+        "onVague": {
+          "ask": "Pichhla claim wala kaam kaunsi gaadi ka tha, aur paisa kab aaya?",
+          "qHi": "पिछला क्लेम वाला काम कौन सी गाड़ी का था, और पैसा कब आया?"
+        }
+      },
+      {
+        "key": "technicians",
+        "ask": "Kitne mistri hain, aur sabse senior wale ko mahine ka kitna dete hain?",
+        "qHi": "कितने मिस्त्री हैं, और सबसे सीनियर वाले को महीने का कितना देते हैं?",
+        "expect": "Technician salaries are the main cost; the owner knows each one's pay.",
+        "redFlag": "Cannot say what the technicians are paid.",
+        "onVague": { "ask": "Pichhle mahine mistriyon ko kul kitna diya?", "qHi": "पिछले महीने मिस्त्रियों को कुल कितना दिया?" }
+      }
+    ],
+    "hisaab": {
+      "fields": [],
+      "netMarginMaxPct": 25,
+      "netMarginExpect": "10-20% of revenue after parts, rent and technician salaries",
+      "answerRanges": [
+        {
+          "probe": "labour_rate",
+          "min": 150,
+          "max": 700,
+          "parseMin": 50,
+          "what": "an hour of labour",
+          "expect": "Rs 200-500 an hour depending on the city"
+        }
+      ]
+    }
   },
 
   "gym": {
@@ -1550,7 +1794,104 @@
     "knowledgeQuestions": [
       { "q": "Abhi kitne site chal rahe hain aur ek site pe margin kitna baith jaata hai?", "expect": "Site count and a 8-20% margin", "flag": "Quotes contract value as income" },
       { "q": "Payment running bill pe milta hai? Retention kitna katta hai?", "expect": "Aware of retention, typically 5-10%", "flag": "Unaware of standard terms" }
-    ]
+    ],
+    "depth": [
+      {
+        "key": "work_orders",
+        "ask": "Abhi haath mein kitne kaam hain — kiska kaam hai, kitne ka order hai, aur kab tak khatam hoga?",
+        "qHi": "अभी हाथ में कितने काम हैं — किसका काम है, कितने का ऑर्डर है, और कब तक ख़त्म होगा?",
+        "expect": "Names specific clients with order values and completion dates, ideally with written work orders.",
+        "redFlag": "No work order in hand right now, or cannot name a client or a value.",
+        "redFlagMatch": "(abhi koi nahi|koi kaam nahi|kaam nahi hai|khaali|kuch khaas nahi|chhote.?mote)",
+        "onRedFlag": {
+          "ask": "Pichhla sabse bada kaam kaunsa tha — kiska, aur kitne ka?",
+          "qHi": "पिछला सबसे बड़ा काम कौन सा था — किसका, और कितने का?"
+        },
+        "onVague": {
+          "ask": "Sabse bada chalu kaam kiska hai, aur kitne ka order hai?",
+          "qHi": "सबसे बड़ा चालू काम किसका है, और कितने का ऑर्डर है?"
+        }
+      },
+      {
+        "key": "client_mix",
+        "ask": "Kaam zyada kiska karte hain — sarkari, builder ya ghar banwane wale log? Kaam tender se milta hai ya pehchaan se?",
+        "qHi": "काम ज़्यादा किसका करते हैं — सरकारी, बिल्डर, या घर बनवाने वाले लोग? काम टेंडर से मिलता है या पहचान से?",
+        "expect": "Work spread across several clients. Government work pays slowly; private work carries better margins (15-20%).",
+        "redFlag": "One client gives almost all the work.",
+        "redFlagMatch": "(sirf ek|ek hi (party|builder|client|seth|aadmi|company)|sab kaam (ek|usi)|saara kaam (ek|usi))",
+        "onRedFlag": {
+          "ask": "Agar woh party kaam dena band kar de, toh kaam kahan se aayega?",
+          "qHi": "अगर वो पार्टी काम देना बंद कर दे, तो काम कहाँ से आएगा?"
+        },
+        "onVague": {
+          "ask": "Pichhle saal sabse bada kaam kis party ka tha, aur kul kaam mein unka kitna hissa tha?",
+          "qHi": "पिछले साल सबसे बड़ा काम किस पार्टी का था, और कुल काम में उनका कितना हिस्सा था?"
+        }
+      },
+      {
+        "key": "main_or_sub",
+        "ask": "Kaam seedha party se lete hain, ya kisi bade thekedar ke neeche karte hain?",
+        "qHi": "काम सीधा पार्टी से लेते हैं, या किसी बड़े ठेकेदार के नीचे करते हैं?",
+        "expect": "Main contractors are paid first; a sub-contractor waits for the main contractor to be paid, and a sub of a sub waits longest.",
+        "redFlag": "A sub-contractor of a sub-contractor — the longest payment wait.",
+        "redFlagMatch": "(neeche ke neeche|uske bhi neeche|uske neeche wale|petty)",
+        "onRedFlag": {
+          "ask": "Aapke upar wale thekedar ko paisa kaun deta hai, aur aap tak kitne din mein pahunchta hai?",
+          "qHi": "आपके ऊपर वाले ठेकेदार को पैसा कौन देता है, और आप तक कितने दिन में पहुँचता है?"
+        },
+        "onVague": { "ask": "Pichhle kaam ka paisa aapko kisne diya tha?", "qHi": "पिछले काम का पैसा आपको किसने दिया था?" }
+      },
+      {
+        "key": "pending_bills",
+        "ask": "Abhi kitna payment ruka hua hai, aur sabse purana kab se ruka hai?",
+        "qHi": "अभी कितना पेमेंट रुका हुआ है, और सबसे पुराना कब से रुका है?",
+        "expect": "Knows the pending amount and its age by client. Cash stuck in bills is the biggest risk in this trade, not low profit.",
+        "redFlag": "Large bills pending for a year or more, or does not know how much is pending.",
+        "redFlagMatch": "(saal bhar|ek saal|do saal|saal se|saalon|year)",
+        "onRedFlag": {
+          "ask": "Itna purana paisa aane ki kya umeed hai — party ne kya kaha hai?",
+          "qHi": "इतना पुराना पैसा आने की क्या उम्मीद है — पार्टी ने क्या कहा है?"
+        },
+        "onVague": {
+          "ask": "Sabse zyada paisa kis party ke paas ruka hai, aur kitna?",
+          "qHi": "सबसे ज़्यादा पैसा किस पार्टी के पास रुका है, और कितना?"
+        }
+      },
+      {
+        "key": "retention",
+        "ask": "Bill mein se party kuch paisa baad ke liye rok leti hai kya? Abhi aisa kitna ruka hai?",
+        "qHi": "बिल में से पार्टी कुछ पैसा बाद के लिए रोक लेती है क्या? अभी ऐसा कितना रुका है?",
+        "expect": "Knows the retention held back on each job and when it is due. It is often paid late or not at all, and GST is paid on it before it arrives.",
+        "redFlag": "Large retention stuck, or cannot say how much is held back.",
+        "onVague": { "ask": "Pichhle kaam ka roka hua paisa mil gaya?", "qHi": "पिछले काम का रोका हुआ पैसा मिल गया?" }
+      },
+      {
+        "key": "labour_wages",
+        "ask": "Kitne mazdoor hain, hafte ki mazdoori kitni jaati hai — aur party ka paisa der se aaye toh mazdoori kaise dete hain?",
+        "qHi": "कितने मज़दूर हैं, हफ़्ते की मज़दूरी कितनी जाती है — और पार्टी का पैसा देर से आए तो मज़दूरी कैसे देते हैं?",
+        "expect": "Knows the weekly wage bill and bridges late payments with savings or supplier credit. A labour contractor adds about 10-20% over wages.",
+        "redFlag": "Pays wages by borrowing on interest while bills are pending.",
+        "redFlagMatch": "(byaaj|byaj|sood|sahukar|karza|udhaar leke|udhar leke|udhaar lekar|udhar lekar)",
+        "onRedFlag": { "ask": "Kisse lete hain, aur kitne byaaj par?", "qHi": "किससे लेते हैं, और कितने ब्याज पर?" },
+        "onVague": { "ask": "Pichhle hafte kitni mazdoori di thi?", "qHi": "पिछले हफ़्ते कितनी मज़दूरी दी थी?" }
+      },
+      {
+        "key": "past_projects",
+        "ask": "Pichhle teen kaam kaunse the, aur unka paisa time pe aaya?",
+        "qHi": "पिछले तीन काम कौन से थे, और उनका पैसा टाइम पे आया?",
+        "expect": "Names recent jobs and how each one paid.",
+        "redFlag": "Cannot name recent jobs.",
+        "onVague": {
+          "ask": "Sabse aakhri kaam kaunsa khatam kiya, aur kiska tha?",
+          "qHi": "सबसे आख़िरी काम कौन सा ख़त्म किया, और किसका था?"
+        }
+      }
+    ],
+    "hisaab": {
+      "fields": [],
+      "netMarginMaxPct": 20,
+      "netMarginExpect": "8-15% of project value (small firms 5-12%; private work up to 15-20%)"
+    }
   },
 
   "plumber_electrician": {

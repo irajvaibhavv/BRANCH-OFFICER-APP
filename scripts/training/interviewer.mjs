@@ -39,7 +39,7 @@ const ECHO = {
   monthly_rent: ['ghar ka kiraya {c}', 'घर का किराया {d}'], shop_rent: ['dukaan ka kiraya {c}', 'दुकान का किराया {d}'],
   business_age: ['{c} saal se kaam', '{d} साल से काम'], employees: ['{c} log madad karte hain', '{d} लोग मदद करते हैं'],
   customers_per_day: ['roz {c} grahak', 'रोज़ {d} ग्राहक'], avg_bill_value: ['ek grahak {c} rupaye ka', 'एक ग्राहक {d} रुपये का'],
-  monthly_sales: ['mahine ki bikri {c}', 'महीने की बिक्री {d}'], monthly_expenses: ['dukaan ka kharcha {c}', 'दुकान का खर्चा {d}'],
+  monthly_sales: ['mahine ki bikri {c}', 'महीने की बिक्री {d}'], worst_month_sales: ['halke mahine mein {c}', 'हल्के महीने में {d}'], monthly_expenses: ['dukaan ka kharcha {c}', 'दुकान का खर्चा {d}'],
   monthly_income: ['mahine mein {c} bachte hain', 'महीने में {d} बचते हैं'], household_expenses: ['ghar ka kharcha {c}', 'घर का खर्चा {d}'],
   existing_emi: ['kisht {c}', 'किश्त {d}'], loan_amount: ['{c} ki zaroorat', '{d} की ज़रूरत'], own_contribution: ['apne {c}', 'अपने {d}'],
 };
@@ -58,7 +58,7 @@ const RANGE = { age: [22, 60, 1], family_size: [2, 9, 1], monthly_rent: [2000, 2
   business_age: [1, 25, 1], employees: [0, 6, 1], customers_per_day: [20, 250, 5], avg_bill_value: [60, 600, 10],
   monthly_sales: [60000, 900000, 10000], monthly_expenses: [8000, 80000, 1000], monthly_income: [15000, 90000, 1000],
   household_expenses: [8000, 40000, 1000], existing_emi: [2000, 25000, 500], loan_amount: [100000, 1500000, 50000],
-  own_contribution: [20000, 300000, 10000] };
+  own_contribution: [20000, 300000, 10000], worst_month_sales: [40000, 400000, 10000] };
 const TEXT = {
   earning_members: [['Sirf main hi', { earning_members: 1 }], ['Main aur wife dono', { earning_members: 2 }]],
   residence_type: [['Apna hai', { residence_type: 'owned' }, ['Achha, apna ghar hai.', 'अच्छा, अपना घर है।']],
@@ -75,6 +75,7 @@ const TEXT = {
   supplier_credit: [['Pandrah din ka udhaar milta hai', { supplier_credit: '15 days' }], ['Sab nakad dena padta hai', { supplier_credit: 'none' }]],
   existing_loans: [['Ek gold loan hai', { existing_loans: 'gold loan' }], ['Koi loan nahi', { existing_loans: 'none' }]],
   informal_loans: [['Committee mein do hazaar bharta hoon', { informal_loans: 'committee 2000 mahina' }], ['Nahi, kuch nahi', { informal_loans: 'none' }]],
+  recent_loan_applications: [['Nahi, kahin nahi', { recent_loan_applications: 'none' }], ['Ek finance company mein baat ki thi', { recent_loan_applications: 'one finance company' }]],
   repayment_history: [['Kabhi nahi chhooti', { repayment_history: 'never missed' }], ['Ek baar late hui thi', { repayment_history: 'ek baar late' }]],
   savings: [['Thoda RD hai', { savings: 'RD' }], ['Kuch khaas nahi', { savings: 'none' }]],
   loan_purpose: [['Dukaan ke liye maal lena hai', { loan_purpose: 'stock' }, ['Achha, maal ke liye.', 'अच्छा, माल के लिए।']],
@@ -83,8 +84,8 @@ const TEXT = {
 };
 const ORDER = ['age', 'family_size', 'earning_members', 'residence_type', 'monthly_rent', 'business_type', 'business_age',
   'business_location', 'shop_ownership', 'shop_rent', 'employees', 'products_services', 'customers_per_day', 'avg_bill_value',
-  'monthly_sales', 'monthly_expenses', 'supplier_credit', 'monthly_income', 'household_expenses', 'existing_loans',
-  'existing_emi', 'informal_loans', 'repayment_history', 'savings', 'loan_purpose', 'loan_amount', 'own_contribution', 'repayment_plan'];
+  'monthly_sales', 'monthly_expenses', 'worst_month_sales', 'supplier_credit', 'monthly_income', 'household_expenses', 'existing_loans',
+  'existing_emi', 'recent_loan_applications', 'informal_loans', 'repayment_history', 'savings', 'loan_purpose', 'loan_amount', 'own_contribution', 'repayment_plan'];
 
 const VAGUE = ['Theek-thaak ho jaata hai', 'Chal jaata hai ji', 'Kabhi kam kabhi zyada', 'Utna exact yaad nahi', 'Bas guzara ho jaata hai'];
 // A vague money answer is broken into something easier — never answered for them.

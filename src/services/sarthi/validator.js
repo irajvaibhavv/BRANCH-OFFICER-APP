@@ -6,7 +6,7 @@ function allowedNumbers(eligibility = {}) {
     eligibility.assessedIncome, eligibility.declaredIncome, eligibility.existingEmi,
     eligibility.availableEmiCapacity, eligibility.maxEligible, eligibility.emiOnEligible,
     eligibility.requested, eligibility.emiOnRequested, eligibility.gap,
-    eligibility.rate, eligibility.tenureMonths, eligibility.foirPct,
+    eligibility.rate, eligibility.tenureMonths, eligibility.foirPct, eligibility.turnoverCap,
   ].filter((n) => typeof n === 'number');
   // Accept small rounding drift in the lakh/crore range (Agent 2 writes 1,50,000 style figures).
   return vals;

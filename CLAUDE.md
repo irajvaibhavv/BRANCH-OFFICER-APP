@@ -190,7 +190,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   Without those answers it stays `assessable: false` and the report says "not assessable" rather than
   printing a figure. A declared income alone is never enough to produce a number.
 - **Depth, not a form** (`probes.js`). A trade with a `depth[]` pack in `businessKnowledge.json` (kirana,
-  electrical shop, electrical dealer/distributor, electrical contractor so far) gets a `trade_depth` section of insider questions — margin by category, distributor
+  mobile, electrical shop / dealer / contractor, building contractor, garage, garment, chai) gets a `trade_depth` section of insider questions — margin by category, distributor
   cycle, licence class, retention — whose answers are stored verbatim in `memory.tradeAnswers` (no extraction) and
   judged in the report against each probe's `expect` / `redFlag`. Such a trade skips the single
   `business_domain` knowledge question. Loan purpose is checked in code: a different trade or "kholna/shuru" is a
@@ -205,6 +205,15 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   turn, most severe first, then marked `followedUp` — before this they were re-sent every turn. New trade =
   add a `depth[]` pack (with follow-ups) and `hisaab` limits, researched, not invented. `lookupBusiness` takes the longest word-start match — a bare
   substring once filed taxi, carpenter and welding under CA ("ca").
+  The PD research notes (2026-09-27) added packs for building contractor, garage (`garage_mechanic`, which now owns
+  the "mechanic" alias — in Hindi usage that is a vehicle), garment shop and chai stall (the last two only lightly
+  researched), plus three hisaab checks: `netMarginMaxPct` (declared take-home ÷ sales against the trade's
+  researched net margin: kirana 15, garage 25, contractor 20), `cupsPerLitre` (chai cups vs milk bought), and
+  **worst month for every applicant** — `worst_month_sales` scales income down, and all EMIs (new at the product's
+  rate and tenure + running) must stay within 60% of it (the profit/DSCR rule). `recent_loan_applications` denied while
+  `brief.bureau.enquiries6m ≥ 2` is a loan-shopping contradiction. `computeEligibility` also caps an unsecured loan at
+  15% of a year's bank turnover (`turnoverCap`; only when `creditsAre === 'turnover'`) — that cap is why Imran's
+  eligibility dropped from 12.6 to 9.9 lakh.
 - **SLM training data** (`npm run sarthi:training -- <source.jsonl>`, output in git-ignored `training/`):
   `scripts/build-training-data.mjs` bundles the app's own `EXTRACTOR_SYSTEM`, schema and number parser, so the
   data matches what inference sends. Extraction labels are checked against `hindiNumbers.js`; interviewer turns are
@@ -213,8 +222,8 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
 - **Cross-questions** (schema `cross` on a field): the first time a field is answered, `updateMemory` queues it and
   the controller asks ONE follow-up straight away — the code picks WHEN (`cross.when`), the model phrases it from
   `cross.hint` and the area data, and must ask it open (never "Blue Line wale side?" — that hands a faker the
-  answer). At most 6 per interview, only one `priority: "low"`, so location, ownership, sales, income and loans
-  always get theirs. Answers go to `memory.crossAnswers` and the report weighs them.
+  answer). At most 7 per interview, only one `priority: "low"`, so location, ownership, sales, income, loans and
+  the loan's end use (supplier, item, amount — never just "business ke liye") always get theirs. Answers go to `memory.crossAnswers` and the report weighs them.
 - **Identity**: the greeting asks the name openly (never "Aap Ramesh ji hain na?" — anyone can say haan). `stated_name`
   is compared with the file name in code (`namesMatch` in `idChecks.js`); a mismatch raises a high `identity_mismatch`
   flag and unlocks `speaker_relation` (condition `name_mismatch`). Walk-ins skip both — there is no name on file.

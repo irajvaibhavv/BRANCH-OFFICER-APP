@@ -189,6 +189,18 @@ export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN', end
   let heard = '';
   let quiet = null;
   let quietEnded = false;
+  let watchdog = null;
+  let settled = false;
+  // Chrome sometimes never fires onend after stop() (the speech service stalls), which left an answer on screen
+  // with the app still "listening" forever. Whichever comes first — onend or the watchdog — settles the turn, once.
+  const settle = () => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(quiet); clearTimeout(watchdog);
+    const text = final.trim() || (quietEnded ? heard : '');
+    if (text) onFinal?.(text);
+    onEnd?.();
+  };
   r.onresult = (e) => {
     let interim = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -200,12 +212,16 @@ export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN', end
     // The browser's own end-of-speech wait is ~2s on phones; endAfterMs closes the turn sooner.
     if (endAfterMs && heard) {
       clearTimeout(quiet);
-      quiet = setTimeout(() => { quietEnded = true; try { r.stop(); } catch { /* ignore */ } }, endAfterMs);
+      quiet = setTimeout(() => {
+        quietEnded = true;
+        try { r.stop(); } catch { /* ignore */ }
+        watchdog = setTimeout(() => { try { r.abort(); } catch { /* ignore */ } settle(); }, 1500);
+      }, endAfterMs);
     }
   };
-  r.onerror = (e) => onError?.(e.error);
+  r.onerror = (e) => { if (!settled) onError?.(e.error); };
   // The silence stop can land before the last words are marked final; keep what was on screen.
-  r.onend = () => { clearTimeout(quiet); const text = final.trim() || (quietEnded ? heard : ''); if (text) onFinal?.(text); onEnd?.(); };
+  r.onend = settle;
   try { r.start(); } catch (e) { onError?.(String(e)); }
   return () => { clearTimeout(quiet); try { r.stop(); } catch { /* ignore */ } };
 }

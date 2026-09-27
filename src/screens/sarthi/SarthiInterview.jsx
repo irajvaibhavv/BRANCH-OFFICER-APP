@@ -17,7 +17,7 @@ import { readNumbers } from '../../services/sarthi/hindiNumbers';
 import pdSchema from '../../data/sarthi/pdSchema.json';
 import { getNextAction, directiveText, checkContradictions, checkInternalConsistency, getInterviewConfig, assessIncome } from '../../services/sarthi/controller';
 import { validateReport, extractRecommendation } from '../../services/sarthi/validator';
-import { validateAadhaar, validatePan, detectForeignId, detectForeignResidence, pickIdentity, identitySummary, namesMatch, nameFromWords, relationOf, applicantComing, presenceLines } from '../../services/sarthi/idChecks';
+import { validateAadhaar, validatePan, detectForeignId, detectForeignResidence, pickIdentity, identitySummary, namesMatch, nameFromWords, relationOf, applicantComing, presenceLines, speakerIsSomeoneElse } from '../../services/sarthi/idChecks';
 import PhotoCapture from '../../components/sarthi/PhotoCapture';
 import { startFrameCapture, stopCamera, pauseCamera, resumeCamera, getObservations, resetObservations } from '../../services/sarthi/video';
 import { downscale, analysePhoto, PHOTO_ASKS } from '../../services/sarthi/photo';
@@ -305,6 +305,31 @@ export default function SarthiInterview() {
     sayFixed(lines.relation);
   };
 
+  // They say they are the applicant's relative or helper ("Rekha ka beta", "mummy bahar hai"). Read from the words, at
+  // any turn until the applicant has confirmed their own name: "Raj, Rekha Devi ka beta" shares a word with the file and
+  // passed the name check, and the call carried on with the son.
+  const stopForRelative = (text, turn) => {
+    if (isIntake || caseData.isNew || presence.current === 'done') return false;
+    const other = speakerIsSomeoneElse(text, caseData.name);
+    if (!other) return false;
+    const lines = presenceLines(caseData);
+    if (!memory.current.flags.some((f) => f.type === 'identity_mismatch')) {
+      memory.current = addFlags(memory.current, [{
+        type: 'identity_mismatch', field: 'stated_name', severity: 'high', known: caseData.name, turn,
+        detail: `Application is in the name of ${caseData.name}, but the person on the call is not the applicant: "${text}"`,
+      }]);
+    }
+    memory.current = updateMemory(memory.current, { speaker_relation: other.relation });
+    if (other.away || presence.current === 'handover') {
+      presence.current = 'done';
+      sayFixed(lines.later, { then: leaveForLater });
+    } else {
+      presence.current = 'call';
+      sayFixed(lines.call);
+    }
+    return true;
+  };
+
   const handlePresence = (text) => {
     const lines = presenceLines(caseData);
     if (presence.current === 'relation') {
@@ -343,6 +368,8 @@ export default function SarthiInterview() {
       // Scripted mode fills the same structured memory as the live agent, so the report, the
       // consistency checks and the coverage bar behave identically with or without a proxy.
       memory.current = recordTurn(memory.current, 'user', text);
+      if (presence.current === 'relation' || presence.current === 'call') { handlePresence(text); return; }
+      if (stopForRelative(text, borrowerTurn)) return;
       if (step?.collect) memory.current = updateMemory(memory.current, { [step.collect]: text, _verbatim: text });
       setCovered(completeness(memory.current));
 
@@ -373,6 +400,7 @@ export default function SarthiInterview() {
     memory.current = recordTurn(memory.current, 'user', text);
     if (stopForForeignResidence(text, borrowerTurn)) return;
     if (presence.current === 'relation' || presence.current === 'call') { handlePresence(text); return; }
+    if (stopForRelative(text, borrowerTurn)) return;
 
     try {
       // Extract first, then pick the next topic, so the controller decides on THIS turn's facts.
@@ -428,6 +456,8 @@ export default function SarthiInterview() {
         const same = namesMatch(stated, caseData.name)
           ?? (stated && /[ऀ-ॿ]/.test(stated) && caseData.hi?.firstName ? String(stated).includes(caseData.hi.firstName) : null);
         if (stated && same === false) { startPresence(stated, borrowerTurn); return; }
+        // The applicant's own name: from here "mere pati" is them talking about family, not someone else on the phone.
+        if (stated && same === true && presence.current == null) presence.current = 'done';
         if (stated && presence.current === 'handover') {
           presence.current = 'done';
           memory.current = {

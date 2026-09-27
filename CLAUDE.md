@@ -275,6 +275,9 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   "Chaliye, koi baat nahi… hum tab baat karenge", no report, back to `/sarthi`. Yes → "phone unhe de dijiye", the name is
   asked again and, if it matches, the PD carries on with the mismatch flag downgraded and annotated. Regexes and lines are
   in `idChecks.js` (`applicantComing`, `relationOf`, `presenceLines`). Built for the Rekha Devi demo, applies to every file.
+  The name alone is not enough: "Raj, Rekha Devi ka beta" shares a word with the file and passed, so `speakerIsSomeoneElse`
+  also reads the words ("X ka beta", "meri mummy", "mummy bahar hai") on every turn — in live and scripted mode — until
+  the applicant confirms their own name; "… bahar hai" closes the call at once.
 - **Identity**: the greeting asks the name openly (never "Aap Ramesh ji hain na?" — anyone can say haan). `stated_name`
   is compared with the file name in code (`namesMatch` in `idChecks.js`); a mismatch raises a high `identity_mismatch`
   flag and unlocks `speaker_relation` (condition `name_mismatch`). Walk-ins skip both — there is no name on file.

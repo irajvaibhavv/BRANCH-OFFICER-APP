@@ -238,3 +238,26 @@ export function presenceLines(c) {
     },
   };
 }
+
+const KIN = '(beta|beti|bete|son|daughter|pati|husband|patni|wife|bhai|brother|behen|bahen|sister|bahu|damaad|pota|poti|nati|devar|bhatija|bhatiji|naukar|helper|munim|employee)';
+const ELDER = '(mummy|mumy|mummi|mumma|maa|mom|mother|mata ?ji|papa|pitaji|father|dad|daddy|pati|husband|patni|wife|bhaiya|didi|chacha|chachi|dadi|nani)';
+const AWAY = '(bahar|baahar|ghar pe nahi|ghar par nahi|nahi hai|nahi hain|nhi hai|gayi|gaye|gai hai|busy|so rahi|so rahe|market|bazaar|mandir|kaam pe|outside|not here)';
+
+/**
+ * The person answering says they are the applicant's relative or helper — "Rekha Devi ka beta", "meri mummy ka loan",
+ * "mummy bahar hai". Their own name alone can still share a word with the file ("Raj, Rekha ka beta"), so this is read
+ * from the words, not the name. Only used before the applicant has confirmed their own name: after that, "mere pati"
+ * is the applicant speaking about her husband. `away` = they also said the applicant is not there.
+ */
+export function speakerIsSomeoneElse(text = '', applicantName = '') {
+  const s = String(text).toLowerCase();
+  const first = applicantName.split(' ')[0]?.toLowerCase();
+  const whose = first ? `|${first}(\\s+\\w+)?\\s+(ji\\s+)?(ka|ki|ke)` : '';
+  const ofThem = new RegExp(`\\b(unka|unki|unke|inka|inki|inke${whose})\\s+${KIN}\\b`);
+  const mine = new RegExp(`\\b(meri|mere|my)\\s+${ELDER}\\b`);
+  const elderAway = new RegExp(`\\b${ELDER}\\b.{0,25}\\b${AWAY}`);
+  const hit = ofThem.exec(s) ?? mine.exec(s) ?? elderAway.exec(s);
+  if (!hit) return null;
+  const relation = relationOf(hit[0]);
+  return { relation: relation === 'other' ? 'family' : relation, away: elderAway.test(s) };
+}

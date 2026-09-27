@@ -139,12 +139,21 @@ function pickVoice() {
 }
 synth?.addEventListener?.('voiceschanged', () => { voice = pickVoice(); });
 
+// An English voice reads Devanagari as silence — Sarthi speaks Devanagari, so it needs a Hindi voice.
+const DEVANAGARI = /[ऀ-ॿ]/;
+function hindiVoice() {
+  const vs = synth?.getVoices() ?? [];
+  return vs.find((v) => v.lang === 'hi-IN' && /google/i.test(v.name)) || vs.find((v) => v.lang?.startsWith('hi')) || null;
+}
+
 function browserSpeak(text, { rate = 1, onEnd, onStart } = {}) {
   if (!synth) { onStart?.(); onEnd?.(); return; }
   voice = voice || pickVoice();
+  const hindi = DEVANAGARI.test(text);
+  const v = hindi ? hindiVoice() : voice;
   const u = new SpeechSynthesisUtterance(clean(text));
-  if (voice) u.voice = voice;
-  u.lang = voice?.lang || 'en-IN';
+  if (v) u.voice = v;
+  u.lang = v?.lang || (hindi ? 'hi-IN' : 'en-IN');
   u.rate = rate; u.pitch = 1; u.volume = silent ? 0 : 1;
   u.onstart = () => onStart?.();
   u.onend = () => onEnd?.();

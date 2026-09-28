@@ -12,11 +12,14 @@ const MURF_VOICE = ENV.VITE_MURF_VOICE || 'en-IN-arohi';
 const MURF_URL = 'https://api.murf.ai/v1/speech/generate';
 
 const forced = ENV.VITE_TTS_ENGINE;
-// The wanted engine if its key exists, else whichever cloud engine has one — browser TTS is the last resort.
+// Only a refused key or a spent quota writes an engine off; a blip or a blocked autoplay is not the engine's fault.
+const brokenEngines = new Set();
+const usable = (e) => (e === 'murf' ? !!MURF_KEY : !!ELEVEN_KEY) && !brokenEngines.has(e);
+// The wanted engine if it is usable, else the other cloud engine — browser TTS is the last resort.
 const pickEngine = (want) => (want === 'browser' ? 'browser'
-  : want === 'murf' && MURF_KEY ? 'murf'
-  : ELEVEN_KEY ? 'elevenlabs'
-  : MURF_KEY ? 'murf'
+  : want === 'murf' && usable('murf') ? 'murf'
+  : usable('elevenlabs') ? 'elevenlabs'
+  : usable('murf') ? 'murf'
   : 'browser');
 const engine = pickEngine(forced);
 const CLOUD = engine !== 'browser';
@@ -27,9 +30,12 @@ export const ttsEngine = CLOUD ? engine : synth ? 'browser' : 'none';
 
 // Per-call voice profile; callers passing nothing get the .env default.
 // voiceId may be a map per engine, since a fallback engine cannot use the other's voice ids.
-export function voiceProfile({ engine: want, voiceId, style, speed, model, lang } = {}) {
+export function voiceProfile(voice = {}) {
+  const { engine: want, voiceId, style, speed, model, lang, gender } = voice;
   const engine = pickEngine(want ?? forced);
   return {
+    voice, // kept so a failed line can be re-profiled for the next engine
+    gender: gender ?? null,
     engine,
     voiceId: (voiceId && typeof voiceId === 'object' ? voiceId[engine] : voiceId) ?? null,
     style: style ?? null,
@@ -44,7 +50,12 @@ const clean = (text) => text.replace(/₹/g, 'rupees ').replace(/[*_`]/g, '');
 
 /* ---------- Cloud TTS: fetch → cache → play, one line at a time ---------- */
 const cache = new Map();          // profile+text → Promise<audio url>
-const brokenEngines = new Set();  // an engine that failed (bad key, quota, offline) is skipped for the session
+
+function ttsError(name, status, body) {
+  const e = new Error(`${name} ${status} ${String(body).slice(0, 160)}`);
+  e.permanent = status === 401 || status === 402 || status === 403 || /quota|credits|limit_reached|payment/i.test(body);
+  return e;
+}
 
 function fetchMurf(text, p) {
   const body = { text, voiceId: p.voiceId || MURF_VOICE, rate: Math.round((p.speed - 1) * 100), format: 'MP3', sampleRate: 24000, modelVersion: 'GEN2', channelType: 'MONO' };
@@ -55,7 +66,7 @@ function fetchMurf(text, p) {
     headers: { 'api-key': MURF_KEY, 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify(body),
   })
-    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`Murf ${r.status}`))))
+    .then((r) => (r.ok ? r.json() : r.text().then((t) => Promise.reject(ttsError('Murf', r.status, t)))))
     .then((j) => j.audioFile || Promise.reject(new Error('Murf: no audioFile')));
 }
 
@@ -70,7 +81,7 @@ function fetchEleven(text, p) {
       voice_settings: { stability: 0.6, similarity_boost: 0.8, style: 0.1, speed: p.speed },
     }),
   })
-    .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`ElevenLabs ${r.status}`))))
+    .then((r) => (r.ok ? r.blob() : r.text().then((t) => Promise.reject(ttsError('ElevenLabs', r.status, t)))))
     .then((b) => URL.createObjectURL(b));
 }
 
@@ -122,11 +133,17 @@ async function drain() {
     audio.onplaying = () => { item.onStart?.(); item.onStart = null; };
     await audio.play();
   } catch (e) {
-    console.warn(`[voice] ${item.profile.engine} unavailable, falling back to browser TTS`, e);
-    brokenEngines.add(item.profile.engine); // only this engine is written off, not the other one
     playing = false; current = null;
-    queue.length = 0;
-    browserSpeak(item.text, item);
+    if (myGen !== gen) return;
+    const failed = item.profile.engine;
+    if (e?.permanent) brokenEngines.add(failed);
+    // This line only: the other cloud engine if it has a key (Sarthi's Murf voice is the same male Hindi speaker), else the browser.
+    const next = item.src ? item.profile : voiceProfile({ ...item.profile.voice, engine: failed === 'murf' ? 'elevenlabs' : 'murf' });
+    console.warn(`[voice] ${failed} failed (${e?.name === 'NotAllowedError' ? 'autoplay blocked' : e?.message})${e?.permanent ? ' — off for this session' : ''}; this line → ${next.engine === failed || item.src ? 'browser' : next.engine}`);
+    if (!item.src && next.engine !== 'browser' && next.engine !== failed) { queue.unshift({ ...item, profile: next }); drain(); return; }
+    // Hold the queue until the browser has finished, or the next cloud line would talk over it.
+    playing = true;
+    browserSpeak(item.text, { ...item, onEnd: () => { playing = false; item.onEnd?.(); if (myGen === gen) drain(); } });
   }
 }
 
@@ -141,16 +158,20 @@ synth?.addEventListener?.('voiceschanged', () => { voice = pickVoice(); });
 
 // An English voice reads Devanagari as silence — Sarthi speaks Devanagari, so it needs a Hindi voice.
 const DEVANAGARI = /[ऀ-ॿ]/;
-function hindiVoice() {
-  const vs = synth?.getVoices() ?? [];
-  return vs.find((v) => v.lang === 'hi-IN' && /google/i.test(v.name)) || vs.find((v) => v.lang?.startsWith('hi')) || null;
+// Hemant/Madhur (Windows, Edge) and Google's hid/hie Android voices are male; Google हिन्दी, Kalpana, Swara are female.
+const MALE = /hemant|madhur|prabhat|ravi|arjun|male|-hid-|-hie-/i;
+function hindiVoice(gender) {
+  const vs = (synth?.getVoices() ?? []).filter((v) => v.lang?.replace('_', '-').toLowerCase().startsWith('hi'));
+  if (gender === 'male') { const m = vs.find((v) => MALE.test(v.name) || MALE.test(v.voiceURI ?? '')); if (m) return m; }
+  return vs.find((v) => /google/i.test(v.name)) || vs[0] || null;
 }
 
-function browserSpeak(text, { rate = 1, onEnd, onStart } = {}) {
+function browserSpeak(text, { rate = 1, onEnd, onStart, profile } = {}) {
   if (!synth) { onStart?.(); onEnd?.(); return; }
   voice = voice || pickVoice();
-  const hindi = DEVANAGARI.test(text);
-  const v = hindi ? hindiVoice() : voice;
+  // A Hindi profile (Sarthi) keeps ONE Hindi voice for every line — picking by script switched speakers mid-call.
+  const hindi = profile?.lang === 'hi' || DEVANAGARI.test(text);
+  const v = hindi ? hindiVoice(profile?.gender) : voice;
   const u = new SpeechSynthesisUtterance(clean(text));
   if (v) u.voice = v;
   u.lang = v?.lang || (hindi ? 'hi-IN' : 'en-IN');
@@ -175,7 +196,7 @@ export function speak(text, { rate = 1, onEnd, onStart, voice, src } = {}) {
     drain();
     return;
   }
-  browserSpeak(text, { rate, onEnd, onStart });
+  browserSpeak(text, { rate, onEnd, onStart, profile });
 }
 
 export function stopSpeaking() {

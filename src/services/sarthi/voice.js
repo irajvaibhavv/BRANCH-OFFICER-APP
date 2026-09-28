@@ -14,6 +14,7 @@ export const SARTHI_VOICE = {
   speed: Number(ENV.VITE_SARTHI_TTS_SPEED) || 1,
   model: ENV.VITE_SARTHI_ELEVEN_MODEL || 'eleven_flash_v2_5', // ~75ms model latency vs ~1s+ for multilingual_v2
   lang: 'hi',
+  gender: 'male', // browser fallback picks a male Hindi voice when the device has one
 };
 
 // public/sarthi-audio was rendered with Murf; playing it next to a live ElevenLabs line would switch voices mid-call.

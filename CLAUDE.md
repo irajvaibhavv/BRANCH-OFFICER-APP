@@ -179,6 +179,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   chunks are chained through each other's `onEnd` rather than bulk-queued, because `services/voice.js` clears
   its queue wholesale when an engine fails, which would drop the tail and strand the interview
   waiting on a callback that never comes. `services/voice.js` itself is untouched: it is shared with SAARTHI AI.
+- **One voice for the whole call** (`services/voice.js`): only a 401/402/403 or quota reply writes a TTS engine off for the session; a blip or a blocked autoplay sends just that line to the other cloud engine, else the browser. A Hindi profile (`lang: 'hi'`, Sarthi) keeps one browser Hindi voice for every line, male when the device has one (`gender`) — picking by script and writing ElevenLabs off on any error made Sarthi switch to Google हिन्दी (female) mid-call.
 - **Sarthi asks for Murf, but a missing `VITE_MURF_API_KEY` silently degrades it to browser TTS**
   (`pickEngine` falls through). That is a config problem, never a code one — if Sarthi sounds like
   the browser, the key is absent from `.env.local` or from Vercel.

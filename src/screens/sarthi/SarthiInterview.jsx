@@ -17,7 +17,7 @@ import { readNumbers } from '../../services/sarthi/hindiNumbers';
 import pdSchema from '../../data/sarthi/pdSchema.json';
 import { getNextAction, directiveText, checkContradictions, checkInternalConsistency, getInterviewConfig, assessIncome } from '../../services/sarthi/controller';
 import { validateReport, extractRecommendation } from '../../services/sarthi/validator';
-import { validateAadhaar, validatePan, detectForeignId, detectForeignResidence, pickIdentity, identitySummary, namesMatch, nameFromWords, relationOf, applicantComing, presenceLines, speakerIsSomeoneElse } from '../../services/sarthi/idChecks';
+import { validateAadhaar, validatePan, detectForeignId, detectForeignResidence, pickIdentity, identitySummary, nameVerdict, confirmReply, nameFromWords, relationOf, applicantComing, presenceLines, speakerIsSomeoneElse } from '../../services/sarthi/idChecks';
 import PhotoCapture from '../../components/sarthi/PhotoCapture';
 import { startFrameCapture, stopCamera, pauseCamera, resumeCamera, getObservations, resetObservations } from '../../services/sarthi/video';
 import { downscale, analysePhoto, PHOTO_ASKS } from '../../services/sarthi/photo';
@@ -46,7 +46,7 @@ const save = (key, value) => {
 
 const CAPTION_FALLBACK_MS = 3000;
 // The borrower ending the call themselves.
-const LEAVING = /(bye|alvida|band karo|band kar do|rehne do|nahi karna|cut karo|cut kar raha|mujhe jaana hai)|अलविदा|बाय|बंद करो/i;
+const LEAVING = /\b(bye|alvida|band karo|band kar do|rehne do|nahi karna|cut karo|cut kar raha|mujhe jaana hai)\b|अलविदा|बाय|बंद करो/i;
 
 // One topic = one schema field (or fixed section / verification task), so re-asks don't advance the count.
 const topicKey = (a) => `${a?.section ?? 'x'}:${a?.crossOf ? `cross_${a.crossOf}` : a?.recheckOf ? `recheck_${a.recheckOf}` : a?.hot ? `hot_${a.hot.id}` : a?.photo ? `photo_${a.photo}` : a?.missingFields?.[0] ?? a?.verificationTask ?? a?.tradeProbe ?? ''}`;
@@ -121,7 +121,8 @@ export default function SarthiInterview() {
     setAsked(topics.current.size);
   };
   const doneRef = useRef(false);
-  const presence = useRef(null); // null · relation · call · handover · done — someone other than the applicant answered
+  const presence = useRef(null); // null · relation · call · handover · confirm · done — someone other than the applicant answered
+  const confirm = useRef(null); // { stated, verdict, handover, retried } while asking "aap X ji hi hain?"
   const stopListen = useRef(null);
   const cameraRef = useRef(false);
   const liveRef = useRef(false); // proxy reachable → vision frames are worth sending
@@ -349,6 +350,44 @@ export default function SarthiInterview() {
     sayFixed(lines.later, { then: leaveForLater });
   };
 
+  // The name said is only part of the file's ("Mahesh"), or clashes with it ("Mahesh Sharma"): ask straight out whether
+  // they are the applicant. The code asks, never the model; "no" ends the PD without a report.
+  const askIfApplicant = (stated, verdict) => {
+    confirm.current = { stated, verdict, handover: presence.current === 'handover', retried: false };
+    presence.current = 'confirm';
+    sayFixed(presenceLines(caseData).confirm(stated, verdict));
+  };
+
+  // The applicant is on the line: from here "mere pati" is them talking about family, not someone else on the phone.
+  const applicantConfirmed = (stated, turn) => {
+    const wasHandover = presence.current === 'handover' || confirm.current?.handover;
+    presence.current = 'done';
+    memory.current = updateMemory(memory.current, { stated_name: caseData.name, applicant_name: caseData.name });
+    if (wasHandover) {
+      memory.current = {
+        ...memory.current,
+        flags: memory.current.flags.map((f) => (f.type === 'identity_mismatch'
+          ? { ...f, severity: 'low', followedUp: true, detail: `${f.detail}. The applicant then came to the phone and gave their own name as "${stated}" (Turn ${turn}).` }
+          : f)),
+      };
+    }
+  };
+
+  /** Their reply to "aap X ji hi hain?". true = the turn is handled (asked again, or the PD ended). */
+  const handleConfirm = (text, turn) => {
+    const lines = presenceLines(caseData);
+    const reply = confirmReply(text, caseData.name);
+    if (reply === 'yes') { applicantConfirmed(caseData.name, turn); return false; }
+    if (reply === null && !confirm.current.retried) { confirm.current.retried = true; sayFixed(lines.confirmAgain); return true; }
+    memory.current = addFlags(memory.current, [{
+      type: 'identity_mismatch', field: 'stated_name', severity: 'high', declared: confirm.current.stated, known: caseData.name, turn,
+      detail: `Application is in the name of ${caseData.name}; the person on the call said "${confirm.current.stated}" and did not confirm being the applicant ("${text}")`,
+    }]);
+    presence.current = 'done';
+    sayFixed(lines.notApplicant, { then: leaveForLater });
+    return true;
+  };
+
   /* ---------------------------------------------------------------- one borrower answer */
   const handleAnswer = useCallback(async (text) => {
     if (doneRef.current) return;
@@ -368,17 +407,21 @@ export default function SarthiInterview() {
       // Scripted mode fills the same structured memory as the live agent, so the report, the
       // consistency checks and the coverage bar behave identically with or without a proxy.
       memory.current = recordTurn(memory.current, 'user', text);
+      let confirmed = false;
+      if (presence.current === 'confirm') { if (handleConfirm(text, borrowerTurn)) return; confirmed = true; }
       if (presence.current === 'relation' || presence.current === 'call') { handlePresence(text); return; }
       if (stopForRelative(text, borrowerTurn)) return;
       // Scripted mode asks the name too, so a wrong person is stopped with or without the model.
       if (step?.collect === 'stated_name' && !isIntake && presence.current !== 'done') {
         const stated = nameFromWords(text) ?? text;
         memory.current = updateMemory(memory.current, { stated_name: stated });
-        const same = namesMatch(stated, caseData.name);
-        if (same === false) { startPresence(stated, borrowerTurn); return; }
-        if (same === true) presence.current = 'done';
+        const verdict = nameVerdict(stated, caseData.name);
+        if (verdict === 'different') { startPresence(stated, borrowerTurn); return; }
+        if (verdict === 'partial' || verdict === 'conflict') { askIfApplicant(stated, verdict); return; }
+        if (verdict === 'full') applicantConfirmed(stated, borrowerTurn);
       }
-      if (step?.collect) memory.current = updateMemory(memory.current, { [step.collect]: text, _verbatim: text });
+      // A "haan" to "aap Mahesh Agarwal ji hi hain?" answers the name step with the file's name, not with "haan".
+      if (step?.collect) memory.current = updateMemory(memory.current, { [step.collect]: confirmed && step.collect === 'stated_name' ? caseData.name : text, _verbatim: text });
       setCovered(completeness(memory.current));
 
       // Intake: this answer IS the file. Store it, and check a document the moment it arrives.
@@ -407,6 +450,8 @@ export default function SarthiInterview() {
 
     memory.current = recordTurn(memory.current, 'user', text);
     if (stopForForeignResidence(text, borrowerTurn)) return;
+    // A yes carries on as the answer to the name question (stated_name is now the file's name, so the controller moves on).
+    if (presence.current === 'confirm' && handleConfirm(text, borrowerTurn)) return;
     if (presence.current === 'relation' || presence.current === 'call') { handlePresence(text); return; }
     if (stopForRelative(text, borrowerTurn)) return;
 
@@ -457,24 +502,18 @@ export default function SarthiInterview() {
         && (answered?.section === 'greeting' || answered?.missingFields?.[0] === 'stated_name' || presence.current === 'handover')) {
         let stated = memory.current.collected.stated_name;
         if (!stated) {
-          stated = nameFromWords(text);
+          // A bare "Mahesh" has no "mera naam" to find it by; a short answer to the name question IS the name.
+          stated = nameFromWords(text) ?? (text.trim().split(/\s+/).length <= 3 ? text.trim() : null);
           if (stated) memory.current = updateMemory(memory.current, { stated_name: stated });
         }
-        // Speech can come back in Devanagari ("राज"), which namesMatch cannot read — compare with the Hindi name on file.
-        const same = namesMatch(stated, caseData.name)
-          ?? (stated && /[ऀ-ॿ]/.test(stated) && caseData.hi?.firstName ? String(stated).includes(caseData.hi.firstName) : null);
-        if (stated && same === false) { startPresence(stated, borrowerTurn); return; }
-        // The applicant's own name: from here "mere pati" is them talking about family, not someone else on the phone.
-        if (stated && same === true && presence.current == null) presence.current = 'done';
-        if (stated && presence.current === 'handover') {
-          presence.current = 'done';
-          memory.current = {
-            ...memory.current,
-            flags: memory.current.flags.map((f) => (f.type === 'identity_mismatch'
-              ? { ...f, severity: 'low', followedUp: true, detail: `${f.detail}. The applicant then came to the phone and gave their own name as "${stated}" (Turn ${borrowerTurn}).` }
-              : f)),
-          };
-        }
+        // Speech can come back in Devanagari ("राज"), which nameVerdict cannot read — compare with the Hindi name on file.
+        const hindi = stated && /[ऀ-ॿ]/.test(stated) && caseData.hi?.firstName;
+        const verdict = nameVerdict(stated, caseData.name)
+          ?? (hindi ? (caseData.hi.name && String(stated).includes(caseData.hi.name) ? 'full' : String(stated).includes(caseData.hi.firstName) ? 'partial' : 'different') : null);
+        if (stated && verdict === 'different') { startPresence(stated, borrowerTurn); return; }
+        // "Mahesh" or "Mahesh Sharma" for Mahesh Agarwal: ask whether they are the applicant before any PD question.
+        if (stated && (verdict === 'partial' || verdict === 'conflict')) { askIfApplicant(stated, verdict); return; }
+        if (stated && (verdict === 'full' || presence.current === 'handover')) applicantConfirmed(stated, borrowerTurn);
       }
 
       if (isIntake) rebuildWalkIn();

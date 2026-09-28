@@ -248,7 +248,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   them from the file's own figures (cash share, running loans, enquiries, ITR, GST threshold, deposits, purpose).
   Start asks who takes the PD: **Sarthi AI** asks them at the end of their section (`nextHot`, `memory.hotAnswers`,
   reported as "Questions prepared from the file"); **Branch Officer** opens `/sarthi/officer/:id`, a tick-and-note sheet
-  (`bo_sarthi_officer_<case>`). Walk-ins have no file, so no questions and no chooser. **No duplicates**: every file
+  (`bo_sarthi_officer_<case>`), one question per slide; finishing opens `?done=1` — Summary | Transcript like a recorded meeting, the summary written by the LLM from the notes only (`summariseOfficerPd`, cached in `bo_sarthi_officer_sum_<case>`, else built from the notes). Walk-ins have no file, so no questions and no chooser. **No duplicates**: every file
   question is asked, and one that also gets a standard fact lists it in `covers` — that standard question (and its
   cross-question) is skipped, and the file question is asked where it would have been. Skipped only while the file
   question is pending: if its answer did not give the fact, the standard one is asked after all. Mahesh: 75 → ~56 turns.
@@ -280,7 +280,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   also reads the words ("X ka beta", "meri mummy", "mummy bahar hai") on every turn — in live and scripted mode — until
   the applicant confirms their own name; "… bahar hai" closes the call at once.
 - **Identity**: the greeting asks the name openly (never "Aap Ramesh ji hain na?" — anyone can say haan). `stated_name`
-  is compared with the file name in code (`namesMatch` in `idChecks.js`); a mismatch raises a high `identity_mismatch`
+  is compared with the file name in code (`nameVerdict` in `idChecks.js`: full / partial / conflict / different — `namesMatch` alone passed "Mahesh Sharma" for Mahesh Agarwal because any shared part counted). Only AFTER that open answer, a partial ("Mahesh") or clashing ("Mahesh Sharma") name gets "Aap Mahesh Agarwal ji hi hain?" from the code (`presenceLines().confirm`); yes carries on, no — or unclear twice — ends the call with no report. A different name ("Raj") goes to the relative flow below; a mismatch raises a high `identity_mismatch`
   flag and unlocks `speaker_relation` (condition `name_mismatch`). Walk-ins skip both — there is no name on file.
   `idChecks.js` does the offline document checks (Aadhaar Verhoeff, PAN structure + surname initial);
   it is not eKYC and the copy says so everywhere.

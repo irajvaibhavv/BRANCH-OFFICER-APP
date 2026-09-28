@@ -189,3 +189,47 @@ export async function prepareHotQuestions(c, { fresh = false } = {}) {
   saveHot(c.id, result);
   return result;
 }
+
+// ---- the officer's own PD: summary of their notes ----
+
+const OFFICER_SUM_SYSTEM = `You summarise a PD (personal discussion) that a branch officer took himself with a loan applicant: the questions
+prepared from the file, and the officer's short notes of what the applicant said.
+Use only the notes — never invent a figure or an answer. A question with no note was not asked.
+Reply with ONLY a JSON object:
+{"headline": "one line", "sentiment": "positive" | "neutral" | "concern", "keyPoints": ["..."], "concerns": ["..."], "followUps": ["..."]}
+At most 5 key points, 4 concerns and 4 follow-ups, each under 25 words. followUps must name the important questions left unasked.`;
+
+/** Questions paired with the officer's notes, in slide order. */
+export const officerQa = (questions, notes) => questions.map((q) => ({
+  id: q.id, section: q.section, q: q.q, a: notes[q.id]?.note?.trim() ?? '', done: !!notes[q.id]?.done,
+}));
+
+/** No model reachable: the same shape, straight from the notes. */
+export function ruleOfficerSummary(c, qa) {
+  const answered = qa.filter((x) => x.a);
+  return {
+    headline: `${c.name}: ${qa.filter((x) => x.done).length} of ${qa.length} questions covered`,
+    sentiment: 'neutral',
+    keyPoints: answered.slice(0, 5).map((x) => `${x.q.split('?')[0]}? — ${x.a}`),
+    concerns: [],
+    followUps: qa.filter((x) => !x.done).slice(0, 4).map((x) => x.q),
+    source: 'rule',
+  };
+}
+
+export async function summariseOfficerPd(c, qa) {
+  if (!qa.some((x) => x.a)) return ruleOfficerSummary(c, qa);
+  try {
+    const reply = await askAgent({
+      systemPrompt: OFFICER_SUM_SYSTEM,
+      messages: [{ role: 'user', content: `APPLICANT: ${JSON.stringify(briefForCitation(c))}\n\nPD NOTES:\n${qa.map((x) => `[${x.section}] ${x.q}\n→ ${x.a || '(not asked)'}`).join('\n\n')}` }],
+      temperature: 0.2, maxTokens: 1200, provider: 'llm', retries: 1,
+    });
+    const j = JSON.parse(reply.slice(reply.indexOf('{'), reply.lastIndexOf('}') + 1));
+    if (!j.headline || !Array.isArray(j.keyPoints)) throw new Error('bad shape');
+    return { concerns: [], followUps: [], ...j, source: 'ai' };
+  } catch (e) {
+    console.warn(`[sarthi] officer PD summary failed (${e?.message}) — built from the notes`);
+    return ruleOfficerSummary(c, qa);
+  }
+}

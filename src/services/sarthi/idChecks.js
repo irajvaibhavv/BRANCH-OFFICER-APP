@@ -2,7 +2,8 @@
 /* ---------------------------------------------------------------- Name */
 
 const NAME_FILLER = new Set(['ji', 'mr', 'mrs', 'shri', 'sri', 'smt', 'sir', 'bhai', 'main', 'mai', 'mera', 'meri', 'naam',
-  'hai', 'hoon', 'hu', 'haan', 'ha', 'my', 'name', 'is', 'i', 'am', 'im', 'ka', 'ki', 'se', 'aur', 'and']);
+  'hai', 'hoon', 'hu', 'haan', 'ha', 'my', 'name', 'is', 'i', 'am', 'im', 'ka', 'ki', 'se', 'aur', 'and',
+  'hi', 'hun', 'ho', 'jee', 'haanji', 'namaste', 'sahab', 'bol', 'raha', 'rahi', 'rha', 'rhi', 'yes', 'bilkul', 'sahi']);
 
 const nameTokens = (s) => String(s ?? '').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/)
   .filter((t) => t.length >= 2 && !NAME_FILLER.has(t));
@@ -29,6 +30,48 @@ export function namesMatch(stated, onFile) {
   if (!a.length || !b.length) return null;
   return a.some((x) => b.some((y) => x === y
     || (Math.min(x.length, y.length) >= 4 && (oneEditApart(x, y) || x.startsWith(y) || y.startsWith(x)))));
+}
+
+// Agarwal / Agrawal, Choudhary / Chaudhary: spellings of one name share their consonants.
+const skeleton = (t) => t.replace(/[aeiouy]/g, '');
+const sameToken = (x, y) => x === y || (Math.min(x.length, y.length) >= 4
+  && (oneEditApart(x, y) || x.startsWith(y) || y.startsWith(x) || (Math.min(x.length, y.length) >= 5 && skeleton(x) === skeleton(y))));
+
+/**
+ * How the stated name compares with the file, decided in code:
+ *   'full'      — every part of the file name was said ("Mahesh Agarwal")
+ *   'partial'   — only part of it, nothing contradicting ("Mahesh") → confirm the full name
+ *   'conflict'  — a part matches but the next part is different ("Mahesh Sharma") → confirm; "no" ends the PD
+ *   'different' — nothing matches ("Raj") → someone else is on the phone
+ *   null        — cannot tell (Devanagari from speech recognition)
+ * namesMatch() alone passed "Mahesh Sharma" for Mahesh Agarwal, because any shared part counted.
+ */
+export function nameVerdict(stated, onFile) {
+  const a = nameTokens(stated);
+  const b = nameTokens(onFile);
+  if (!a.length || !b.length) return null;
+  let hit = false;
+  for (let i = 0; i < a.length; i += 1) {
+    const j = b.findIndex((y) => sameToken(a[i], y));
+    if (j < 0) continue;
+    hit = true;
+    // The word they said after a matching part must be the file's next part, if the file has one.
+    if (b[j + 1] && a[i + 1] && !b.some((y) => sameToken(a[i + 1], y))) return 'conflict';
+  }
+  if (!hit) return 'different';
+  return b.every((y) => a.some((x) => sameToken(x, y))) ? 'full' : 'partial';
+}
+
+const CONFIRM_NO = /\b(nahi|nahin|nhi|nai|no|nope|galat|not)\b|नहीं|नही/i;
+const CONFIRM_YES = /\b(haan|han|ha|haa|ji|jee|haanji|yes|yeah|bilkul|sahi|correct|right|hoon|hun|hu)\b|हाँ|हां|जी|हूँ|हूं/i;
+
+/** Their reply to "Aap Mahesh Agarwal ji hi hain?" — 'yes', 'no', or null when it cannot tell. */
+export function confirmReply(text, onFile) {
+  const s = String(text);
+  if (nameVerdict(s, onFile) === 'conflict' || speakerIsSomeoneElse(s, onFile)) return 'no';
+  if (CONFIRM_NO.test(s)) return 'no';
+  if (CONFIRM_YES.test(s) || nameVerdict(s, onFile) === 'full') return 'yes';
+  return null;
 }
 
 /* ---------------------------------------------------------------- Aadhaar */
@@ -219,7 +262,24 @@ export function applicantComing(text = '') {
 export function presenceLines(c) {
   const first = c.name.split(' ')[0];
   const hi = c.hi?.firstName ?? first;
+  const full = c.name;
+  const hiFull = c.hi?.name ?? c.name;
   return {
+    // The name they gave only partly matches: ask for the full name on file, never let "Mahesh" pass for Mahesh Agarwal.
+    confirm: (stated, verdict) => (verdict === 'conflict'
+      ? {
+        text: `Aapne apna naam ${stated} bataya. Yeh application ${full} ji ke naam se hai. Kya aap ${full} ji hi hain?`,
+        speech: `आपने अपना नाम ${stated} बताया। यह एप्लीकेशन ${hiFull} जी के नाम से है। क्या आप ${hiFull} जी ही हैं?`,
+      }
+      : { text: `Achha. Aap ${full} ji hi hain na?`, speech: `अच्छा। आप ${hiFull} जी ही हैं ना?` }),
+    confirmAgain: {
+      text: `Maaf kijiye, samajh nahi paaya. Kya aap khud ${full} ji hain — haan ya nahi?`,
+      speech: `माफ़ कीजिए, समझ नहीं पाया। क्या आप ख़ुद ${hiFull} जी हैं? हाँ या नहीं?`,
+    },
+    notApplicant: {
+      text: `Achha, koi baat nahi. Yeh application ${full} ji ke naam se hai, isliye PD unhi se hogi. Jab woh khud baat kar sakein, tab hum dobara baat karenge. Dhanyavaad!`,
+      speech: `अच्छा, कोई बात नहीं। यह एप्लीकेशन ${hiFull} जी के नाम से है, इसलिए बात उन्हीं से होगी। जब वो ख़ुद बात कर सकें, तब हम दोबारा बात करेंगे। धन्यवाद!`,
+    },
     relation: {
       text: `Yeh application ${first} ji ke naam se hai. Aap unke kya lagte hain?`,
       speech: `यह एप्लीकेशन ${hi} जी के नाम से है। आप उनके क्या लगते हैं?`,

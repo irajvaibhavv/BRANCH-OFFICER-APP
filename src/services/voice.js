@@ -108,10 +108,31 @@ let playing = false;
 let gen = 0;        // bumped by stopSpeaking() so stale fetches never play
 let silent = false;
 
-// Mute by volume, not by skipping lines: onStart/onEnd still fire, so callers waiting on them carry on.
+// Safari (iPhone and Mac) plays a media element only if a tap once started THAT element, and a line starts after a TTS
+// fetch, long after the tap. So every line plays through one shared element, unlocked on the first tap anywhere in the
+// app; the browser voice is unlocked the same way. A fresh `new Audio()` per line was silent on every Safari.
+const SILENT_WAV = 'data:audio/wav;base64,UklGRnQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
+let player = null;
+let unlocked = false;
+const getPlayer = () => (player ??= typeof Audio !== 'undefined' ? new Audio() : null);
+const GESTURES = ['touchend', 'click', 'keydown'];
+function unlock() {
+  const a = getPlayer();
+  if (a && !unlocked && !playing) {
+    a.onended = null; a.onerror = null; a.onplaying = null; // a finished line's handlers must not fire on the silent clip
+    a.muted = false;
+    a.src = SILENT_WAV;
+    a.play().then(() => { unlocked = true; GESTURES.forEach((e) => document.removeEventListener(e, unlock, true)); }).catch(() => {});
+  }
+  if (synth && !unlock.synthDone) { unlock.synthDone = true; const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); }
+}
+if (typeof document !== 'undefined') GESTURES.forEach((e) => document.addEventListener(e, unlock, true));
+
+// Mute without skipping lines: onStart/onEnd still fire, so callers waiting on them carry on.
+// `muted`, not `volume` — iOS ignores volume on media elements.
 export function setSilent(on) {
   silent = on;
-  if (current?.audio) current.audio.volume = on ? 0 : 1;
+  if (current?.audio) current.audio.muted = on;
 }
 
 async function drain() {
@@ -124,9 +145,10 @@ async function drain() {
   try {
     const url = item.src ?? await audioUrl(item.text, item.profile);
     if (myGen !== gen) { playing = false; return; } // stopped while fetching
-    const audio = new Audio(url);
+    const audio = getPlayer();
+    audio.src = url;
     audio.playbackRate = item.rate;
-    audio.volume = silent ? 0 : 1;
+    audio.muted = silent;
     current = { audio };
     audio.onended = finish;
     audio.onerror = finish;
@@ -176,9 +198,14 @@ function browserSpeak(text, { rate = 1, onEnd, onStart, profile } = {}) {
   if (v) u.voice = v;
   u.lang = v?.lang || (hindi ? 'hi-IN' : 'en-IN');
   u.rate = rate; u.pitch = 1; u.volume = silent ? 0 : 1;
-  u.onstart = () => onStart?.();
-  u.onend = () => onEnd?.();
-  u.onerror = () => onEnd?.();
+  // Safari drops an utterance it will not play (no tap yet, no voice) without any event — the call would wait on
+  // onEnd forever with the mic never opening. If nothing is speaking 3s on, give up on this line and carry on.
+  let started = false; let ended = false;
+  const end = () => { if (ended) return; ended = true; clearTimeout(watchdog); onEnd?.(); };
+  const watchdog = setTimeout(() => { if (!started && !synth.speaking) { synth.cancel(); end(); } }, 3000);
+  u.onstart = () => { started = true; onStart?.(); };
+  u.onend = end;
+  u.onerror = end;
   synth.speak(u);
 }
 
@@ -202,7 +229,8 @@ export function speak(text, { rate = 1, onEnd, onStart, voice, src } = {}) {
 export function stopSpeaking() {
   gen++;
   queue.length = 0;
-  if (current?.audio) { current.audio.onended = null; current.audio.onerror = null; current.audio.pause(); current.audio.src = ''; }
+  // Pause only: clearing src on the shared element would fire a spurious error on some browsers.
+  if (current?.audio) { current.audio.onended = null; current.audio.onerror = null; current.audio.onplaying = null; current.audio.pause(); }
   current = null; playing = false;
   synth?.cancel();
 }

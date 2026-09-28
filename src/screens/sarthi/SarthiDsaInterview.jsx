@@ -6,8 +6,7 @@ import { IoCall, IoMic, IoMicOff, IoRefresh, IoSend, IoVolumeHigh, IoVolumeMute 
 import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { askAgent, parseClaims } from '../../services/sarthi/agent';
-import { readNumber } from '../../services/sarthi/hindiNumbers';
-import { DSA_TOPICS, dsaFile, needsProbe, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport } from '../../services/sarthi/dsa';
+import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport } from '../../services/sarthi/dsa';
 import { stopSpeaking, listen, canListen, canSpeak, setSilent } from '../../services/voice';
 import { speakStreamed } from '../../services/sarthi/stream';
 import { stopCamera } from '../../services/sarthi/video';
@@ -18,7 +17,8 @@ import styles from './SarthiInterview.module.css';
 
 // Sarthi's DSA review on the same video call as the PD. Claude only; if it is unreachable a turn falls back to the
 // topic's plain question, so the call never dies. The report lands in SAARTHI AI's report list (/ai/reports/:id).
-const LEAVING = /(bye|alvida|band karo|cut karo|mujhe jaana hai)|अलविदा|बंद करो/i;
+// Only a goodbye to the call itself — "questions band karo" is a complaint, not a hang-up.
+const LEAVING = /\b(bye|alvida)\b|(call|phone)\s+(band|cut|kaat|rakh)|mujhe jaana hai|अलविदा/i;
 const CAPTION_FALLBACK_MS = 3000;
 
 export default function SarthiDsaInterview() {
@@ -125,18 +125,25 @@ export default function SarthiDsaInterview() {
     current.current = action;
     setAvatar('thinking');
     let text; let speech;
+    if (action.kind === 'closing') {
+      ({ text, speech } = closingLine(file));
+      transcript.current.push({ from: 'ai', text });
+      say(text, speech, finish);
+      return;
+    }
     try {
-      const raw = await askAgent({ systemPrompt: interviewerPrompt(file, directiveFor(action, file)), messages: history.current, maxTokens: 400 });
+      const directive = directiveFor(action, file);
+      const raw = await askAgent({ systemPrompt: interviewerPrompt(file, directive), messages: turnMessages(history.current, directive), maxTokens: 400 });
       ({ display: text, speech } = parseClaims(raw, 0));
       history.current.push({ role: 'assistant', content: raw });
     } catch (e) {
       console.warn(`[sarthi] DSA turn failed (${e?.message}) — plain question`);
-      text = action.kind === 'closing' ? 'Bahut shukriya aapke time ke liye. Officer aapse jaldi baat karenge.' : action.kind === 'topic' ? action.topic.ask : 'Thoda aur bataiye?';
+      text = action.kind === 'topic' ? action.topic.ask : 'Thoda aur bataiye?';
+      speech = undefined;
       history.current.push({ role: 'assistant', content: text });
     }
     if (doneRef.current) return;
     transcript.current.push({ from: 'ai', text });
-    if (action.kind === 'closing') { say(text, speech, finish); return; }
     say(text, speech);
   }, [file, say, finish]);
 
@@ -148,7 +155,7 @@ export default function SarthiDsaInterview() {
     return topic ? { kind: 'topic', topic } : { kind: 'closing' };
   };
 
-  const handleAnswer = useCallback((text) => {
+  const handleAnswer = useCallback(async (text) => {
     if (doneRef.current || !current.current) return;
     stopListen.current?.();
     setAnswer(text);
@@ -163,8 +170,10 @@ export default function SarthiDsaInterview() {
     } else if (topic) {
       const prev = qa.current.find((x) => x.id === topic.id);
       if (prev) prev.a += ` / ${text}`; else qa.current.push({ id: topic.id, section: topic.section, q: topic.ask, a: text });
-      if (topic.num) { const n = readNumber(text); if (n != null) nums.current[topic.id] = n; }
-      if (cur.kind === 'topic' && needsProbe(topic, text) && !probed.current.has(topic.id)) {
+      let n = null;
+      if (topic.num) { setAvatar('thinking'); n = await figureFrom(topic, text); if (n != null) nums.current[topic.id] = n; }
+      if (doneRef.current) return;
+      if (cur.kind === 'topic' && needsProbe(topic, text, n) && !probed.current.has(topic.id)) {
         probed.current.add(topic.id);
         ask({ kind: 'probe', topic, text });
         return;

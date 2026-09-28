@@ -1,7 +1,7 @@
 // Sarthi's DSA review call. Same split as the PD: code picks the topic and does the hisaab against the DSA's own
 // numbers, Claude only phrases the question. Numbers are read in code (hindiNumbers), so there is no extraction call.
 import { askAgent } from './agent';
-import { readNumber } from './hindiNumbers';
+import { readNumber, readNumbers } from './hindiNumbers';
 import { commissionFor, productMix } from '../../utils/commission';
 
 const FENCE = '```';
@@ -55,12 +55,43 @@ export const DSA_TOPICS = [
   { id: 'conduct', section: 'Compliance', noProbe: true, goal: 'Whether any lender ever suspended or closed their DSA code, and why. Gently, as a routine record question.', ask: 'Kabhi kisi lender ne aapka code band kiya tha? Bas record ke liye pooch rahe hain.' },
 ];
 
+// "sau mein se assi" and "teen mahine mein sau files" carry a frame number first; readNumber takes the first one.
+// "ek baar", "ek minute" are not figures; a range "70-80 hazaar" is its lower figure with the scale.
+const FRAME = /\b(sau|100|hundred)\s+(mein|me|main|men)\s+se\b|\b(ek|do|teen|chaar|char|chhe|chhah|\d{1,2})\s+(mahine|mahino|mahina|months?)\b|\bek\s+(baar|minute|min|second|din|cheez|baat)\b/gi;
+/** The figure that answers a `num` topic. */
+export const readFigure = (text) => readNumber(String(text).replace(FRAME, ' ').replace(/(\d+)\s*(?:-|se|to)\s*\d+/gi, '$1'));
+
+/**
+ * The figure that answers a `num` topic, from a long spoken answer ("ek-do NBFC… 25 files" — the parser alone takes 1).
+ * Haiku picks which number answers the question; code accepts it only if it is one the DSA actually said
+ * (or that figure in thousands/lakhs), so a model misread can never become a recheck. No model → `readFigure`.
+ */
+export async function figureFrom(topic, text) {
+  const said = readNumbers(String(text).replace(/(\d+)\s*(?:-|se|to)\s*\d+/gi, '$1')).map((n) => n.value);
+  if (!said.length) return null;
+  try {
+    const raw = await askAgent({
+      systemPrompt: 'A loan agent answered a question on a call. Reply with ONLY the number that answers the question, as digits (rupees in full, e.g. 50000; a range → its lower end), or "none" if their answer gives no such number.',
+      messages: [{ role: 'user', content: `Question: ${topic.goal}\nAnswer: ${text}` }],
+      maxTokens: 12, temperature: 0, retries: 0,
+    });
+    const v = Number(raw.replace(/[^\d.]/g, ''));
+    if (/none/i.test(raw) || !v) return null;
+    return said.some((n) => n === v || n * 1000 === v || n * 100000 === v) ? v : null;
+  } catch {
+    return said.length === 1 ? said[0] : readFigure(text);
+  }
+}
+
 const VAGUE = /^(haan|ha|nahi|no|yes|ok|theek|thik|normal|pata nahi|yaad nahi|sab|kuch|chalta hai|dekhte hain|dekhenge)\b/i;
 /** One follow-up per topic when the answer gives nothing to hold on to. */
-export function needsProbe(topic, text) {
+export function needsProbe(topic, text, figure) {
   if (topic.noProbe) return false;
-  if (topic.num) return readNumber(text) == null;
-  return text.trim().split(/\s+/).length < 4 || VAGUE.test(text.trim());
+  // Any number said counts as an answer — a follow-up asking "rough number?" after one is just irritating.
+  if (topic.num) return figure == null && readFigure(text) == null;
+  const words = text.trim().split(/\s+/).length;
+  // "Haan haan, Hadapsar mein office hai…" is an answer; only a short one that opens vague is not.
+  return words < 4 || (words < 8 && VAGUE.test(text.trim()));
 }
 
 const PRODUCT_WORDS = { 'Home Loan': /home|ghar|housing|होम/i, LAP: /lap|property|prop|प्रॉपर्टी/i, 'Business Loan': /business|bl\b|बिज़नेस/i, 'MSME WC': /msme|working|wc\b|capital/i };
@@ -72,7 +103,7 @@ export function rechecksFor(topic, text, file, nums) {
   const out = [];
   if (topic.id === 'files_us' && v != null && file.avgFilesPerMonth) {
     if (v > file.avgFilesPerMonth * 1.5 || v < file.avgFilesPerMonth * 0.6) {
-      out.push(`They said ${v} files a month come to us; our system shows about ${Math.round(file.avgFilesPerMonth)} a month over the last 6 months (best month ${file.bestMonth}). Ask where the difference is.`);
+      out.push(`They said ${v} files a month come to us; our record shows about ${Math.round(file.avgFilesPerMonth)} files a month from them (their 6-month average; best month ${file.bestMonth}). Ask where the difference is.`);
     }
     if (nums.files_total && v / nums.files_total < 0.3) {
       out.push(`They log ${nums.files_total} files a month but give us only ${v}. Ask kindly why most go to other lenders.`);
@@ -81,14 +112,16 @@ export function rechecksFor(topic, text, file, nums) {
   if (topic.id === 'approval' && v != null && Math.abs(v - file.approvalRate) > 15) {
     out.push(`They think ${v} of 100 files get approved with us; our record says ${file.approvalRate}%. Ask what they are counting.`);
   }
-  if (topic.id === 'product' && file.topProduct && !PRODUCT_WORDS[file.topProduct]?.test(text)) {
+  // Only when they named some other product — "haan" is not a mismatch.
+  const named = Object.values(PRODUCT_WORDS).some((re) => re.test(text));
+  if (topic.id === 'product' && file.topProduct && named && !PRODUCT_WORDS[file.topProduct]?.test(text)) {
     out.push(`They said most of their business with us is "${text.slice(0, 60)}"; our record says ${file.topProduct} (${file.productMix.join(', ')}). Ask about it.`);
   }
   if (topic.id === 'commission' && v != null && file.commission.pending && Math.abs(v - file.commission.pending) > Math.max(5000, file.commission.pending * 0.4)) {
     out.push(`They say Rs ${fmt(v)} commission is pending; our record shows about Rs ${fmt(file.commission.pending)} pending. Ask which payouts they are counting — the officer will reconcile.`);
   }
   if (topic.id === 'forecast' && v != null && file.avgFilesPerMonth && v > file.avgFilesPerMonth * 3 * 1.6) {
-    out.push(`They promise ${v} files in 3 months; in the last 6 months they gave about ${Math.round(file.avgFilesPerMonth * 3)} per quarter (best month ${file.bestMonth}). Ask what will bring the jump.`);
+    out.push(`They promise ${v} files in 3 months; our record shows about ${Math.round(file.avgFilesPerMonth)} a month from them, so about ${Math.round(file.avgFilesPerMonth * 3)} in three months (best month ${file.bestMonth}). Ask what will bring the jump.`);
   }
   if (topic.id === 'recent' && file.files.length) {
     const said = text.toLowerCase();
@@ -100,7 +133,7 @@ export function rechecksFor(topic, text, file, nums) {
 
 export function interviewerPrompt(file, directive) {
   return `You are Sarthi, an AI from the branch, on a video call reviewing the work of a DSA (a loan agent who brings loan files to the branch).
-You sound like a warm relationship manager who knows their numbers — respectful, curious, never an auditor.
+You are male ("samjha", never "samjhi"/"samjh gayi"). You sound like a warm relationship manager who knows their numbers — respectful, curious, never an auditor.
 
 ## Rules
 - Hinglish, everyday words. One short question at a time, ideally under 18 words.
@@ -109,11 +142,16 @@ You sound like a warm relationship manager who knows their numbers — respectfu
   say both figures plainly and kindly, assume they rounded or forgot, and let them explain.
 - Never promise payouts, approvals or policy changes — "officer aapse baat karenge".
 - Never name any bank, NBFC or brand as the one you work for; you are "branch se". Lenders they name may be repeated back.
-- The DSA file below is internal. Use a figure from it ONLY when THIS TURN tells you to; never read the file out.
+- **Ask ONLY what THIS TURN asks.** A program decides every question and every follow-up; do not chase anything else they said,
+  do not add a second question, do not jump ahead. If they already answered THIS TURN's topic in passing, confirm it briefly in the question.
+- You know nothing about their files or numbers beyond what THIS TURN gives you. Never invent a figure.
 - "Pata nahi" is a valid answer — thank them and move on.
+- Never say "aakhri" (sawal, baat, cheez) or "last question" — you do not know how many are left.
+- If they push ("officer ko bulao", "status batao", "jaldi karo"), say in a few words that the officer will call them, then ask THIS TURN's
+  question anyway. Never ask for their phone number (the branch has it), never say goodbye — the program ends the call.
 
 ## Output — exactly this order, nothing else
-1. ${FENCE}speech${FENCE} block FIRST: the same message fully in Devanagari (English words too: file → फ़ाइल, commission → कमीशन). Digits may stay.
+1. ${FENCE}speech${FENCE} block FIRST: the same message fully in Devanagari — English words and names too (file → फ़ाइल, commission → कमीशन, LAP → एल ए पी). Digits may stay.
 2. Then the same message in Hinglish (Latin script), on its own.
 
 ${FENCE}speech
@@ -121,25 +159,39 @@ ${FENCE}speech
 ${FENCE}
 Achha, 8 saal ka kaam hai. Aapke saath kitne log kaam karte hain?
 
-## DSA file (internal)
-${JSON.stringify(file, null, 1)}
+You are speaking with ${file.name}${file.firm ? ` of ${file.firm}` : ''}.
 
 ## THIS TURN
 ${directive}`;
 }
 
-/** THIS TURN for an action: { kind: topic | probe | recheck | closing, topic, detail, greet, text }. */
-export function directiveFor(action, file) {
+/** History for Claude with THIS TURN repeated at the end of the DSA's last message — from the system prompt alone, a pushy DSA
+ * pulled Haiku off the topic (it started asking for their phone number and said goodbye mid-review). */
+export function turnMessages(history, directive) {
+  const last = history.at(-1);
+  if (last?.role !== 'user') return history;
+  return [...history.slice(0, -1), { role: 'user', content: `${last.content}\n\n[Program → Sarthi, THIS TURN: ${directive.replace(/\n/g, ' ')}]` }];
+}
+
+/** The goodbye is fixed text: asked to close, the model kept adding one more question. */
+export function closingLine(file) {
   const first = file.name.split(' ')[0];
-  if (action.kind === 'closing') return `Close the call warmly in two short sentences: thank ${first} ji for their time and say the officer will follow up on what they raised. Ask nothing.`;
-  if (action.kind === 'recheck') return `FRIENDLY RECHECK. ${action.detail}\nSay both figures kindly, like doing the hisaab together, and ask them to explain. One question.`;
-  if (action.kind === 'probe') return `FOLLOW UP on "${action.topic.goal}". Their answer was: "${action.text}". It gave nothing concrete — ask ONE specific follow-up to get a name, a number or an example.${action.topic.num ? ' They must give a number; ask for a rough one.' : ''}`;
+  return {
+    text: `Bahut shukriya ${first} ji, aapke time ke liye. Jo baatein aapne batayi, officer aapse unpar jaldi baat karenge. Namaste!`,
+    speech: 'बहुत शुक्रिया, आपके समय के लिए। जो बातें आपने बताईं, ऑफ़िसर आपसे उन पर जल्दी बात करेंगे। नमस्ते!',
+  };
+}
+
+/** THIS TURN for an action: { kind: topic | probe | recheck, topic, detail, greet, text }. */
+export function directiveFor(action, file) {
+  if (action.kind === 'recheck') return `FRIENDLY RECHECK. ${action.detail}\nSay both figures kindly, like doing the hisaab together, and ask them to explain. One question. These two figures are the only numbers you may say.`;
+  if (action.kind === 'probe') return `FOLLOW UP on "${action.topic.goal}". Their answer was: "${action.text}". It gave nothing concrete — ask ONE specific follow-up on this same topic to get a name, a number or an example.${action.topic.num ? ' They must give a number; ask for a rough one.' : ''}`;
   const t = action.topic;
   const stuck = t.stuck && file.stuck.length
     ? `\nOur record: ${file.stuck.map((f) => `${f.borrower} (${f.status}, pending: ${f.pendingDocs.join(', ')})`).join('; ')}${file.rejected.length ? `; rejected: ${file.rejected.join(', ')}` : ''}. Name one of these files and ask what is holding it.`
     : '';
   const greet = action.greet ? `Greet first in one short sentence: "Namaste! Main Sarthi, branch se — aapke kaam ka chhota sa review hai, 10-15 minute lagenge." Then ask.\n` : '';
-  return `${greet}Topic: ${t.goal}\nPlain example: "${t.ask}"${stuck}`;
+  return `${greet}Ask about exactly this, and nothing else: ${t.goal}\nPlain example: "${t.ask}"${stuck}`;
 }
 
 // ---- report ----
@@ -157,7 +209,8 @@ Reply with ONLY a JSON object:
  "flags": [{"tone": "danger" | "warning" | "info", "text": "..."}],
  "sections": [{"title": "...", "items": ["..."]}],
  "todos": [{"owner": "BO" | "DSA" | "Credit", "text": "..."}]}
-Sections, in order: "Who they are", "Where their customers come from", "File quality", "Their numbers vs our record", "Working with us", "Pipeline and plan".`;
+Sections, in order: "Who they are", "Where their customers come from", "File quality", "Their numbers vs our record", "Working with us", "Pipeline and plan".
+Keep it tight — the officer reads it on a phone: at most 6 flags, 3 items per section, 5 todos, each under 30 words.`;
 
 export async function writeDsaReport({ file, qa, rechecks }) {
   const input = `## Branch record\n${JSON.stringify(file, null, 1)}\n\n## Answers\n${qa.map((x) => `[${x.section}] ${x.q}\n→ ${x.a}`).join('\n\n')}\n\n## Rechecks on the call\n${rechecks.length ? rechecks.map((r) => `- ${r.detail}\n  Their answer: ${r.answer ?? '(none)'}`).join('\n') : 'None'}`;

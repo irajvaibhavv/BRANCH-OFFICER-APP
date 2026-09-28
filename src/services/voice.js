@@ -53,6 +53,7 @@ const cache = new Map();          // profile+text → Promise<audio url>
 
 function ttsError(name, status, body) {
   const e = new Error(`${name} ${status} ${String(body).slice(0, 160)}`);
+  e.status = status;
   e.permanent = status === 401 || status === 402 || status === 403 || /quota|credits|limit_reached|payment/i.test(body);
   return e;
 }
@@ -89,7 +90,11 @@ function audioUrl(text, p) {
   const clean_ = clean(text);
   const key = `${p.engine}|${p.voiceId}|${p.style}|${p.speed}|${p.model}|${clean_}`;
   if (!cache.has(key)) {
-    const req = p.engine === 'elevenlabs' ? fetchEleven(clean_, p) : fetchMurf(clean_, p);
+    const get = () => (p.engine === 'elevenlabs' ? fetchEleven(clean_, p) : fetchMurf(clean_, p));
+    // One retry for a busy engine (429 concurrency, 5xx, network): waiting 400ms beats switching to the browser voice.
+    const req = get().catch((e) => (e?.permanent || (e?.status && e.status < 500 && e.status !== 429)
+      ? Promise.reject(e)
+      : new Promise((r) => { setTimeout(r, 400); }).then(get)));
     cache.set(key, req.catch((e) => { cache.delete(key); throw e; }));
   }
   return cache.get(key);

@@ -1,13 +1,15 @@
 // Sentence-level TTS: prefetch every sentence at once and play the first as soon as its audio lands.
 // voice.js is shared with SAARTHI AI, so this is built only from its prefetch + speak.
-import { prefetch, speak } from '../voice';
+import { prefetch, speak, voiceProfile } from '../voice';
 
 // A '.' between digits ("2.5 lakh") never ends a sentence.
 const BOUNDARY = /(?<!\d)[.!?।]+(?=\s|$)|(?<=\d)[!?।]+(?=\s|$)/g;
 
-// Shorter chunks are merged forward; past MAX_CHUNKS more calls buy nothing.
+// Shorter chunks are merged forward. Two chunks — the first sentence, then the rest — start the voice as early as three
+// did, with one seam instead of two, and two parallel renders fit ElevenLabs' concurrency limit; a third request was
+// sometimes refused (429), re-fetched when its turn came, and heard as a long pause after a full stop.
 const MIN_CHARS = 16;
-const MAX_CHUNKS = 3;
+const MAX_CHUNKS = 2;
 
 export function splitSentences(text, { minChars = MIN_CHARS, maxChunks = MAX_CHUNKS } = {}) {
   const trimmed = (text ?? '').trim();
@@ -46,7 +48,9 @@ export function splitSentences(text, { minChars = MIN_CHARS, maxChunks = MAX_CHU
 export function speakStreamed(text, { voice, rate = 1, src, onEnd, onStart } = {}) {
   if (src) { speak(text, { voice, rate, src, onEnd, onStart }); return 1; }
 
-  const chunks = splitSentences(text);
+  // Browser voices gain nothing from splitting — each utterance restarts the voice (Chrome's Hindi voice is a network
+  // voice), which was a ~1s gap at every full stop. One utterance, no seams.
+  const chunks = voiceProfile(voice).engine === 'browser' ? [String(text ?? '').trim()].filter(Boolean) : splitSentences(text);
   if (chunks.length === 0) { onStart?.(); onEnd?.(); return 0; }
   if (chunks.length === 1) { speak(chunks[0], { voice, rate, onEnd, onStart }); return 1; }
 

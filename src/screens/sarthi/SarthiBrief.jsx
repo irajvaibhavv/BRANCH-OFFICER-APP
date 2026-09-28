@@ -4,11 +4,18 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   FiAlertTriangle, FiArrowRight, FiBriefcase, FiCalendar, FiCheck, FiClock, FiCpu, FiCreditCard, FiFileText,
   FiHelpCircle, FiMapPin, FiRefreshCw, FiRepeat, FiSearch, FiShield, FiTrendingDown, FiUser, FiX, FiZap,
+  FiPhone, FiMessageSquare, FiChevronRight,
 } from 'react-icons/fi';
+import { IoLogoWhatsapp, IoSparkles } from 'react-icons/io5';
 import BottomSheet from '../../components/ui/BottomSheet';
 import Page, { listContainer, listItem } from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import EmptyState from '../../components/ui/EmptyState';
+import Card, { MetricCard } from '../../components/ui/Card';
+import Avatar from '../../components/ui/Avatar';
+import Badge from '../../components/ui/Badge';
+import { useToast } from '../../hooks/useToast';
+import { useSarthiReports } from '../../hooks/useSarthiReports';
 import { formatINR } from '../../utils/formatters';
 import { getCase, lookupRiskPattern, bankIncome } from '../../services/sarthi/knowledge';
 import { computeEligibility } from '../../services/sarthi/verifier';
@@ -17,6 +24,8 @@ import { loadHot, prepareHotQuestions } from '../../services/sarthi/prep';
 import styles from './SarthiBrief.module.css';
 
 const RISK = { low: 'Low risk', medium: 'Medium risk', high: 'High risk' };
+const RISK_TONE = { low: 'success', medium: 'warning', high: 'danger' };
+const TABS = ['Overview', 'Money', 'KYC', 'Questions'];
 const SECTION = {
   personal: { label: 'Personal', icon: FiUser },
   business: { label: 'Business', icon: FiBriefcase },
@@ -25,7 +34,6 @@ const SECTION = {
   loan_purpose: { label: 'Loan', icon: FiZap },
 };
 const inr = (n) => formatINR(n, { compact: false });
-const initials = (name) => name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
 export default function SarthiBrief() {
   const { id } = useParams();
@@ -36,6 +44,9 @@ export default function SarthiBrief() {
   const [choose, setChoose] = useState(false);
   const [filter, setFilter] = useState('all');
   const [openWhy, setOpenWhy] = useState(null);
+  const [tab, setTab] = useState('Overview');
+  const [reports] = useSarthiReports();
+  const { toast } = useToast();
   const isNew = !!c?.isNew;
 
   // Drafted once per case when the brief opens, so they are ready before the officer presses start.
@@ -92,148 +103,196 @@ export default function SarthiBrief() {
     ...(b.bank ? [{ icon: FiTrendingDown, term: 'Bounces', value: b.bank.bounces, note: `${b.bank.cashCreditPct}% cash · ${b.bank.upiCreditPct}% UPI`, tone: b.bank.bounces ? 'stamp' : 'clear' }] : []),
   ];
 
+  const report = reports.find((r) => r.caseId === c.id);
+  const start = () => (isNew ? navigate(`/sarthi/interview/${c.id}`) : setChoose(true));
+  const tabs = isNew ? TABS.filter((t) => t !== 'Questions') : TABS;
+
   return (
     <Page mode="slide" className={`sarthi ${styles.page}`}>
-      <TopBar back title={c.name} subtitle={`${c.business}, ${c.area.split(',')[0]}`} hideBell />
+      <TopBar back title={c.name} hideBell />
 
-      {/* Who, what they ask, and the one disagreement that matters */}
-      <motion.section className={styles.hero} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className={styles.heroTop}>
-          <div className={styles.avatar}>{initials(c.name)}</div>
-          <div className={styles.heroWho}>
-            <h1 className={styles.heroName}>{c.name}</h1>
-            <p className={styles.heroSub}><FiMapPin size={12} /> {c.area}</p>
-          </div>
-          {c.riskLevel && <span className={`${styles.risk} ${styles[`risk_${c.riskLevel}`]}`}>{RISK[c.riskLevel]}</span>}
+      {/* Same header as a DSA: who, how to reach them, then the PD */}
+      <div className={styles.detailHead}>
+        <Avatar name={c.name} size={84} ring />
+        <h1 style={{ fontSize: 24 }}>{c.name}</h1>
+        <span className="label">{c.business} · {c.area.split(',')[0]}</span>
+        {c.riskLevel && <Badge tone={RISK_TONE[c.riskLevel]} size="md">{RISK[c.riskLevel]}</Badge>}
+        <div className={styles.actions}>
+          <button className={styles.actBtn} onClick={() => toast(`Calling ${c.name}…`)}><FiPhone size={16} /> Call</button>
+          <button className={styles.actBtn} style={{ color: '#16a34a' }} onClick={() => toast('Opening WhatsApp…')}><IoLogoWhatsapp size={18} /> WhatsApp</button>
+          <button className={styles.actBtn} style={{ color: 'var(--primary)' }} onClick={() => toast(`Opening maps for ${c.area}`)}><FiMapPin size={16} /> Location</button>
         </div>
-        <div className={styles.chips}>
-          <span className={styles.chip}>Asking <b>{formatINR(c.loanAmountRequested)}</b></span>
-          {c.businessVintage && <span className={styles.chip}><FiClock size={11} /> {c.businessVintage}</span>}
-          {c.loanPurpose && <span className={styles.chip}>{c.loanPurpose}</span>}
+        <div className={styles.actions} style={{ marginTop: 8 }}>
+          <button className={`${styles.actBtn} ${styles.actAi}`} onClick={start}><IoSparkles size={16} /> Sarthi AI</button>
+          {report
+            ? <button className={styles.actBtn} style={{ color: 'var(--primary)' }} onClick={() => navigate(`/sarthi/report/${c.id}`)}><FiFileText size={16} /> View report</button>
+            : !isNew && <button className={styles.actBtn} style={{ color: 'var(--primary)' }} onClick={() => navigate(`/sarthi/officer/${c.id}`)}><FiUser size={16} /> Take PD yourself</button>}
         </div>
+      </div>
 
-        <div className={styles.compare}>
-          <div className={styles.barRow}>
-            <span className={styles.barLabel}>Declared</span>
-            <span className={styles.barTrack}><motion.span className={styles.barSaid} initial={{ width: 0 }} animate={{ width: `${((c.declaredIncome || 0) / top) * 100}%` }} transition={{ duration: 0.7, delay: 0.1 }} /></span>
-            <span className={styles.barFig}>{c.declaredIncome ? formatINR(c.declaredIncome) : '—'}</span>
-          </div>
-          <div className={styles.barRow}>
-            <span className={styles.barLabel}>Bank shows</span>
-            <span className={styles.barTrack}><motion.span className={styles.barReal} initial={{ width: 0 }} animate={{ width: `${noBank ? 0 : (bank.income / top) * 100}%` }} transition={{ duration: 0.7, delay: 0.25 }} /></span>
-            <span className={styles.barFig}>{noBank ? 'none' : formatINR(bank.income)}</span>
-          </div>
-          {gap != null && (
-            <span className={`${styles.gapPill} ${styles[`pill_${gapTone}`]}`}>
-              {gap > 0 ? <><FiAlertTriangle size={12} /> {gap}% above what the bank supports</> : <><FiCheck size={12} /> Within reach of the bank</>}
-            </span>
-          )}
-        </div>
-        <p className={styles.heroNote}>
-          {noBank
-            ? <>No bank statement on file. Sarthi will rebuild income from their answers (footfall, bill size and the trade&apos;s margin) and mark it unverified.</>
-            : <>{b.bankStatementMonths} months of statements: {inr(bank.credits)} a month of credits{bank.marginPct != null ? <>, about {inr(bank.income)} of income at the trade&apos;s {bank.marginPct}% margin</> : null}.</>}
-        </p>
-      </motion.section>
-
-      {/* What the lender can support */}
-      <section className={styles.card}>
-        <div className={styles.moneyHead}>
-          <div>
-            <span className={styles.kicker}>Supported by verified income</span>
-            <div className={styles.moneyBig}>{elig.assessable ? inr(elig.maxEligible) : 'Not assessable'}</div>
-          </div>
-          <div className={styles.moneyAsk}>
-            <span className={styles.kicker}>Asking</span>
-            <div className={styles.moneyAskFig}>{inr(c.loanAmountRequested)}</div>
-          </div>
-        </div>
-        {elig.assessable && (
-          <div className={styles.meter}>
-            <motion.span className={`${styles.meterFill} ${cover < 100 ? styles.meterShort : ''}`} initial={{ width: 0 }} animate={{ width: `${cover}%` }} transition={{ duration: 0.8 }} />
-          </div>
-        )}
-        <p className={styles.moneyNote}>
-          {!elig.assessable
-            ? 'No verified income yet. The interview can rebuild an indicative figure; a bank statement or ITR settles it.'
-            : short > 0
-              ? <><b>{inr(short)} more than the file supports</b> · bank credits at {elig.foirPct}% FOIR, less existing EMIs.</>
-              : <>Within what the file supports · {elig.foirPct}% FOIR, less existing EMIs.</>}
-        </p>
-      </section>
-
-      {/* On record */}
-      <h2 className={styles.head}>On record</h2>
-      <motion.div className={styles.tiles} variants={listContainer} initial="initial" animate="animate">
-        {tiles.map((t) => (
-          <motion.div key={t.term} variants={listItem} className={`${styles.tile} ${t.tone ? styles[`tile_${t.tone}`] : ''}`}>
-            <span className={styles.tileIcon}><t.icon size={14} /></span>
-            <span className={styles.tileTerm}>{t.term}</span>
-            <span className={styles.tileVal}>{t.value}</span>
-            {t.meter != null && <span className={styles.tileMeter}><span style={{ width: `${t.meter}%` }} /></span>}
-            <span className={styles.tileNote}>{t.note}</span>
-          </motion.div>
+      <div className={styles.tabs}>
+        {tabs.map((t) => (
+          <button key={t} className={`${styles.tab} ${tab === t ? styles.tabOn : ''}`} onClick={() => setTab(t)}>
+            {tab === t && <motion.span layoutId="cust-tab" className={styles.tabPill} transition={{ type: 'spring', stiffness: 400, damping: 30 }} />}
+            <span style={{ position: 'relative' }}>{t}</span>
+          </button>
         ))}
-      </motion.div>
+      </div>
 
-      {(b.largeDeposits.length > 0 || (!b.docsSubmitted && b.missingDocs.length > 0)) && (
-        <div className={styles.alerts}>
-          {b.largeDeposits.map((d, i) => (
-            <div key={i} className={styles.alert}><FiAlertTriangle size={15} /> <span><b>{formatINR(d.amount)}</b> landed in {d.month} with no source on file{d.note ? ` — ${d.note.toLowerCase()}` : ''}</span></div>
-          ))}
-          {!b.docsSubmitted && b.missingDocs.map((d) => <div key={d} className={styles.alert}><FiX size={15} /> <span>{d} never arrived</span></div>)}
-        </div>
-      )}
-
-      {/* Documents and KYC */}
-      {(b.kyc || b.bank || b.bureau) && (
-        <>
-          <h2 className={styles.head}>Documents and KYC</h2>
-          <section className={styles.card}>
-            <div className={styles.kyc}>
-              {b.kyc && <KycRow term="Aadhaar" value={`XXXX XXXX ${b.kyc.aadhaarLast4}`} note={b.kyc.aadhaarCheck} ok={/eKYC|XML/.test(b.kyc.aadhaarCheck)} />}
-              {pan && <KycRow term="PAN" value={maskPan(pan.value)} note={pan.ok ? 'Format and surname initial check out' : pan.checks.filter((x) => !x.pass).map((x) => x.detail).join('; ')} ok={pan.ok} bad={!pan.ok} />}
-              {b.bank && <KycRow term="Bank" value={`${b.bank.name}, ${b.bank.type}`} note={`${b.bank.source} · avg balance ${inr(b.bank.avgBalance)}`} ok />}
-              {b.bureau && <KycRow term="Bureau" value={`${b.bureau.enquiries6m} enquir${b.bureau.enquiries6m === 1 ? 'y' : 'ies'} in 6 months`} note={`${b.bureau.bureau} ${b.bureau.pulledOn} · ${b.bureau.worstDpd}`} ok={b.bureau.enquiries6m < 3 && !/late/.test(b.bureau.worstDpd)} />}
-            </div>
-            {b.docsSubmitted?.length > 0 && (
-              <div className={styles.docChips}>
-                {b.docsSubmitted.map((d) => <span key={d} className={styles.docIn}><FiCheck size={11} /> {d}</span>)}
-                {b.missingDocs.map((d) => <span key={d} className={styles.docOut}><FiX size={11} /> {d}</span>)}
+      <AnimatePresence mode="wait">
+        <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
+          {tab === 'Overview' && (
+            <div className="stack">
+              {!isNew && (
+                <Card className="tint-primary" noChevron padding={12} onClick={() => setTab('Questions')}>
+                  <div className="row-between">
+                    <div className="hint" style={{ color: 'var(--primary)', fontWeight: 700 }}><FiMessageSquare size={13} style={{ verticalAlign: '-2px' }} /> PD brief <span style={{ fontWeight: 500, color: 'var(--text-3)' }}>· Sarthi suggests</span></div>
+                    <span className={styles.briefMore}>All {questions.length} <FiChevronRight size={14} /></span>
+                  </div>
+                  <div className={styles.briefChips}>
+                    {questions.length
+                      ? questions.slice(0, 3).map((h) => <span key={h.id} className={`${styles.briefChip} ${styles[`sec_${h.section}`] ?? ''}`}><span className={styles.briefDot} />{h.q}</span>)
+                      : <span className="hint">Sarthi is reading the file…</span>}
+                  </div>
+                </Card>
+              )}
+              <div className={styles.metricGrid}>
+                <MetricCard value={formatINR(c.loanAmountRequested)} label="Asking" tone="primary" onClick={() => setTab('Money')} />
+                <MetricCard value={c.declaredIncome ? formatINR(c.declaredIncome) : '—'} label="Declared income" onClick={() => setTab('Money')} />
+                <MetricCard value={noBank ? '—' : formatINR(bank.income)} label="Bank supports" tone={noBank ? undefined : gap > 40 ? 'danger' : gap > 10 ? 'warning' : 'success'} onClick={() => setTab('Money')} />
+                <MetricCard value={b.bureauScore ?? '—'} label="Bureau score" tone={b.bureauScore == null ? undefined : b.bureauScore >= 750 ? 'success' : b.bureauScore >= 700 ? 'warning' : 'danger'} onClick={() => setTab('KYC')} />
               </div>
-            )}
-          </section>
-        </>
-      )}
 
-      {/* Institutional memory */}
-      {pattern && (
-        <section className={styles.memory}>
-          <span className={styles.memoryKicker}><FiClock size={12} /> What happened last time · {pattern.patternId}</span>
-          <p className={styles.memoryLead}>{pattern.whatWentWrong}</p>
-          <div className={styles.failRow}>
-            <div className={styles.failBar}><motion.div className={styles.failFill} initial={{ width: 0 }} animate={{ width: `${pattern.failureRate * 100}%` }} transition={{ duration: 0.8 }} /></div>
-            <b>{Math.round(pattern.failureRate * 100)}%</b>
-          </div>
-          <p className={styles.memoryStat}>of {pattern.businessType.toLowerCase()} files in {pattern.area} went the same way</p>
-        </section>
-      )}
+              <Card padding={16} noChevron>
+                <div className="hint" style={{ color: 'var(--primary)', fontWeight: 600, marginBottom: 12 }}>Said vs bank</div>
+                <div className={styles.barRow}>
+                  <span className={styles.barLabel}>Declared</span>
+                  <span className={styles.barTrack}><motion.span className={styles.barSaid} initial={{ width: 0 }} animate={{ width: `${((c.declaredIncome || 0) / top) * 100}%` }} transition={{ duration: 0.7, delay: 0.1 }} /></span>
+                  <span className={styles.barFig}>{c.declaredIncome ? formatINR(c.declaredIncome) : '—'}</span>
+                </div>
+                <div className={styles.barRow}>
+                  <span className={styles.barLabel}>Bank shows</span>
+                  <span className={styles.barTrack}><motion.span className={styles.barReal} initial={{ width: 0 }} animate={{ width: `${noBank ? 0 : (bank.income / top) * 100}%` }} transition={{ duration: 0.7, delay: 0.25 }} /></span>
+                  <span className={styles.barFig}>{noBank ? 'none' : formatINR(bank.income)}</span>
+                </div>
+                {gap != null && (
+                  <span className={`${styles.gapPill} ${styles[`pill_${gapTone}`]}`}>
+                    {gap > 0 ? <><FiAlertTriangle size={12} /> {gap}% above what the bank supports</> : <><FiCheck size={12} /> Within reach of the bank</>}
+                  </span>
+                )}
+                <p className={styles.heroNote}>
+                  {noBank
+                    ? <>No bank statement on file. Sarthi will rebuild income from their answers (footfall, bill size and the trade&apos;s margin) and mark it unverified.</>
+                    : <>{b.bankStatementMonths} months of statements: {inr(bank.credits)} a month of credits{bank.marginPct != null ? <>, about {inr(bank.income)} of income at the trade&apos;s {bank.marginPct}% margin</> : null}.</>}
+                </p>
+              </Card>
 
-      {/* The officer's own list */}
-      {b.digInto.length > 0 && (
-        <>
-          <h2 className={styles.head}>Worth digging into</h2>
-          <div className={styles.digs}>
-            {b.digInto.map((d, i) => (
-              <div key={i} className={styles.dig}><span className={styles.digIcon}><FiSearch size={13} /></span><span>{d}</span></div>
-            ))}
-          </div>
-        </>
-      )}
+              <Card padding={16} noChevron>
+                <div className="row" style={{ gap: 12 }}>
+                  <FiMapPin size={22} color="var(--text-2)" />
+                  <div className="grow">
+                    <div style={{ fontWeight: 600 }}>{c.area}</div>
+                    <div className="hint">{[c.businessName, c.businessVintage, c.loanPurpose].filter(Boolean).join(' · ')}</div>
+                  </div>
+                </div>
+              </Card>
 
-      {/* Sarthi's suggested questions for the officer */}
-      {!isNew && (
-        <section className={styles.suggest}>
+              {(b.largeDeposits.length > 0 || (!b.docsSubmitted && b.missingDocs.length > 0)) && (
+                <div className={styles.alerts}>
+                  {b.largeDeposits.map((d, i) => (
+                    <div key={i} className={styles.alert}><FiAlertTriangle size={15} /> <span><b>{formatINR(d.amount)}</b> landed in {d.month} with no source on file{d.note ? ` — ${d.note.toLowerCase()}` : ''}</span></div>
+                  ))}
+                  {!b.docsSubmitted && b.missingDocs.map((d) => <div key={d} className={styles.alert}><FiX size={15} /> <span>{d} never arrived</span></div>)}
+                </div>
+              )}
+
+              {pattern && (
+                <section className={styles.memory}>
+                  <span className={styles.memoryKicker}><FiClock size={12} /> What happened last time · {pattern.patternId}</span>
+                  <p className={styles.memoryLead}>{pattern.whatWentWrong}</p>
+                  <div className={styles.failRow}>
+                    <div className={styles.failBar}><motion.div className={styles.failFill} initial={{ width: 0 }} animate={{ width: `${pattern.failureRate * 100}%` }} transition={{ duration: 0.8 }} /></div>
+                    <b>{Math.round(pattern.failureRate * 100)}%</b>
+                  </div>
+                  <p className={styles.memoryStat}>of {pattern.businessType.toLowerCase()} files in {pattern.area} went the same way</p>
+                </section>
+              )}
+
+              {b.digInto.length > 0 && (
+                <>
+                  <h2 className={styles.head}>Worth digging into</h2>
+                  <div className={styles.digs}>
+                    {b.digInto.map((d, i) => (
+                      <div key={i} className={styles.dig}><span className={styles.digIcon}><FiSearch size={13} /></span><span>{d}</span></div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {tab === 'Money' && (
+            <>
+              <section className={styles.card} style={{ marginTop: 0 }}>
+                <div className={styles.moneyHead}>
+                  <div>
+                    <span className={styles.kicker}>Supported by verified income</span>
+                    <div className={styles.moneyBig}>{elig.assessable ? inr(elig.maxEligible) : 'Not assessable'}</div>
+                  </div>
+                  <div className={styles.moneyAsk}>
+                    <span className={styles.kicker}>Asking</span>
+                    <div className={styles.moneyAskFig}>{inr(c.loanAmountRequested)}</div>
+                  </div>
+                </div>
+                {elig.assessable && (
+                  <div className={styles.meter}>
+                    <motion.span className={`${styles.meterFill} ${cover < 100 ? styles.meterShort : ''}`} initial={{ width: 0 }} animate={{ width: `${cover}%` }} transition={{ duration: 0.8 }} />
+                  </div>
+                )}
+                <p className={styles.moneyNote}>
+                  {!elig.assessable
+                    ? 'No verified income yet. The interview can rebuild an indicative figure; a bank statement or ITR settles it.'
+                    : short > 0
+                      ? <><b>{inr(short)} more than the file supports</b> · bank credits at {elig.foirPct}% FOIR, less existing EMIs.</>
+                      : <>Within what the file supports · {elig.foirPct}% FOIR, less existing EMIs.</>}
+                </p>
+              </section>
+              <h2 className={styles.head}>On record</h2>
+              <motion.div className={styles.tiles} variants={listContainer} initial="initial" animate="animate">
+                {tiles.map((t) => (
+                  <motion.div key={t.term} variants={listItem} className={`${styles.tile} ${t.tone ? styles[`tile_${t.tone}`] : ''}`}>
+                    <span className={styles.tileIcon}><t.icon size={14} /></span>
+                    <span className={styles.tileTerm}>{t.term}</span>
+                    <span className={styles.tileVal}>{t.value}</span>
+                    {t.meter != null && <span className={styles.tileMeter}><span style={{ width: `${t.meter}%` }} /></span>}
+                    <span className={styles.tileNote}>{t.note}</span>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </>
+          )}
+
+          {tab === 'KYC' && (
+            (b.kyc || b.bank || b.bureau) ? (
+              <section className={styles.card} style={{ marginTop: 0 }}>
+                <div className={styles.kyc}>
+                  {b.kyc && <KycRow term="Aadhaar" value={`XXXX XXXX ${b.kyc.aadhaarLast4}`} note={b.kyc.aadhaarCheck} ok={/eKYC|XML/.test(b.kyc.aadhaarCheck)} />}
+                  {pan && <KycRow term="PAN" value={maskPan(pan.value)} note={pan.ok ? 'Format and surname initial check out' : pan.checks.filter((x) => !x.pass).map((x) => x.detail).join('; ')} ok={pan.ok} bad={!pan.ok} />}
+                  {b.bank && <KycRow term="Bank" value={`${b.bank.name}, ${b.bank.type}`} note={`${b.bank.source} · avg balance ${inr(b.bank.avgBalance)}`} ok />}
+                  {b.bureau && <KycRow term="Bureau" value={`${b.bureau.enquiries6m} enquir${b.bureau.enquiries6m === 1 ? 'y' : 'ies'} in 6 months`} note={`${b.bureau.bureau} ${b.bureau.pulledOn} · ${b.bureau.worstDpd}`} ok={b.bureau.enquiries6m < 3 && !/late/.test(b.bureau.worstDpd)} />}
+                </div>
+                {b.docsSubmitted?.length > 0 && (
+                  <div className={styles.docChips}>
+                    {b.docsSubmitted.map((d) => <span key={d} className={styles.docIn}><FiCheck size={11} /> {d}</span>)}
+                    {b.missingDocs.map((d) => <span key={d} className={styles.docOut}><FiX size={11} /> {d}</span>)}
+                  </div>
+                )}
+              </section>
+            ) : <EmptyState emoji="🪪" title="No documents on file" subtitle="Sarthi asks for PAN and Aadhaar during the interview." />
+          )}
+
+          {tab === 'Questions' && !isNew && (
+        <section className={styles.suggest} style={{ marginTop: 0 }}>
           <div className={styles.suggestHead}>
             <span className={styles.sparkle}><FiCpu size={16} /></span>
             <div className={styles.suggestTitleWrap}>
@@ -297,13 +356,9 @@ export default function SarthiBrief() {
               </motion.ol>
             )}
         </section>
-      )}
-
-      <div className={styles.footer}>
-        <motion.button className={styles.start} whileTap={{ scale: 0.98 }} onClick={() => (isNew ? navigate(`/sarthi/interview/${c.id}`) : setChoose(true))}>
-          Start the interview <FiArrowRight size={18} />
-        </motion.button>
-      </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
 
       <BottomSheet open={choose} onClose={() => setChoose(false)} title="Who will take this PD?">
         <div className={styles.choices}>

@@ -77,7 +77,7 @@ export default function DSADetail() {
           <button className={`${styles.actBtn} ${styles.actRecord}`} onClick={() => navigate(`/prompter?dsa=${dsa.id}&mode=record`)}><FiMic size={16} /> Record</button>
         </div>
         <div className={styles.actions} style={{ marginTop: 8 }}>
-          <button className={`${styles.actBtn} ${styles.actAi}`} onClick={() => navigate(`/ai/session?kind=dsa&id=${dsa.id}`)}><IoSparkles size={16} /> SAARTHI AI</button>
+          <button className={`${styles.actBtn} ${styles.actAi}`} onClick={() => navigate(`/sarthi/dsa/${dsa.id}`)}><IoSparkles size={16} /> Sarthi AI</button>
           <button className={styles.actBtn} style={{ color: 'var(--primary)' }} onClick={() => navigate(`/scheduler?dsa=${dsa.id}`)}><FiCalendar size={16} /> Schedule meeting</button>
         </div>
       </div>

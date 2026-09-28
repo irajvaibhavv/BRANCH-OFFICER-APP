@@ -35,12 +35,12 @@ import HelpFAQ from '../screens/help/HelpFAQ';
 import ProfileSettings from '../screens/profile/ProfileSettings';
 import Prompter from '../screens/prompter/Prompter';
 import MeetingRecorder, { RecordingDetail, RecordingsList, EngagementDetail } from '../screens/recorder/MeetingRecorder';
-import SarthiHome from '../screens/sarthi/SarthiHome';
 import SarthiNewCase from '../screens/sarthi/SarthiNewCase';
 import SarthiBrief from '../screens/sarthi/SarthiBrief';
 import SarthiInterview from '../screens/sarthi/SarthiInterview';
 import SarthiReport from '../screens/sarthi/SarthiReport';
 import SarthiOfficer from '../screens/sarthi/SarthiOfficer';
+import SarthiDsaInterview from '../screens/sarthi/SarthiDsaInterview';
 
 /** Persistent tab bar — on every screen after login (hidden only during auth). */
 export function PersistentTabBar() {
@@ -48,7 +48,7 @@ export function PersistentTabBar() {
   const { isAuthed } = useAuth();
   // Also hidden in SAARTHI AI handover mode and in a Sarthi AI interview (the customer/DSA holding
   // the phone must not wander into the officer's app), and in the teleprompter, a full-screen stage.
-  if (!isAuthed || pathname.startsWith('/login') || pathname === '/ai/session' || pathname === '/prompter' || pathname.startsWith('/sarthi/interview')) return null;
+  if (!isAuthed || pathname.startsWith('/login') || pathname === '/ai/session' || pathname === '/prompter' || pathname.startsWith('/sarthi/interview') || pathname.startsWith('/sarthi/dsa') || pathname.startsWith('/sarthi/officer')) return null;
   return <BottomTabBar />;
 }
 
@@ -109,12 +109,14 @@ export function AnimatedRoutes() {
           <Route path="/ai" element={<AIHome />} />
           <Route path="/ai/session" element={<AISession />} />
           <Route path="/ai/reports/:id" element={<AIReport />} />
-          <Route path="/sarthi" element={<SarthiHome />} />
+          {/* Sarthi's queue lives under Clients → Customers */}
+          <Route path="/sarthi" element={<Navigate to="/dsas?tab=customers" replace />} />
           <Route path="/sarthi/new" element={<SarthiNewCase />} />
           <Route path="/sarthi/brief/:id" element={<SarthiBrief />} />
           <Route path="/sarthi/interview/:id" element={<SarthiInterview />} />
           <Route path="/sarthi/report/:id" element={<SarthiReport />} />
           <Route path="/sarthi/officer/:id" element={<SarthiOfficer />} />
+          <Route path="/sarthi/dsa/:id" element={<SarthiDsaInterview />} />
           <Route path="/visits/new" element={<VisitLogger />} />
           <Route path="/prompter" element={<Prompter />} />
           <Route path="/record" element={<MeetingRecorder />} />

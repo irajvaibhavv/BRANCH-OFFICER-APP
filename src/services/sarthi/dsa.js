@@ -1,0 +1,191 @@
+// Sarthi's DSA review call. Same split as the PD: code picks the topic and does the hisaab against the DSA's own
+// numbers, Claude only phrases the question. Numbers are read in code (hindiNumbers), so there is no extraction call.
+import { askAgent } from './agent';
+import { readNumber } from './hindiNumbers';
+import { commissionFor, productMix } from '../../utils/commission';
+
+const FENCE = '```';
+
+/** What the branch already knows about this DSA — the "bank statement" of a DSA review. */
+export function dsaFile(dsa, { loanFiles = [], engagements = [] } = {}) {
+  const monthly = dsa.monthly ?? [];
+  const avg = monthly.length ? +(monthly.reduce((a, b) => a + b, 0) / monthly.length).toFixed(1) : null;
+  const mix = productMix(dsa);
+  const pay = commissionFor(dsa);
+  const files = loanFiles.filter((f) => f.dsaId === dsa.id).map((f) => ({
+    borrower: f.borrower, product: f.product, amount: f.amount, status: f.status,
+    pendingDocs: (f.docs ?? []).filter(([, s]) => s !== 'done').map(([d]) => d),
+  }));
+  return {
+    name: dsa.name, firm: dsa.firm, location: dsa.location, quality: dsa.quality,
+    filesSubmitted: dsa.filesSubmitted, approvalRate: dsa.approvalRate, disbursed: dsa.disbursed,
+    filesPerMonthLast6: monthly, avgFilesPerMonth: avg, bestMonth: monthly.length ? Math.max(...monthly) : null,
+    topProduct: [...mix].sort((a, b) => b.files - a.files)[0]?.product,
+    productMix: mix.map((m) => `${m.product} ${m.files} files`),
+    commission: { paidThisYear: pay.paidFY, thisMonth: pay.thisMonth, pending: pay.pending, slab: pay.slab },
+    files,
+    stuck: files.filter((f) => f.pendingDocs.length && !['disbursed', 'rejected'].includes(f.status)),
+    rejected: files.filter((f) => f.status === 'rejected').map((f) => f.borrower),
+    meetings: engagements.filter((e) => e.dsaId === dsa.id).length,
+    lastVisit: dsa.lastVisit,
+  };
+}
+
+// `num` topics are read as a number in code and rechecked; `noProbe` topics accept a plain yes/no.
+export const DSA_TOPICS = [
+  { id: 'name', section: 'Identity', noProbe: true, goal: 'Who is speaking: their own name and their firm name. Ask openly — never "aap Priya ji hain na?"', ask: 'Aapka poora naam aur firm ka naam bataiye?' },
+  { id: 'office', section: 'Identity', goal: 'Where their office is, and how many years they have done loan work', ask: 'Aapka office kahan hai, aur ye kaam kitne saal se kar rahe hain?' },
+  { id: 'team', section: 'Identity', goal: 'How many people work with them, and whether sub-agents or freelancers bring them files', ask: 'Aapke saath kitne log kaam karte hain? Koi sub-agent bhi hain?' },
+  { id: 'lenders', section: 'Identity', goal: 'Which other banks or NBFCs they also send files to', ask: 'Humare alawa aur kin banks ya NBFC ke saath kaam karte hain?' },
+  { id: 'sourcing', section: 'Where customers come from', goal: 'How customers reach them: walk-in, references, builders, CAs, online leads, sub-agents', ask: 'Customer aapke paas zyada kaise aate hain?' },
+  { id: 'recent', section: 'Where customers come from', goal: 'Names and the business of two or three customers they brought last month — do they know their own customers?', ask: 'Pichhle mahine ke do-teen customers ke naam aur unka kaam bataiye?' },
+  { id: 'charges', section: 'Where customers come from', noProbe: true, goal: 'Whether they take any fee or charge from customers. Ask casually, as a routine question.', ask: 'Customer se aap koi fees ya charge lete hain?' },
+  { id: 'docs', section: 'File quality', goal: 'Who collects documents, and who prepares bank statements, ITR or financials for the customer', ask: 'Customer ke documents kaun ikattha karta hai — aap ya customer khud?' },
+  { id: 'files_total', section: 'Numbers', num: true, goal: 'How many files they log in a month in total, across all lenders', ask: 'Sab lenders mila ke mahine mein kitni files login karte hain?' },
+  { id: 'files_us', section: 'Numbers', num: true, goal: 'How many of those files come to us each month', ask: 'Unmein se humein mahine mein kitni files dete hain?' },
+  { id: 'approval', section: 'Numbers', num: true, goal: 'What approval rate they think they get with us, out of 100', ask: 'Aapke hisaab se humare yahan sau mein se kitni files approve hoti hain?' },
+  { id: 'rejections', section: 'File quality', stuck: true, goal: 'The main reason their files get stuck or rejected with us', ask: 'Aapki files zyada kis wajah se atakti ya reject hoti hain?' },
+  { id: 'product', section: 'Numbers', goal: 'Which loan most of their business with us is: home loan, LAP, business loan or MSME', ask: 'Humare saath sabse zyada kaunsa loan karte hain?' },
+  { id: 'commission', section: 'Numbers', num: true, goal: 'How much commission from us is pending right now, in rupees', ask: 'Abhi humari taraf se aapka kitna commission baaki hai?' },
+  { id: 'service', section: 'Working with us', goal: 'The biggest problem working with us: turnaround time, officer response, rejections, payouts', ask: 'Humare saath kaam mein sabse badi dikkat kya aati hai?' },
+  { id: 'competition', section: 'Working with us', goal: 'What other lenders give them that we do not: payout, speed, policy', ask: 'Doosre lender aisa kya dete hain jo hum nahi dete?' },
+  { id: 'forecast', section: 'Plan ahead', num: true, goal: 'How many files they can give us in the next three months', ask: 'Agle teen mahine mein humein kitni files de sakte hain?' },
+  { id: 'growth', section: 'Plan ahead', goal: 'Any new area, segment or loan type they want to start — and how they will get customers there', ask: 'Koi naya area ya naya kaam shuru karne ka plan hai?' },
+  { id: 'support', section: 'Plan ahead', goal: 'What support they need from us: training, faster sanction, marketing material, payouts', ask: 'Humse kis cheez mein madad chahiye?' },
+  { id: 'conduct', section: 'Compliance', noProbe: true, goal: 'Whether any lender ever suspended or closed their DSA code, and why. Gently, as a routine record question.', ask: 'Kabhi kisi lender ne aapka code band kiya tha? Bas record ke liye pooch rahe hain.' },
+];
+
+const VAGUE = /^(haan|ha|nahi|no|yes|ok|theek|thik|normal|pata nahi|yaad nahi|sab|kuch|chalta hai|dekhte hain|dekhenge)\b/i;
+/** One follow-up per topic when the answer gives nothing to hold on to. */
+export function needsProbe(topic, text) {
+  if (topic.noProbe) return false;
+  if (topic.num) return readNumber(text) == null;
+  return text.trim().split(/\s+/).length < 4 || VAGUE.test(text.trim());
+}
+
+const PRODUCT_WORDS = { 'Home Loan': /home|ghar|housing|होम/i, LAP: /lap|property|prop|प्रॉपर्टी/i, 'Business Loan': /business|bl\b|बिज़नेस/i, 'MSME WC': /msme|working|wc\b|capital/i };
+const fmt = (n) => (n >= 100000 ? `${+(n / 100000).toFixed(1)} lakh` : n >= 1000 ? `${Math.round(n / 1000)} hazaar` : String(n));
+
+/** The hisaab done on the call: a stated figure against the branch's record. Returns detail lines for the directive. */
+export function rechecksFor(topic, text, file, nums) {
+  const v = nums[topic.id];
+  const out = [];
+  if (topic.id === 'files_us' && v != null && file.avgFilesPerMonth) {
+    if (v > file.avgFilesPerMonth * 1.5 || v < file.avgFilesPerMonth * 0.6) {
+      out.push(`They said ${v} files a month come to us; our system shows about ${Math.round(file.avgFilesPerMonth)} a month over the last 6 months (best month ${file.bestMonth}). Ask where the difference is.`);
+    }
+    if (nums.files_total && v / nums.files_total < 0.3) {
+      out.push(`They log ${nums.files_total} files a month but give us only ${v}. Ask kindly why most go to other lenders.`);
+    }
+  }
+  if (topic.id === 'approval' && v != null && Math.abs(v - file.approvalRate) > 15) {
+    out.push(`They think ${v} of 100 files get approved with us; our record says ${file.approvalRate}%. Ask what they are counting.`);
+  }
+  if (topic.id === 'product' && file.topProduct && !PRODUCT_WORDS[file.topProduct]?.test(text)) {
+    out.push(`They said most of their business with us is "${text.slice(0, 60)}"; our record says ${file.topProduct} (${file.productMix.join(', ')}). Ask about it.`);
+  }
+  if (topic.id === 'commission' && v != null && file.commission.pending && Math.abs(v - file.commission.pending) > Math.max(5000, file.commission.pending * 0.4)) {
+    out.push(`They say Rs ${fmt(v)} commission is pending; our record shows about Rs ${fmt(file.commission.pending)} pending. Ask which payouts they are counting — the officer will reconcile.`);
+  }
+  if (topic.id === 'forecast' && v != null && file.avgFilesPerMonth && v > file.avgFilesPerMonth * 3 * 1.6) {
+    out.push(`They promise ${v} files in 3 months; in the last 6 months they gave about ${Math.round(file.avgFilesPerMonth * 3)} per quarter (best month ${file.bestMonth}). Ask what will bring the jump.`);
+  }
+  if (topic.id === 'recent' && file.files.length) {
+    const said = text.toLowerCase();
+    const known = file.files.filter((f) => f.borrower.toLowerCase().split(/\s+/).some((w) => w.length > 3 && said.includes(w)));
+    if (!known.length) out.push(`None of the names they gave is in their files with us. Our files from them include ${file.files.slice(0, 2).map((f) => f.borrower).join(' and ')}. Ask about one of these: what the customer does and how they came to them.`);
+  }
+  return out;
+}
+
+export function interviewerPrompt(file, directive) {
+  return `You are Sarthi, an AI from the branch, on a video call reviewing the work of a DSA (a loan agent who brings loan files to the branch).
+You sound like a warm relationship manager who knows their numbers — respectful, curious, never an auditor.
+
+## Rules
+- Hinglish, everyday words. One short question at a time, ideally under 18 words.
+- Start with a few words reacting to their last answer when it is natural ("Achha, 8 saal ka kaam hai"), then ask. Vary how you begin.
+- Never accuse, never say an answer is wrong. The only place you mention a mismatch is a FRIENDLY RECHECK from THIS TURN:
+  say both figures plainly and kindly, assume they rounded or forgot, and let them explain.
+- Never promise payouts, approvals or policy changes — "officer aapse baat karenge".
+- Never name any bank, NBFC or brand as the one you work for; you are "branch se". Lenders they name may be repeated back.
+- The DSA file below is internal. Use a figure from it ONLY when THIS TURN tells you to; never read the file out.
+- "Pata nahi" is a valid answer — thank them and move on.
+
+## Output — exactly this order, nothing else
+1. ${FENCE}speech${FENCE} block FIRST: the same message fully in Devanagari (English words too: file → फ़ाइल, commission → कमीशन). Digits may stay.
+2. Then the same message in Hinglish (Latin script), on its own.
+
+${FENCE}speech
+अच्छा, आठ साल का काम है। आपके साथ कितने लोग काम करते हैं?
+${FENCE}
+Achha, 8 saal ka kaam hai. Aapke saath kitne log kaam karte hain?
+
+## DSA file (internal)
+${JSON.stringify(file, null, 1)}
+
+## THIS TURN
+${directive}`;
+}
+
+/** THIS TURN for an action: { kind: topic | probe | recheck | closing, topic, detail, greet, text }. */
+export function directiveFor(action, file) {
+  const first = file.name.split(' ')[0];
+  if (action.kind === 'closing') return `Close the call warmly in two short sentences: thank ${first} ji for their time and say the officer will follow up on what they raised. Ask nothing.`;
+  if (action.kind === 'recheck') return `FRIENDLY RECHECK. ${action.detail}\nSay both figures kindly, like doing the hisaab together, and ask them to explain. One question.`;
+  if (action.kind === 'probe') return `FOLLOW UP on "${action.topic.goal}". Their answer was: "${action.text}". It gave nothing concrete — ask ONE specific follow-up to get a name, a number or an example.${action.topic.num ? ' They must give a number; ask for a rough one.' : ''}`;
+  const t = action.topic;
+  const stuck = t.stuck && file.stuck.length
+    ? `\nOur record: ${file.stuck.map((f) => `${f.borrower} (${f.status}, pending: ${f.pendingDocs.join(', ')})`).join('; ')}${file.rejected.length ? `; rejected: ${file.rejected.join(', ')}` : ''}. Name one of these files and ask what is holding it.`
+    : '';
+  const greet = action.greet ? `Greet first in one short sentence: "Namaste! Main Sarthi, branch se — aapke kaam ka chhota sa review hai, 10-15 minute lagenge." Then ask.\n` : '';
+  return `${greet}Topic: ${t.goal}\nPlain example: "${t.ask}"${stuck}`;
+}
+
+// ---- report ----
+
+const REPORT_SYSTEM = `You write a DSA review report for a branch officer from a call Sarthi (an AI) had with the DSA.
+You get the DSA's record from the branch, the question-by-question answers, and the rechecks where their figures did not match the record.
+Judge: is this partner bringing genuine files, how loyal are they to us, and what should the officer do next.
+Red flags to look for: sub-agents they cannot name, not knowing their own customers, charging customers, someone else preparing
+statements/ITR, a code blocked by another lender, figures far from the record, most files going to other lenders.
+Use only what is in the input — never invent a figure. Quote their words when it matters.
+
+Reply with ONLY a JSON object:
+{"score": 0-100, "sentiment": "strong" | "positive" | "moderate" | "weak", "headline": "one line",
+ "escalate": true | false,
+ "flags": [{"tone": "danger" | "warning" | "info", "text": "..."}],
+ "sections": [{"title": "...", "items": ["..."]}],
+ "todos": [{"owner": "BO" | "DSA" | "Credit", "text": "..."}]}
+Sections, in order: "Who they are", "Where their customers come from", "File quality", "Their numbers vs our record", "Working with us", "Pipeline and plan".`;
+
+export async function writeDsaReport({ file, qa, rechecks }) {
+  const input = `## Branch record\n${JSON.stringify(file, null, 1)}\n\n## Answers\n${qa.map((x) => `[${x.section}] ${x.q}\n→ ${x.a}`).join('\n\n')}\n\n## Rechecks on the call\n${rechecks.length ? rechecks.map((r) => `- ${r.detail}\n  Their answer: ${r.answer ?? '(none)'}`).join('\n') : 'None'}`;
+  const raw = await askAgent({ systemPrompt: REPORT_SYSTEM, messages: [{ role: 'user', content: input }], temperature: 0.2, maxTokens: 6000, thinkingBudget: 2000 });
+  const json = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
+  if (!Array.isArray(json.sections) || typeof json.score !== 'number') throw new Error('DSA report: bad shape');
+  return { flags: [], todos: [], ...json };
+}
+
+/** No model reachable: the same report shape, built from the answers and rechecks alone. */
+export function fallbackDsaReport({ file, qa, rechecks }) {
+  const sections = [];
+  qa.forEach((x) => {
+    let s = sections.find((y) => y.title === x.section);
+    if (!s) { s = { title: x.section, items: [] }; sections.push(s); }
+    s.items.push(`${x.q} — "${x.a}"`);
+  });
+  const score = Math.round(file.approvalRate * 0.8 + (file.quality === 'high' ? 20 : file.quality === 'average' ? 10 : 0) - rechecks.length * 5);
+  return {
+    score: Math.max(0, Math.min(100, score)),
+    sentiment: score >= 75 ? 'strong' : score >= 60 ? 'positive' : score >= 45 ? 'moderate' : 'weak',
+    headline: `${file.name}: ${rechecks.length ? `${rechecks.length} figure${rechecks.length > 1 ? 's' : ''} did not match our record` : 'answers in line with our record'}`,
+    escalate: false,
+    flags: rechecks.map((r) => ({ tone: 'warning', text: `${r.detail} Their answer: "${r.answer ?? '—'}"` })),
+    sections,
+    todos: [
+      ...file.stuck.map((f) => ({ owner: 'BO', text: `Clear pending docs on ${f.borrower}: ${f.pendingDocs.join(', ')}` })),
+      { owner: 'BO', text: 'Review the answers above; the AI was not reachable to write the assessment.' },
+    ],
+  };
+}

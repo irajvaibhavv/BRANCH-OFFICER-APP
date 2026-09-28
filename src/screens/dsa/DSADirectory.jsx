@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FiSearch, FiPhone, FiPlus, FiCheck, FiX } from 'react-icons/fi';
 import { IoLogoWhatsapp } from 'react-icons/io5';
@@ -15,9 +15,14 @@ import { MiniMetricRow } from '../../components/charts/MiniMetric';
 import { useAppState } from '../../context/AppStateContext';
 import { useToast } from '../../hooks/useToast';
 import { formatINR } from '../../utils/formatters';
+import { useLocalStorage } from '../../hooks/useLocalStorage';
+import { useSarthiReports } from '../../hooks/useSarthiReports';
+import { CASES, CUSTOM_CASES_KEY } from '../../services/sarthi/knowledge';
+import CustomerList from './CustomerList';
 import styles from './dsa.module.css';
 
 const FILTERS = ['All', 'High Quality', 'Average', 'Low Quality', 'Nearby', 'Recently Visited'];
+const CUSTOMER_FILTERS = ['All', 'High Risk', 'Medium Risk', 'Low Risk', 'Report Ready'];
 
 export default function DSADirectory() {
   const navigate = useNavigate();
@@ -25,6 +30,11 @@ export default function DSADirectory() {
   const { toast } = useToast();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('All');
+  const [params, setParams] = useSearchParams();
+  const customers = params.get('tab') === 'customers';
+  const [reports] = useSarthiReports();
+  const [walkIns] = useLocalStorage(CUSTOM_CASES_KEY, []);
+  const switchTab = (toCustomers) => { setParams(toCustomers ? { tab: 'customers' } : {}, { replace: true }); setFilter('All'); setQ(''); exitSelect(); };
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState([]);
 
@@ -39,6 +49,14 @@ export default function DSADirectory() {
     return l;
   }, [dsas, q, filter]);
 
+  const files = useMemo(() => {
+    let l = [...walkIns, ...CASES];
+    if (q) l = l.filter((c) => `${c.name} ${c.business} ${c.area}`.toLowerCase().includes(q.toLowerCase()));
+    if (filter.endsWith('Risk')) l = l.filter((c) => c.riskLevel === filter.split(' ')[0].toLowerCase());
+    if (filter === 'Report Ready') l = l.filter((c) => reports.some((r) => r.caseId === c.id));
+    return l;
+  }, [walkIns, reports, q, filter]);
+
   const toggleSel = (id) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : s.length < 3 ? [...s, id] : s));
   const exitSelect = () => { setSelectMode(false); setSelected([]); };
 
@@ -46,6 +64,7 @@ export default function DSADirectory() {
   const longPressed = useRef(false);
   const onPointerDown = (id) => {
     longPressed.current = false;
+    if (customers) return;
     pressTimer.current = setTimeout(() => { longPressed.current = true; setSelectMode(true); toggleSel(id); }, 500);
   };
   const onPointerUp = () => clearTimeout(pressTimer.current);
@@ -58,32 +77,40 @@ export default function DSADirectory() {
   return (
     <Page>
       <TopBar
-        title={selectMode ? `${selected.length} selected` : 'DSAs'}
-        subtitle={selectMode ? 'Pick 2–3 to compare' : `${dsas.length} partners · ${dsas.filter((d) => d.quality === 'high').length} high quality`}
+        title={selectMode ? `${selected.length} selected` : 'Clients'}
+        subtitle={selectMode ? 'Pick 2–3 to compare' : customers ? `${walkIns.length + CASES.length} customers waiting for PD` : `${dsas.length} partners · ${dsas.filter((d) => d.quality === 'high').length} high quality`}
         hideBell={selectMode}
         right={
           selectMode ? (
             <button className={styles.iconBtn} onClick={exitSelect} aria-label="Cancel"><FiX size={22} /></button>
           ) : (
-            <button className={styles.iconBtn} onClick={() => navigate('/dsas/new')} aria-label="Add DSA"><FiPlus size={24} /></button>
+            <button className={styles.iconBtn} onClick={() => navigate(customers ? '/sarthi/interview/new' : '/dsas/new')} aria-label={customers ? 'New applicant' : 'Add DSA'}><FiPlus size={24} /></button>
           )
         }
       />
 
       <div className={styles.sticky}>
+        {!selectMode && (
+          <div className={styles.seg}>
+            <button className={!customers ? styles.segOn : ''} onClick={() => switchTab(false)}>DSA</button>
+            <button className={customers ? styles.segOn : ''} onClick={() => switchTab(true)}>Customers</button>
+          </div>
+        )}
         <div className={styles.search}>
           <FiSearch size={20} color="var(--text-3)" />
-          <input placeholder="Search DSAs..." value={q} onChange={(e) => setQ(e.target.value)} />
+          <input placeholder={customers ? 'Search customers...' : 'Search DSAs...'} value={q} onChange={(e) => setQ(e.target.value)} />
           {q && <button onClick={() => setQ('')} aria-label="Clear"><FiX size={18} /></button>}
         </div>
         <div className="hscroll" style={{ paddingTop: 12, paddingBottom: 8 }}>
-          {FILTERS.map((f) => (
+          {(customers ? CUSTOMER_FILTERS : FILTERS).map((f) => (
             <button key={f} className={`${styles.chip} ${filter === f ? styles.chipOn : ''}`} onClick={() => setFilter(f)}>{f}</button>
           ))}
         </div>
       </div>
 
-      {list.length === 0 ? (
+      {customers ? (
+        <CustomerList files={files} reports={reports} onClear={() => { setQ(''); setFilter('All'); }} />
+      ) : list.length === 0 ? (
         <EmptyState emoji="🔍" title="No DSAs match" subtitle="Try a different name or clear the filter." actionLabel="Clear filters" onAction={() => { setQ(''); setFilter('All'); }} />
       ) : (
         <motion.div className="stack" variants={listContainer} initial="initial" animate="animate" key={filter}>
@@ -140,7 +167,7 @@ export default function DSADirectory() {
         </motion.div>
       )}
 
-      {!selectMode && <p className="hint" style={{ textAlign: 'center', marginTop: 16 }}>Long-press a card to compare DSAs</p>}
+      {!selectMode && !customers && <p className="hint" style={{ textAlign: 'center', marginTop: 16 }}>Long-press a card to compare DSAs</p>}
       {selectMode && <div style={{ height: 88 }} />}
 
       <AnimatePresence>

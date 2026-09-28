@@ -7,7 +7,7 @@ import styles from './BottomTabBar.module.css';
 // Outline icon for inactive, filled for active.
 const TABS = [
   { to: '/', label: 'Home', outline: FiHome, filled: IoHome, exact: true },
-  { to: '/dsas', label: 'DSAs', outline: FiUsers, filled: IoPeople },
+  { to: '/dsas', label: 'Clients', outline: FiUsers, filled: IoPeople },
   { to: '/route', label: 'Route', outline: FiMap, filled: IoMap },
   { to: '/activity', label: 'Activity', outline: FiActivity, filled: IoPulse },
   { to: '/more', label: 'More', outline: FiGrid, filled: IoGrid },
@@ -16,9 +16,9 @@ const TABS = [
 // Deeper screens light up the tab they belong to
 function activeTab(pathname) {
   if (pathname === '/') return '/';
-  if (pathname.startsWith('/dsas') || pathname.startsWith('/record') || pathname.startsWith('/engagements')) return '/dsas';
+  if (pathname.startsWith('/dsas') || pathname.startsWith('/sarthi') || pathname.startsWith('/record') || pathname.startsWith('/engagements')) return '/dsas';
   if (pathname.startsWith('/route') || pathname.startsWith('/plan') || pathname.startsWith('/customers')) return '/route';
-  if (pathname.startsWith('/ai') || pathname.startsWith('/sarthi')) return '/more';
+  if (pathname.startsWith('/ai')) return '/more';
   if (pathname.startsWith('/activity') || pathname.startsWith('/visits')) return '/activity';
   return '/more';
 }

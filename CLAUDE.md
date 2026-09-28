@@ -295,6 +295,8 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   EXIF. Each doubt becomes a `photo_provenance` flag (`Flag: photo_<kind>`) in the report — never a
   rejection. A vision description that mentions a screen, print or generated image adds a soft flag too.
   None of this catches someone photographing a real house that is not theirs; that stays the officer's job.
+- **Where it lives**: the Clients tab (`/dsas`) has a DSA | Customers toggle; Customers (`/dsas?tab=customers`, `screens/dsa/CustomerList.jsx`) is Sarthi's PD queue in the DSA card layout. `/sarthi` redirects there, so every "back to the queue" link still works.
+- **DSA review** (`/sarthi/dsa/:id`, `services/sarthi/dsa.js`, the Sarthi AI button on a DSA): the same video call, Claude only (`provider: 'llm'`), one call per turn — numbers are read in code with `readNumber`, so there is no extraction call. `DSA_TOPICS` (20, identity → sourcing → file quality → numbers → working with us → plan → conduct) are walked in order; a vague answer gets one follow-up (`needsProbe`); `rechecksFor` compares stated files/month, share given to us, approval %, main product, pending commission, the 3-month forecast and named customers against `dsaFile()` (monthly, productMix, commissionFor, loan files) and queues a FRIENDLY RECHECK. Stuck files are named on the rejections topic. The report (Sonnet via thinkingBudget, else `fallbackDsaReport`) is saved to `bo_ai_reports` and shown on `/ai/reports/:id`. If Claude is unreachable a turn says the topic's plain `ask`.
 - Sarthi state is `bo_sarthi_*` in localStorage (cleared on logout like every `bo_` key); it is not part of
   the AppState seed/date-shift system.
 

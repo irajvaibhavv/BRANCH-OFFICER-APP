@@ -335,7 +335,7 @@ export function AIReport() {
 
   return (
     <Page mode="slide">
-      <TopBar back title={<span className={styles.brand}><IoSparkles size={18} /> SAARTHI AI report</span>} subtitle={`${r.partyName} · ${timeAgo(r.createdAt)}`} hideBell />
+      <TopBar back title={<span className={styles.brand}><IoSparkles size={18} /> {r.sarthi ? 'Sarthi AI' : 'SAARTHI AI'} report</span>} subtitle={`${r.partyName} · ${timeAgo(r.createdAt)}`} hideBell />
 
       <Card padding={16} noChevron className={styles.heroCard}>
         <div className="row" style={{ gap: 14 }}>

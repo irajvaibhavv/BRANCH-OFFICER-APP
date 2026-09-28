@@ -170,7 +170,7 @@ export default function Dashboard() {
                   <Button size="sm" style={{ flex: 1, minWidth: 0, padding: '0 10px' }} variant="secondary" icon={<FiNavigation size={16} />} onClick={() => navigate('/route')}>Navigate</Button>
                   {nextDsa?.isCustomer
                     ? <Button size="sm" variant="secondary" style={{ width: 40, padding: 0, flexShrink: 0, gap: 0 }} icon={<FiUser size={18} />} aria-label="Customer prep" title="Questions & loan calculator" onClick={() => navigate(`/customers/${nextVisit.dsaId}`)} />
-                    : <Button size="sm" variant="secondary" style={{ width: 40, padding: 0, flexShrink: 0, color: 'var(--danger)', gap: 0 }} icon={<FiMic size={18} />} aria-label="Record meeting" title="Record meeting" onClick={() => navigate(`/record?dsa=${nextVisit.dsaId}`)} />}
+                    : <Button size="sm" variant="secondary" style={{ width: 40, padding: 0, flexShrink: 0, color: 'var(--danger)', gap: 0 }} icon={<FiMic size={18} />} aria-label="Record meeting" title="Record meeting" onClick={() => navigate(`/prompter?dsa=${nextVisit.dsaId}&mode=record`)} />}
                 </div>
                 <div className="row-between" style={{ marginTop: 8 }}>
                   <button className={styles.moreLink} onClick={() => navigate('/route')}>

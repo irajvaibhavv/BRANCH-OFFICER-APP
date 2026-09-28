@@ -169,7 +169,7 @@ export default function VisitLogger() {
             </div>
           </Card>
         ) : dsa && !dsa.isCustomer ? (
-          <button className="link" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--danger)', fontWeight: 600, fontSize: 14, minHeight: 32 }} onClick={() => navigate(`/record?dsa=${dsa.id}`)}>
+          <button className="link" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--danger)', fontWeight: 600, fontSize: 14, minHeight: 32 }} onClick={() => navigate(`/prompter?dsa=${dsa.id}&mode=record`)}>
             <FiMic size={14} /> In the meeting now? Record it for a transcript &amp; summary <FiChevronRight size={14} />
           </button>
         ) : null}

@@ -98,7 +98,7 @@ export default function Prompter() {
       {/* Controls */}
       <div className={styles.controls}>
         <button className={styles.navBtn} disabled={i === 0} onClick={() => go(i - 1)} aria-label="Previous"><FiChevronLeft size={24} /></button>
-        <button className={`${styles.tickBtn} ${covered.includes(q?.id) ? styles.tickOn : ''}`} onClick={tick}><FiCheck size={20} /> {covered.includes(q?.id) ? 'Covered' : 'Asked it'}</button>
+        <button className={`${styles.tickBtn} ${covered.includes(q?.id) ? styles.tickOn : ''}`} onClick={tick} disabled={!q}><FiCheck size={20} /> {covered.includes(q?.id) ? 'Covered' : 'Asked it'}</button>
         <button className={styles.navBtn} disabled={i >= questions.length - 1} onClick={() => go(i + 1)} aria-label="Next"><FiChevronRight size={24} /></button>
       </div>
       <button className={styles.endBtn} onClick={finish}>

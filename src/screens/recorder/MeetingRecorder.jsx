@@ -307,7 +307,8 @@ function RecordingResult({ rec, dsa, fresh = false, readOnly = false }) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { visits } = useAppState();
-  const [view, setView] = useState('Summary');
+  // Straight after a meeting the officer wants to read what was said; a saved one opens on the summary.
+  const [view, setView] = useState(fresh ? 'Transcript' : 'Summary');
   const s = rec.summary;
   const linkedVisit = rec.visitId ? visits.find((v) => v.id === rec.visitId) : null;
 

@@ -288,7 +288,7 @@ export default function DSADetail() {
                   const m = { ...m0, recordingId: m0.recordingId ?? recs.find((r) => r.visitId === m0.id)?.id };
                   return (
                   <Card key={m.id} padding={16} status={m.status === 'completed' ? 'success' : m.status === 'missed' ? 'danger' : 'primary'}
-                    onClick={m.recordingId ? () => navigate(`/recordings/${m.recordingId}`) : m.status === 'upcoming' ? () => navigate(`/record?dsa=${dsa.id}`) : undefined}
+                    onClick={m.recordingId ? () => navigate(`/recordings/${m.recordingId}`) : m.status === 'upcoming' ? () => navigate(`/prompter?dsa=${dsa.id}&mode=record`) : undefined}
                     noChevron={!m.recordingId}>
                     <div className="row-between">
                       <div>
@@ -307,7 +307,7 @@ export default function DSADetail() {
           )}
 
           {tab === 'Notes' && (
-            notes.length === 0 && recs.length === 0 ? <EmptyState compact emoji="📝" title="No notes yet" subtitle="Record a meeting or log a visit and the notes will appear here." actionLabel="Record meeting" onAction={() => navigate(`/record?dsa=${dsa.id}`)} /> : (
+            notes.length === 0 && recs.length === 0 ? <EmptyState compact emoji="📝" title="No notes yet" subtitle="Record a meeting or log a visit and the notes will appear here." actionLabel="Record meeting" onAction={() => navigate(`/prompter?dsa=${dsa.id}&mode=record`)} /> : (
               <div className="stack">
                 {recs.length > 0 && (
                   <>

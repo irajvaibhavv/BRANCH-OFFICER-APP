@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiCheck, FiClock, FiNavigation, FiZap, FiEdit2, FiMap, FiUsers, FiUser, FiHome } from 'react-icons/fi';
+import { FiCheck, FiClock, FiNavigation, FiZap, FiEdit2 } from 'react-icons/fi';
 import Page, { listContainer, listItem } from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import Card from '../../components/ui/Card';
@@ -44,7 +44,7 @@ export default function RoutePlanner() {
       </div>
     </Card>
   ) : (
-    <Card padding={16} onClick={() => setChooser(true)} className={cards.length ? '' : styles.planTile} style={cards.length ? { marginBottom: 12 } : undefined}>
+    <Card padding={16} onClick={() => setChooser(true)} style={{ marginBottom: 12 }}>
       <div className="row" style={{ gap: 12 }}>
         <span className="icon-tile" style={{ '--tile': '#f59e0b', width: 40, height: 40, borderRadius: 12 }}><FiZap size={18} /></span>
         <div className="grow">
@@ -60,19 +60,8 @@ export default function RoutePlanner() {
       <Page className={styles.emptyPage}>
         <TopBar title="Route" subtitle="Nothing planned yet" />
         <div className={styles.center}>
-          <div className={styles.hero}>
-            <motion.div className={styles.heroIcon} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 18 }}>
-              <FiMap size={30} />
-            </motion.div>
-            <h2 className={styles.heroTitle}>Plan today&rsquo;s route</h2>
-            <p className={styles.heroSub}>Choose who to meet — the stops are put in order and the route is drawn for you.</p>
-          </div>
           {planCard}
-          <div className={styles.chips}>
-            {[[FiUsers, 'DSA visits'], [FiUser, 'Customers'], [FiHome, 'Branch day']].map(([Icon, label]) => (
-              <button key={label} className={styles.chip} onClick={() => setChooser(true)}><Icon size={13} /> {label}</button>
-            ))}
-          </div>
+          <p className="hint" style={{ textAlign: 'center' }}>Pick DSAs, customers or a branch day — the route is drawn for you.</p>
         </div>
         <PlanChooser open={chooser} onClose={() => setChooser(false)} />
       </Page>

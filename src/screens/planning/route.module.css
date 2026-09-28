@@ -14,25 +14,6 @@
 
 .num { width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: #fff; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
-/* Nothing planned: a centred hero with the Plan my day tile. The page is pinned to the visible screen area, because
-   .content is a scroll box whose height a % min-height could not use — the tile sat at the top. */
-.emptyPage { position: absolute; inset: 0; display: flex; flex-direction: column; overflow-y: auto; }
-.center { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px; padding: 8px 0 24px; }
-.hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; }
-.heroIcon {
-  width: 76px; height: 76px; border-radius: 24px; display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
-  color: #fff; background: linear-gradient(135deg, var(--primary), #7c3aed);
-  box-shadow: 0 12px 28px rgba(76, 29, 149, 0.28), 0 0 0 8px var(--primary-soft);
-}
-.heroTitle { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; color: var(--text-1); }
-.heroSub { max-width: 290px; font-size: 14px; line-height: 1.45; color: var(--text-2); }
-.planTile { border: 1.5px solid var(--primary-soft); box-shadow: 0 10px 28px rgba(76, 29, 149, 0.12); }
-.chips { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
-.chip {
-  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px;
-  font-size: 13px; font-weight: 600; color: var(--primary); background: var(--primary-soft);
-}
-/* Real phone: the frame collapses and the page scrolls with the window, so fill the window instead. */
-@media (max-width: 559px) {
-  .emptyPage { position: static; min-height: calc(100dvh - env(safe-area-inset-top)); overflow: visible; }
-}
+/* Nothing planned: the Plan my day tile alone, in the middle of the screen */
+.emptyPage { display: flex; flex-direction: column; }
+.center { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding-bottom: 40px; }

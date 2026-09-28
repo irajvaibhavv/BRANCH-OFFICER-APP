@@ -149,8 +149,9 @@ export function CustomerDetail() {
         <div className="hint" style={{ marginTop: 10, color: 'var(--text-1)', lineHeight: 1.45 }}>{c.note}</div>
         <div className="row" style={{ gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
           <Badge tone="primary" soft>{c.product}</Badge>
-          <Badge tone="neutral" soft>{c.kind === 'existing' ? `Disbursed ${formatINR(c.amount)}` : `Asking ${formatINR(c.amount)}`}</Badge>
+          <Badge tone="neutral" soft>{c.kind === 'existing' && !c.sarthiCase ? `Disbursed ${formatINR(c.amount)}` : `Asking ${formatINR(c.amount)}`}</Badge>
           {dsa && <button className="link" onClick={() => navigate(`/dsas/${dsa.id}`)}><Badge tone="neutral" soft><FiUsers size={10} style={{ verticalAlign: '-1px' }} /> via {dsa.name.split(' ')[0]}</Badge></button>}
+          {c.sarthiCase && <button className="link" onClick={() => navigate(`/sarthi/brief/${c.sarthiCase}`)}><Badge tone="primary" soft><FiFileText size={10} style={{ verticalAlign: '-1px' }} /> PD file · Sarthi AI</Badge></button>}
         </div>
         {file && (
           <button className="row-between" style={{ width: '100%', marginTop: 12, padding: '10px 12px', borderRadius: 12, background: 'var(--bg)', textAlign: 'left' }} onClick={() => navigate(`/files/${file.id}`)}>

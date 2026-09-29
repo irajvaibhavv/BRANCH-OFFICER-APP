@@ -1,0 +1,36 @@
+.toggle {
+  position: relative;
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 34px;
+  height: 30px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  transition: transform 0.22s cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+
+.opt {
+  position: relative;
+  width: 34px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 17px;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+.on { opacity: 1; }
+.opt:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }

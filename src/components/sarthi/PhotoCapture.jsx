@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { IoCameraReverse, IoCheckmarkCircle, IoClose, IoImages, IoRefresh, IoWarning } from 'react-icons/io5';
 import { MAX_EDGE, QUALITY, GUIDE, checkQuality, framingCheck } from '../../services/sarthi/photo';
 import { speak, stopSpeaking } from '../../services/voice';
-import { SARTHI_VOICE } from '../../services/sarthi/voice';
+import { sarthiVoice, gendered } from '../../services/sarthi/voice';
 import styles from './PhotoCapture.module.css';
 
 // A shot that failed the check twice may still be sent — bad light must not strand the PD; the report says so.
@@ -31,7 +31,7 @@ export default function PhotoCapture({ kind = 'extra', title, hint, tips = [], o
     if (!line?.speech) return;
     voice.current.at = Date.now();
     stopSpeaking();
-    speak(line.speech, { voice: SARTHI_VOICE });
+    speak(gendered(line.speech), { voice: sarthiVoice() });
   };
 
   useEffect(() => () => stopSpeaking(), []);
@@ -153,7 +153,7 @@ export default function PhotoCapture({ kind = 'extra', title, hint, tips = [], o
       ) : stage === 'review' && shot ? (
         <div className={styles.bottom}>
           {shot.checking ? (
-            <div className={`${styles.verdict} ${styles.wait}`}>{GUIDE.checking.text}</div>
+            <div className={`${styles.verdict} ${styles.wait}`}>{gendered(GUIDE.checking.text)}</div>
           ) : (
             <div className={`${styles.verdict} ${shot.quality.ok ? styles.good : styles.bad}`}>
               {shot.quality.ok

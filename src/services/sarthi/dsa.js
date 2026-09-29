@@ -1,6 +1,7 @@
 // Sarthi's DSA review call. Same split as the PD: code picks the topic and does the hisaab against the DSA's own
 // numbers, Claude only phrases the question. Numbers are read in code (hindiNumbers), so there is no extraction call.
 import { askAgent } from './agent';
+import { genderRule } from './voice';
 import { readNumber, readNumbers } from './hindiNumbers';
 import { commissionFor, productMix } from '../../utils/commission';
 
@@ -133,7 +134,7 @@ export function rechecksFor(topic, text, file, nums) {
 
 export function interviewerPrompt(file, directive) {
   return `You are Sarthi, an AI from the branch, on a video call reviewing the work of a DSA (a loan agent who brings loan files to the branch).
-You are male ("samjha", never "samjhi"/"samjh gayi"). You sound like a warm relationship manager who knows their numbers — respectful, curious, never an auditor.
+${genderRule()} You sound like a warm relationship manager who knows their numbers — respectful, curious, never an auditor.
 
 ## Rules
 - Hinglish, everyday words. One short question at a time, ideally under 18 words.

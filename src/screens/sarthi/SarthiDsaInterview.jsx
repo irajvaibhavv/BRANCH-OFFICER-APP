@@ -4,13 +4,14 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { FiX } from 'react-icons/fi';
 import { IoCall, IoMic, IoMicOff, IoRefresh, IoSend, IoVolumeHigh, IoVolumeMute } from 'react-icons/io5';
 import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
+import VoiceToggle from '../../components/sarthi/VoiceToggle';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { askAgent, parseClaims } from '../../services/sarthi/agent';
 import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, openingLine, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport } from '../../services/sarthi/dsa';
 import { stopSpeaking, listen, canListen, canSpeak, setSilent } from '../../services/voice';
 import { speakStreamed } from '../../services/sarthi/stream';
 import { stopCamera } from '../../services/sarthi/video';
-import { SARTHI_VOICE } from '../../services/sarthi/voice';
+import { sarthiVoice, gendered, aboutSarthi } from '../../services/sarthi/voice';
 import { useAppState } from '../../context/AppStateContext';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import styles from './SarthiInterview.module.css';
@@ -86,7 +87,10 @@ export default function SarthiDsaInterview() {
     session();
   }, [typeMode]);
 
-  const say = useCallback((text, speech, then) => {
+  const say = useCallback((raw, rawSpeech, then) => {
+    // Lines are written male; the chosen voice's gender is applied to caption and speech alike.
+    const text = gendered(raw);
+    const speech = gendered(rawSpeech);
     lastLine.current = { text, speech };
     setAvatar('speaking');
     const next = then ?? beginListening;
@@ -98,7 +102,7 @@ export default function SarthiDsaInterview() {
     let shown = false;
     const show = () => { if (!shown) { shown = true; setQuestion(text); setAnswer(''); } };
     setTimeout(show, CAPTION_FALLBACK_MS);
-    speakStreamed(speech || text, { voice: SARTHI_VOICE, onStart: show, onEnd: () => { show(); setAvatar('idle'); next(); } });
+    speakStreamed(speech || text, { voice: sarthiVoice(), onStart: show, onEnd: () => { show(); setAvatar('idle'); next(); } });
   }, [beginListening]);
 
   const finish = useCallback(async () => {
@@ -115,7 +119,7 @@ export default function SarthiDsaInterview() {
     const rid = `sdsa_${Date.now()}`;
     setReports((prev) => [{
       ...report, id: rid, kind: 'dsa', sarthi: true, partyId: dsa.id, partyName: dsa.name,
-      scoreLabel: 'Partner score', recommendation: null, createdAt: new Date().toISOString(), transcript: transcript.current,
+      scoreLabel: 'Partner score', recommendation: null, createdAt: new Date().toISOString(), transcript: transcript.current.map((t) => (t.from === 'ai' ? { ...t, text: gendered(t.text) } : t)),
     }, ...prev]);
     navigate(`/ai/reports/${rid}`, { replace: true });
   }, [dsa, file, navigate, setReports]);
@@ -240,6 +244,7 @@ export default function SarthiDsaInterview() {
         <div className={styles.bandTop}>
           <LiveBadge on={cameraOn} />
           <span className={styles.who}>{dsa.name} · DSA review</span>
+          <VoiceToggle className={styles.voiceToggle} />
         </div>
         {cameraOn
           ? <div className={styles.pip}><AiAvatar state={avatar} size={58} label={false} /></div>
@@ -272,8 +277,8 @@ export default function SarthiDsaInterview() {
           </AnimatePresence>
           <div className={`${styles.turn} ${avatar === 'listening' ? styles.turnMine : ''}`}>
             {avatar === 'listening' && <><span className={styles.wave}><i /><i /><i /><i /></span> Aapki baari — boliye</>}
-            {avatar === 'speaking' && 'Sarthi bol rahe hain'}
-            {avatar === 'thinking' && 'Sarthi soch rahe hain…'}
+            {avatar === 'speaking' && aboutSarthi('Sarthi bol rahe hain')}
+            {avatar === 'thinking' && aboutSarthi('Sarthi soch rahe hain…')}
             {avatar === 'idle' && (muted ? 'Mic band hai' : 'Likhkar ya bolkar jawaab dijiye')}
           </div>
         </div>

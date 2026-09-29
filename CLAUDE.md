@@ -184,6 +184,16 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   its queue wholesale when an engine fails, which would drop the tail and strand the interview
   waiting on a callback that never comes. `services/voice.js` itself is untouched: it is shared with SAARTHI AI.
 - **One voice for the whole call** (`services/voice.js`): only a 401/402/403 or quota reply writes a TTS engine off for the session; a blip or a blocked autoplay sends just that line to the other cloud engine, else the browser. A Hindi profile (`lang: 'hi'`, Sarthi) keeps one browser Hindi voice for every line, male when the device has one (`gender`) — picking by script and writing ElevenLabs off on any error made Sarthi switch to Google हिन्दी (female) mid-call. **Safari (iPhone, Mac) plays only a media element a tap once started**, and a line starts after its TTS fetch, long after the tap — so every line plays through ONE shared element, unlocked (with the browser voice) on the first tap anywhere in the app; a `new Audio()` per line was silent on every Safari. Mute is `muted`, not `volume` (iOS ignores volume). A browser utterance that never starts (Safari drops it without an event) is ended after 3s so the mic still opens.
+- **Male or female Sarthi** (2026-09-29): `VoiceToggle` (👨 / 👩 on both call screens) sets `bo_sarthi_voice_gender`;
+  `sarthiVoice()` is read per line, so a switch takes effect on the next one. Female: ElevenLabs
+  `VITE_SARTHI_ELEVEN_VOICE_FEMALE`, Murf `VITE_SARTHI_VOICE_FEMALE` (`hi-IN-ayushi`), browser a female Hindi voice. The
+  words follow the voice: every fixed line is written male and `gendered()` rewrites only first-person forms that can
+  only be Sarthi (-unga, raha/sakta/chahta hoon, samajh gaya, and their Devanagari) at the caption/speech choke points
+  (`say`, the live `showCaption`/`speakStreamed`, PhotoCapture, the report transcript) — never bare "samjha" ("samjha
+  dijiye" = explain) and never "kar rahe hain" (that is the borrower). The model gets `genderRule()` in both interviewer
+  prompts; `aboutSarthi` turns status labels ("Sarthi bol rahe hain") into "rahi hain". Pre-rendered audio is male Murf,
+  so `prerendered()` is false for the female voice. The browser picks male/female Hindi voices by name — the old MALE
+  regex matched "female" (`\bmale` now).
 - **Sarthi asks for Murf, but a missing `VITE_MURF_API_KEY` silently degrades it to browser TTS**
   (`pickEngine` falls through). That is a config problem, never a code one — if Sarthi sounds like
   the browser, the key is absent from `.env.local` or from Vercel.

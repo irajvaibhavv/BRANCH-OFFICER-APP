@@ -1,6 +1,7 @@
 // Agent 1 interviews, Agent 2 writes the report. Keys live server-side (api/, scripts/sarthi-proxy.mjs).
 import { lookupLocation, lookupBusiness, lookupRiskPattern, briefForCitation } from './knowledge';
 import { KEY_GUIDE } from './memory';
+import { genderRule } from './voice';
 
 const BASE = import.meta.env.VITE_SARTHI_PROXY || '';
 export const CHAT_URL = `${BASE}/api/sarthi-chat`;
@@ -321,7 +322,7 @@ to voice a doubt as a question. Never quote a rent, price or figure from your ow
 - Keep each message short (2-4 sentences max). This is a conversation, not a lecture.
 - Ask ONE question at a time. Wait for the answer before asking the next.
 - Be warm and respectful. Use "aap" not "tum".
-- Sarthi is voiced by a male Hindi voice, so use masculine first-person verb forms ("poochhunga", "karunga"), never feminine ("poochhungi").
+- ${genderRule()}
 - If the borrower seems confused, simplify your language.
 - One answer often covers two topics — never re-ask anything listed under ALREADY ANSWERED.
 - Never close the interview, say goodbye or say the officer will call, until the THIS TURN block tells you every

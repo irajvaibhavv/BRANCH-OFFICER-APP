@@ -186,11 +186,13 @@ synth?.addEventListener?.('voiceschanged', () => { voice = pickVoice(); });
 // An English voice reads Devanagari as silence — Sarthi speaks Devanagari, so it needs a Hindi voice.
 const DEVANAGARI = /[ऀ-ॿ]/;
 // Hemant/Madhur (Windows, Edge) and Google's hid/hie Android voices are male; Google हिन्दी, Kalpana, Swara are female.
-const MALE = /hemant|madhur|prabhat|ravi|arjun|male|-hid-|-hie-/i;
+const MALE = /hemant|madhur|prabhat|ravi|arjun|\bmale|-hid-|-hie-/i;
+const FEMALE = /kalpana|swara|lekha|google|female|-hia-|-hic-/i;
 function hindiVoice(gender) {
   const vs = (synth?.getVoices() ?? []).filter((v) => v.lang?.replace('_', '-').toLowerCase().startsWith('hi'));
-  if (gender === 'male') { const m = vs.find((v) => MALE.test(v.name) || MALE.test(v.voiceURI ?? '')); if (m) return m; }
-  return vs.find((v) => /google/i.test(v.name)) || vs[0] || null;
+  const want = gender === 'male' ? MALE : gender === 'female' ? FEMALE : null;
+  const hit = want && vs.find((v) => (want.test(v.name) || want.test(v.voiceURI ?? '')) && !(gender === 'female' && MALE.test(v.name)));
+  return hit || vs.find((v) => /google/i.test(v.name)) || vs[0] || null;
 }
 
 function browserSpeak(text, { rate = 1, onEnd, onStart, profile } = {}) {

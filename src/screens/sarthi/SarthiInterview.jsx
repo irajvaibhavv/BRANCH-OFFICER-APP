@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { FiX } from 'react-icons/fi';
 import { IoCall, IoCamera, IoMic, IoMicOff, IoRefresh, IoSend, IoVolumeHigh, IoVolumeMute } from 'react-icons/io5';
 import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
+import VoiceToggle from '../../components/sarthi/VoiceToggle';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { getCase, briefForCitation, buildNewCase, CUSTOM_CASES_KEY } from '../../services/sarthi/knowledge';
 import { parseClaims, peekSpeech, peekDisplay, writeReport, VISION_URL, COMPLETE_TAG } from '../../services/sarthi/agent';
@@ -25,7 +26,7 @@ import { checkUpload, liveProvenance } from '../../services/sarthi/photoCheck';
 import { stopSpeaking, listen, canListen, canSpeak, setSilent } from '../../services/voice';
 import { speakStreamed } from '../../services/sarthi/stream';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { SARTHI_VOICE, PRERENDERED } from '../../services/sarthi/voice';
+import { sarthiVoice, prerendered, gendered, aboutSarthi } from '../../services/sarthi/voice';
 import voiceManifest from '../../data/sarthi/voiceManifest.json';
 import { useSarthiReports } from '../../hooks/useSarthiReports';
 import { checkTradeMath, understanding } from '../../services/sarthi/probes';
@@ -178,7 +179,10 @@ export default function SarthiInterview() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeMode]);
 
-  const say = useCallback((text, { then, speech, again, topic } = {}) => {
+  const say = useCallback((raw, { then, speech: rawSpeech, again, topic } = {}) => {
+    // Every line is written male; the chosen voice's gender is applied here, to the caption and the speech alike.
+    const text = gendered(raw);
+    const speech = gendered(rawSpeech);
     lastLine.current = { text, speech };
     if (!again) countTopic(topic ?? `line:${text}`);
     setAvatar('speaking');
@@ -189,6 +193,7 @@ export default function SarthiInterview() {
       return () => clearTimeout(t);
     }
     const line = speech || text;
+    const src = prerendered() ? voiceManifest[rawSpeech || raw] : undefined;
     // The question appears with the voice, not seconds before it while TTS renders.
     let shown = false;
     const show = () => { if (!shown) { shown = true; setCaption({ who: 'ai', text }); } };
@@ -196,8 +201,8 @@ export default function SarthiInterview() {
     setTimeout(show, CAPTION_FALLBACK_MS);
     // Scripted lines play pre-rendered audio; live text is streamed sentence by sentence.
     speakStreamed(line, {
-      voice: SARTHI_VOICE,
-      src: PRERENDERED ? voiceManifest[line] : undefined,
+      voice: sarthiVoice(),
+      src,
       onStart: show,
       onEnd: () => { show(); setAvatar('idle'); (then ?? beginListening)(); },
     });
@@ -553,7 +558,7 @@ export default function SarthiInterview() {
       let spokenYet = false;
       let voiceOn = false;
       let pending = '';
-      const showCaption = (text) => { pending = text; if (voiceOn && text) setCaption({ who: 'ai', text }); };
+      const showCaption = (text) => { pending = gendered(text); if (voiceOn && pending) setCaption({ who: 'ai', text: pending }); };
       let audioDone = false;
       let streamDone = false;
       let after = null;
@@ -579,9 +584,9 @@ export default function SarthiInterview() {
           setTimeout(() => { if (!voiceOn) { voiceOn = true; showCaption(pending); } }, CAPTION_FALLBACK_MS);
           lastLine.current = { text: caption, speech: early };
           countTopic(topicKey(action));
-          speakStreamed(early, {
-            voice: SARTHI_VOICE,
-            src: PRERENDERED ? voiceManifest[early] : undefined,
+          speakStreamed(gendered(early), {
+            voice: sarthiVoice(),
+            src: prerendered() ? voiceManifest[early] : undefined,
             onStart: () => { voiceOn = true; setAvatar('speaking'); showCaption(pending); },
             onEnd: () => { voiceOn = true; showCaption(pending); audioDone = true; advance(); },
           });
@@ -733,7 +738,8 @@ export default function SarthiInterview() {
     teardown();
     setPhase('generating');
 
-    const turns = transcript.current;
+    // The report's transcript reads as she/he said it: fixed lines are stored as written (male).
+    const turns = transcript.current.map((t) => (t.role === 'assistant' ? { ...t, content: gendered(t.content) } : t));
     const captured = claims.current;
 
     // A live walk-in has been rebuilt all along; the scripted fallback assembles one from intake.
@@ -932,6 +938,7 @@ export default function SarthiInterview() {
         <div className={styles.bandTop}>
           <LiveBadge on={cameraOn} />
           <span className={styles.who}>{collected.name ?? caseData.name}</span>
+          <VoiceToggle className={styles.voiceToggle} />
         </div>
         {cameraOn
           ? <div className={styles.pip}><AiAvatar state={avatar} size={58} label={false} /></div>
@@ -986,15 +993,15 @@ export default function SarthiInterview() {
             {shownPhoto && (
               <motion.div className={styles.shot} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
                 <img src={shownPhoto} alt="" />
-                <span>{photoBusy ? 'Sarthi dekh rahe hain…' : 'Mil gayi, dhanyawaad'}</span>
+                <span>{photoBusy ? aboutSarthi('Sarthi dekh rahe hain…') : 'Mil gayi, dhanyawaad'}</span>
               </motion.div>
             )}
           </AnimatePresence>
 
           <div className={`${styles.turn} ${avatar === 'listening' ? styles.turnMine : ''}`}>
             {avatar === 'listening' && <><span className={styles.wave}><i /><i /><i /><i /></span> Aapki baari — boliye</>}
-            {avatar === 'speaking' && 'Sarthi bol rahe hain'}
-            {avatar === 'thinking' && 'Sarthi soch rahe hain…'}
+            {avatar === 'speaking' && aboutSarthi('Sarthi bol rahe hain')}
+            {avatar === 'thinking' && aboutSarthi('Sarthi soch rahe hain…')}
             {avatar === 'idle' && (photoAsk ? 'Neeche se photo bhejiye' : muted ? 'Mic band hai' : 'Likhkar ya bolkar jawaab dijiye')}
           </div>
         </div>

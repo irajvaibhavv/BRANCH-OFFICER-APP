@@ -1,4 +1,5 @@
 import styles from './AiAvatar.module.css';
+import { aboutSarthi } from '../../services/sarthi/voice';
 
 // state: idle | speaking | listening | thinking
 // Read by the applicant holding the phone, so these are in the language being spoken.
@@ -31,7 +32,7 @@ export default function AiAvatar({ state = 'idle', size = 132, label = true }) {
       {label && (
         <div className={styles.labels}>
           <div className={styles.name}>Sarthi AI</div>
-          <div className={styles.state}>{STATE_TEXT[state] ?? STATE_TEXT.idle}</div>
+          <div className={styles.state}>{aboutSarthi(STATE_TEXT[state] ?? STATE_TEXT.idle)}</div>
         </div>
       )}
     </div>

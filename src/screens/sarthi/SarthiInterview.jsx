@@ -866,6 +866,9 @@ export default function SarthiInterview() {
       history.current = [{ role: 'user', content: '[System: the borrower has joined the call. Greet them and begin the interview.]' }];
       const opening = getNextAction(memory.current, startCase);
       if (opening.memory) memory.current = opening.memory;
+      // The name answer is checked only when the last question was the greeting — unset, "Ramesh" for Mahesh Agarwal
+      // skipped nameVerdict entirely and the model improvised its own "aapka naam sirf Ramesh hai?".
+      lastAction.current = opening;
       const first = scriptRef.current[0];
       demoRef.current = false;
       liveRef.current = true;

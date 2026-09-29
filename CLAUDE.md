@@ -175,7 +175,10 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   Devanagari at `.!?।`, `prefetch`es every chunk at once and plays the first as soon as ITS audio
   lands (~0.8s); later chunks always finish rendering before the one ahead stops playing. Same
   characters, so no extra quota by volume — but 2-3 Murf calls per turn against a per-minute limit.
-  At most **two** chunks (first sentence, then the rest): a third parallel render sometimes hit ElevenLabs' concurrency 429, was re-fetched when its turn came and was heard as a long pause after a full stop; a 429/5xx is retried once after 400ms before any fallback. **Browser voices are never split** — each utterance restarts Chrome's network Hindi voice, ~1s at every full stop. Three rules the tests pin down: a `.` between digits never splits ("2.5 lakh"), a pre-rendered
+  **A line up to 220 characters is not split at all** (2026-09-29, `SPLIT_ABOVE`): each file carries its own lead-in and
+  tail silence, so even a ready second chunk was heard as a pause after the full stop; most questions are one render now.
+  The browser Hindi voice pauses long at every "।", so its mid-line full stops are read as commas (`softStops`).
+  Longer lines: at most **two** chunks (first sentence, then the rest): a third parallel render sometimes hit ElevenLabs' concurrency 429, was re-fetched when its turn came and was heard as a long pause after a full stop; a 429/5xx is retried once after 400ms before any fallback. **Browser voices are never split** — each utterance restarts Chrome's network Hindi voice, ~1s at every full stop. Three rules the tests pin down: a `.` between digits never splits ("2.5 lakh"), a pre-rendered
   `src` line is never split (one file is the whole point), and `onEnd` fires **exactly once** — the
   chunks are chained through each other's `onEnd` rather than bulk-queued, because `services/voice.js` clears
   its queue wholesale when an engine fails, which would drop the tail and strand the interview

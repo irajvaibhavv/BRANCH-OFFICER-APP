@@ -10,6 +10,14 @@ const BOUNDARY = /(?<!\d)[.!?।]+(?=\s|$)|(?<=\d)[!?।]+(?=\s|$)/g;
 // sometimes refused (429), re-fetched when its turn came, and heard as a long pause after a full stop.
 const MIN_CHARS = 16;
 const MAX_CHUNKS = 2;
+// Below this a line is ONE render: each file carries its own lead-in and tail silence, so the seam between two was
+// still heard as a pause after the full stop. Only a long line (a recheck with figures) is worth that seam for an
+// earlier first word. Calibration knob.
+const SPLIT_ABOVE = 220;
+
+// The browser Hindi voice holds a long pause at every "।" / "." — mid-line full stops become commas (never between
+// digits: "2.5 lakh" is followed by a letter, not a space). The last one and every "?" stay.
+const softStops = (t) => t.replace(/[.।](?=\s+\S)/g, ',');
 
 export function splitSentences(text, { minChars = MIN_CHARS, maxChunks = MAX_CHUNKS } = {}) {
   const trimmed = (text ?? '').trim();
@@ -50,7 +58,9 @@ export function speakStreamed(text, { voice, rate = 1, src, onEnd, onStart } = {
 
   // Browser voices gain nothing from splitting — each utterance restarts the voice (Chrome's Hindi voice is a network
   // voice), which was a ~1s gap at every full stop. One utterance, no seams.
-  const chunks = voiceProfile(voice).engine === 'browser' ? [String(text ?? '').trim()].filter(Boolean) : splitSentences(text);
+  const whole = String(text ?? '').trim();
+  const browser = voiceProfile(voice).engine === 'browser';
+  const chunks = !whole ? [] : browser ? [softStops(whole)] : whole.length <= SPLIT_ABOVE ? [whole] : splitSentences(whole);
   if (chunks.length === 0) { onStart?.(); onEnd?.(); return 0; }
   if (chunks.length === 1) { speak(chunks[0], { voice, rate, onEnd, onStart }); return 1; }
 

@@ -6,7 +6,7 @@ import { IoCall, IoMic, IoMicOff, IoRefresh, IoSend, IoVolumeHigh, IoVolumeMute 
 import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { askAgent, parseClaims } from '../../services/sarthi/agent';
-import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport } from '../../services/sarthi/dsa';
+import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, openingLine, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport } from '../../services/sarthi/dsa';
 import { stopSpeaking, listen, canListen, canSpeak, setSilent } from '../../services/voice';
 import { speakStreamed } from '../../services/sarthi/stream';
 import { stopCamera } from '../../services/sarthi/video';
@@ -186,13 +186,23 @@ export default function SarthiDsaInterview() {
   const handleAnswerRef = useRef(handleAnswer);
   useEffect(() => { handleAnswerRef.current = handleAnswer; }, [handleAnswer]);
 
-  // Start once (StrictMode mounts twice): greet and ask the first topic.
+  // Greet and ask the first topic at once — a fixed line, no model call. Deferred a tick so StrictMode's throwaway
+  // mount (whose cleanup stops speech) is cancelled before it speaks.
   const started = useRef(false);
   useEffect(() => {
-    if (!file || started.current) return;
-    started.current = true;
-    history.current = [{ role: 'user', content: '[System: the DSA has joined the call. Greet them and begin.]' }];
-    ask({ kind: 'topic', topic: DSA_TOPICS[0], greet: true });
+    if (!file || started.current) return undefined;
+    const t = setTimeout(() => {
+      started.current = true;
+      const { text, speech } = openingLine();
+      current.current = { kind: 'topic', topic: DSA_TOPICS[0] };
+      history.current = [
+        { role: 'user', content: '[System: the DSA has joined the call. Greet them and begin.]' },
+        { role: 'assistant', content: `\`\`\`speech\n${speech}\n\`\`\`\n${text}` },
+      ];
+      transcript.current.push({ from: 'ai', text });
+      say(text, speech);
+    }, 0);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file]);
 

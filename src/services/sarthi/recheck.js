@@ -2,9 +2,12 @@
 // says both numbers openly and asks again, while they are still on the call. Decided in code; the model only phrases it.
 import { bankIncome, tradeOf, lookupBusiness, ventureArea } from './knowledge';
 import { toNumber } from './verifier';
+import { readNumbers } from './hindiNumbers';
+import { FIELD_DEFS } from './memory';
 
-// A PD is a conversation, not an audit — a few rechecks, one per field.
-export const MAX_RECHECKS = 5;
+// A PD is a conversation, not an audit — a few rechecks, one per field. Raised from 5 when contradiction and hisaab
+// flags, and their own changed figures, started being asked on the call too.
+export const MAX_RECHECKS = 7;
 
 // Spoken money: "3.8 lakh", "18 hazaar". The model turns these into Devanagari for the voice.
 export function inWords(n) {
@@ -192,11 +195,48 @@ export function findRechecks(memory, caseData, facts = {}) {
   return out;
 }
 
-/** Queue this turn's rechecks, one per field for the whole interview, and settle any open flag on the same field. */
-export function queueRechecks(memory, caseData, facts) {
+// Counts added up from several people, and yes/no-ish numbers: a different figure there is not a changed story.
+const NO_DRIFT = new Set(['family_size', 'dependents', 'earning_members', 'aadhaar_number', 'pan_number']);
+
+/**
+ * Their own earlier figure, said differently in a later answer ("pehle 2 lakh bikri, ab 3 lakh"). acceptedFacts keeps
+ * the old value because the new one did not answer that question, so without this the clash vanished silently. The new
+ * figure must be one they actually said (or it in thousands/lakhs) — never the extractor's reading alone — and within 4×
+ * of the old one: 180 litres filed under monthly purchase of 1.5 lakh is a different quantity, not a changed story.
+ */
+export function driftRechecks(memory, facts = {}, text = '') {
+  const heard = readNumbers(text).map((n) => n.value);
+  const said = (v) => heard.some((h) => h === v || h * 1000 === v || h * 100000 === v);
+  return Object.entries(facts).flatMap(([k, v]) => {
+    const was = toNumber(memory.collected[k]);
+    const now = toNumber(v);
+    if (!was || !now || NO_DRIFT.has(k) || !said(now)) return [];
+    const ratio = now / was;
+    if ((ratio > 0.75 && ratio < 1.33) || ratio < 0.25 || ratio > 4) return [];
+    const label = (FIELD_DEFS[k]?.label ?? k.replace(/_/g, ' ')).toLowerCase();
+    return [{
+      field: k,
+      detail: `Gave ${label} as ${inWords(was)}, later said ${inWords(now)}`,
+      say: `Pehle aapne ${label} ${inWords(was)} bataya tha, abhi ${inWords(now)} keh rahe hain. Sahi kitna hai — thoda samjha dijiye?`,
+    }];
+  });
+}
+
+// Flags from the contradiction, hisaab and consistency checks, asked on the call instead of only landing in the report.
+// No `say`: their details are English and some name the trade's normal range, which must never be told to them.
+const ASK_FLAGS = new Set(['contradiction', 'coaching_detected', 'trade_math', 'internal_consistency']);
+export const flagRechecks = (flags = []) => flags
+  .filter((f) => ASK_FLAGS.has(f.type) && f.severity !== 'low')
+  .map((f) => ({ field: f.field, detail: f.detail, say: null }));
+
+/**
+ * Queue this turn's rechecks, one per field for the whole interview, and settle any open flag on the same field.
+ * Order: drift (their own words clash), then this module's checks, then flags from the other checks.
+ */
+export function queueRechecks(memory, caseData, facts, { drift = [], flags: raised = [] } = {}) {
   const done = new Set([...(memory.recheckAsked ?? []), ...(memory.recheckQueue ?? []).map((r) => r.field)]);
   const room = MAX_RECHECKS - done.size;
-  const fresh = findRechecks(memory, caseData, facts)
+  const fresh = [...drift, ...findRechecks(memory, caseData, facts), ...flagRechecks(raised)]
     .filter((r, i, all) => !done.has(r.field) && all.findIndex((o) => o.field === r.field) === i)
     .slice(0, Math.max(0, room));
   if (!fresh.length) return memory;

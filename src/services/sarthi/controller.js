@@ -29,8 +29,10 @@ export function activeSections(config) {
 }
 
 // A trade with its own insider questions (trade_depth) has already been tested harder than one knowledge question.
+// The area was already tested next to the location answer (areaCheck).
 function verificationTasks(memory, section) {
-  return tradeProbes(memory).length ? section.tasks.filter((t) => t.source !== 'businessKnowledge') : section.tasks;
+  return section.tasks.filter((t) => !(t.source === 'businessKnowledge' && tradeProbes(memory).length)
+    && !(t.source === 'locationKnowledge' && memory.areaChecked));
 }
 
 function sectionComplete(memory, section) {
@@ -77,7 +79,36 @@ function locationCross(memory, caseData, key, def, rest, asked, sections) {
       + ' kaunsi jagah ki baat kar rahe hain?". Your knowledge can be out of date: never state it as certain, never accuse.'
       + ' If it fits, ask it open — never put the answer in the question, never offer choices. One question only.',
     known: knownFacts(memory),
-    memory: { ...memory, crossQueue: rest, crossAsked: [...asked, key] },
+    // The shop's area is tested in one go: the landmark check follows straight after, not in the late knowledge section.
+    memory: { ...memory, crossQueue: key === 'business_location' ? [AREA_CHECK, ...rest] : rest, crossAsked: [...asked, key] },
+  };
+}
+
+const AREA_CHECK = '__area_check';
+
+// Right after the place cross-question: what is around it, from our survey where we have one, else the model's own
+// knowledge of that city. Scored like the old verification task, which is then skipped (memory.areaChecked).
+function areaCheck(memory, caseData, rest, sections) {
+  const place = memory.collected.business_location;
+  const area = lookupLocation(caseData?.areaKey || caseData?.area || place);
+  const surveyed = area?.source === 'specific';
+  const city = caseData?.area && !String(place).toLowerCase().includes(String(caseData.area).toLowerCase()) ? `, ${caseData.area}` : '';
+  return {
+    action: 'ask_question',
+    section: memory.currentSection,
+    sectionLabel: sections.find((s) => s.id === memory.currentSection)?.label ?? '',
+    verificationTask: 'area_knowledge',
+    missingFields: ['area_knowledge_score'],
+    context: surveyed ? { area: area.areaKey, knownMarkets: area.knownMarkets, landmarks: area.landmarks, nearestMetro: area.nearestMetro } : null,
+    directive: `Stay on their area ("${place}${city}") for one more question: ask what is around their shop that anyone who sits there daily`
+      + ' knows — the nearest thana, hospital, bank, mandir or masjid, main chowk, bus stand or station, or the big market nearby.'
+      + ' Ask it OPEN ("dukaan ke aas-paas koi bada landmark kaunsa hai?"), never name one yourself.'
+      + (surveyed ? ` REFERENCE DATA lists what we surveyed in ${area.areaKey} — real but partial; add your own knowledge of the city.`
+        : ' We hold no survey for this place: judge with your own general knowledge of that city.')
+      + ' Your knowledge can be dated — if what they say does not fit, voice it as a gentle doubt and a question, never a verdict.'
+      + ' Score how they answered as area_knowledge_score in the facts fence. One question only.',
+    known: knownFacts(memory),
+    memory: { ...memory, crossQueue: rest, areaChecked: true, askedHyperLocal: true },
   };
 }
 
@@ -166,7 +197,10 @@ export function getNextAction(memory, caseData) {
       recheckOf: recheck.field,
       recheck,
       missingFields: [recheck.field], // so a corrected figure may replace the one they gave
-      directive: `FRIENDLY RECHECK — the numbers they gave do not add up. Tell them both figures, in your own warm words, like a friend who noticed while doing the hisaab: "${recheck.say}"`
+      directive: (recheck.say
+        ? `FRIENDLY RECHECK — the numbers they gave do not add up. Tell them both figures, in your own warm words, like a friend who noticed while doing the hisaab: "${recheck.say}"`
+        // A flag's detail is English for the officer and may name the trade's normal range — that would hand them the answer.
+        : `FRIENDLY RECHECK — something in their answers does not add up (officer's note: ${recheck.detail}). Say THEIR OWN figures back in simple Hinglish, like a friend doing the hisaab with them, and ask how the two fit together. Never say what is normal, usual or expected for the trade, and never give a range.`)
         + ' Give them the benefit of the doubt — people forget, round off, or leave out cash. Never say they are wrong or lying,'
         + ' never mention the loan decision, never name a score. Ask only this; no other topic this turn.',
       known: knownFacts(memory),
@@ -195,6 +229,7 @@ export function getNextAction(memory, caseData) {
   // A field just answered for the first time may earn one cross-question (schema "cross"), asked now.
   if (memory.crossQueue?.length) {
     const [key, ...rest] = memory.crossQueue;
+    if (key === AREA_CHECK) return areaCheck(memory, caseData, rest, sections);
     const def = FIELD_DEFS_BY_KEY[key];
     const asked = memory.crossAsked ?? [];
     const lowUsed = asked.filter((k) => FIELD_DEFS_BY_KEY[k]?.cross?.priority === 'low').length;

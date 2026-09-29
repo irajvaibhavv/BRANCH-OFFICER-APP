@@ -148,8 +148,9 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   audibly halfway through.
 - **The free tier's binding limit is requests per DAY, so count requests, not tokens.** A turn is one
   Gemini call (the question); extraction goes to the SLM, and the ```facts``` fence on the question call
-  covers whatever it drops, which costs nothing extra. There is no separate reachability probe — the
-  opening question IS the probe, because a probe spent a whole request to say hello. Vision bills
+  covers whatever it drops, which costs nothing extra. There is no reachability probe and no model call for the
+  greeting: it is the fixed `script.js` line (DSA review: `openingLine`), said the moment the call opens — waiting
+  ~3s of LLM + TTS for the same words was the "call starts with a lag". Turn two is the first live call. Vision bills
   wall-clock time whether or not anyone is speaking: one frame per 60s, hard cap 6 per interview
   (`VITE_SARTHI_VISION_MS` / `_MAX`, `0`/`off` disables). Observations are a bonus layer the report cites
   when present — never let them be the reason the interview itself runs out of quota.
@@ -236,7 +237,13 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   bataya, bank mein 3.8 lakh mahina aata hai… kuch chhoot toh nahi gaya?"). People under-state as often as they
   over-state, so income is rechecked both ways. Checks: income vs bank-supported income (±40%), sales vs bank credits,
   footfall × bill vs sales, footfall vs credits (implied bill vs the trade's `avgBillValue`), take-home vs
-  `netMarginMaxPct`, EMI below bureau, loan applications denied with enquiries on record. One per field, at most 4, asked
+  `netMarginMaxPct`, EMI below bureau, loan applications denied with enquiries on record. **Instant cross-questioning**
+  (2026-09-29): two more sources feed the same queue. (a) `driftRechecks` — a filled figure said differently in a later
+  answer ("pehle 2 lakh, ab 3 lakh"), which `acceptedFacts` used to drop silently; only a number they actually said, within
+  4× (beyond that it is a different quantity misfiled under the key). (b) `flagRechecks` — contradiction, coaching, trade_math
+  and internal-consistency flags (not low), now computed BEFORE the next question is picked (`runChecks` in the interview)
+  instead of after it, when they only surfaced two turns later as a "follow up naturally" nudge. Flag rechecks have no
+  `say`, and the directive forbids stating the trade's normal range — their English detail names it. One per field, at most 7, asked
   before anything else (`recheckQueue`), with the field in `missingFields` so a corrected figure may replace the old one.
   A corrected income resets `income_mentions` and skips the coaching check — a correction is not a coached answer.
   This is the one place the interviewer may point out a mismatch; the prompt still bans it everywhere else.
@@ -271,6 +278,10 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   use its **own** knowledge of any city's markets and sectors — the one exception to the grounding rule — but only to ask
   and to voice a doubt as a question ("mere hisaab se Sector 21 mein market nahi hai…"), never a figure, and the report
   lists such doubts as unverified. Surveyed `knownMarkets` are partial lists, so a place missing from them proves nothing.
+  **The shop's area is tested in one go** (2026-09-29): the `business_location` cross-question queues `areaCheck` straight
+  after it — "dukaan ke aas-paas koi bada landmark?", judged on survey data or the model's own knowledge of the city, scored
+  `area_knowledge_score` — and sets `areaChecked` (the late verification section drops its area task) and `askedHyperLocal`.
+  Before, the area came back three times across the call. If the location cross is skipped (cap, file question), the late task stays.
 - **Applicant must be present** (live mode, seeded files): when the name given does not match the file, the code — not
   the model — asks "aap unke kya lagte hain?", then asks them to call the applicant. "Bahar hai" / anything unclear →
   "Chaliye, koi baat nahi… hum tab baat karenge", no report, back to `/sarthi`. Yes → "phone unhe de dijiye", the name is

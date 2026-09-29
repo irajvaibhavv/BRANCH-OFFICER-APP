@@ -182,7 +182,15 @@ export function closingLine(file) {
   };
 }
 
-/** THIS TURN for an action: { kind: topic | probe | recheck, topic, detail, greet, text }. */
+// Fixed, like the closing: said the moment the call opens, with no model call to wait on.
+export function openingLine() {
+  return {
+    text: 'Namaste! Main Sarthi, branch se — aapke kaam ka chhota sa review hai, 10-15 minute lagenge. Pehle aapka poora naam aur firm ka naam bataiye?',
+    speech: 'नमस्ते! मैं सारथी, ब्रांच से। आपके काम का छोटा सा रिव्यू है, दस-पंद्रह मिनट लगेंगे। पहले आपका पूरा नाम और फ़र्म का नाम बताइए?',
+  };
+}
+
+/** THIS TURN for an action: { kind: topic | probe | recheck, topic, detail, text }. */
 export function directiveFor(action, file) {
   if (action.kind === 'recheck') return `FRIENDLY RECHECK. ${action.detail}\nSay both figures kindly, like doing the hisaab together, and ask them to explain. One question. These two figures are the only numbers you may say.`;
   if (action.kind === 'probe') return `FOLLOW UP on "${action.topic.goal}". Their answer was: "${action.text}". It gave nothing concrete — ask ONE specific follow-up on this same topic to get a name, a number or an example.${action.topic.num ? ' They must give a number; ask for a rough one.' : ''}`;
@@ -190,8 +198,7 @@ export function directiveFor(action, file) {
   const stuck = t.stuck && file.stuck.length
     ? `\nOur record: ${file.stuck.map((f) => `${f.borrower} (${f.status}, pending: ${f.pendingDocs.join(', ')})`).join('; ')}${file.rejected.length ? `; rejected: ${file.rejected.join(', ')}` : ''}. Name one of these files and ask what is holding it.`
     : '';
-  const greet = action.greet ? `Greet first in one short sentence: "Namaste! Main Sarthi, branch se — aapke kaam ka chhota sa review hai, 10-15 minute lagenge." Then ask.\n` : '';
-  return `${greet}Ask about exactly this, and nothing else: ${t.goal}\nPlain example: "${t.ask}"${stuck}`;
+  return `Ask about exactly this, and nothing else: ${t.goal}\nPlain example: "${t.ask}"${stuck}`;
 }
 
 // ---- report ----

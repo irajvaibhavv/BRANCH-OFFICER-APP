@@ -11,7 +11,7 @@ import { extractFacts, askTurn } from '../../services/sarthi/model';
 import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../services/sarthi/script';
 import { verifyClaims, computeEligibility, toNumber } from '../../services/sarthi/verifier';
 import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor, recordTradeAnswer, recordCrossAnswer, recordHotAnswer, acceptedFacts } from '../../services/sarthi/memory';
-import { queueRechecks, recordRecheckAnswer } from '../../services/sarthi/recheck';
+import { queueRechecks, recordRecheckAnswer, driftRechecks } from '../../services/sarthi/recheck';
 import { loadHot, ruleHotQuestions } from '../../services/sarthi/prep';
 import { readNumbers } from '../../services/sarthi/hindiNumbers';
 import pdSchema from '../../data/sarthi/pdSchema.json';
@@ -461,6 +461,22 @@ export default function SarthiInterview() {
       const before = memory.current;
       // The question this answer replies to — lastAction moves on to the next one before the fence is read.
       const answered = lastAction.current;
+      // Contradiction, hisaab and (walk-in) consistency checks on the facts so far; adds and returns only new flags.
+      // Run before the next question is picked, and again after the facts fence, so a clash is asked on the next turn.
+      const runChecks = (prior, got, subject, ans) => {
+        const math = checkTradeMath(memory.current);
+        memory.current = { ...memory.current, tradeMath: math.results };
+        const found = [
+          ...math.flags,
+          ...checkContradictions(prior, got, subject, { recheck: ans?.recheckOf }),
+          // A walk-in has nothing to check against, so their own numbers have to do the work.
+          ...(getInterviewConfig(subject).isNewApplicant ? checkInternalConsistency(memory.current, subject) : []),
+        ];
+        // Only flags we have not already raised — the same contradiction resurfaces every turn.
+        const fresh = found.filter((f) => !memory.current.flags.some((p) => p.detail === f.detail));
+        memory.current = addFlags(memory.current, fresh);
+        return fresh;
+      };
       // An insider trade question is answered verbatim — the words ARE the evidence.
       if (lastAction.current?.tradeProbeDef) {
         memory.current = recordTradeAnswer(memory.current, lastAction.current.tradeProbeDef, text, borrowerTurn);
@@ -490,6 +506,8 @@ export default function SarthiInterview() {
         // Not fatal: the question call's facts fence is the backstop. Never abandon the turn.
         console.warn(`[sarthi] fact extraction failed (${e?.message}) — relying on the facts fence`);
       }
+      // A filled figure said differently in this answer is dropped by acceptedFacts — but asked about first.
+      const drift = driftRechecks(memory.current, facts, text);
       facts = acceptedFacts(memory.current, facts, answered);
       if (Object.keys(facts).length) memory.current = updateMemory(memory.current, { ...facts, _verbatim: text });
 
@@ -518,8 +536,8 @@ export default function SarthiInterview() {
 
       if (isIntake) rebuildWalkIn();
       const subject = caseRef.current ?? caseData;
-      // The hisaab is done now, on this answer, so a figure that does not add up is asked about while it is fresh.
-      memory.current = queueRechecks(memory.current, subject, facts);
+      // The hisaab is done now, on this answer, so a figure that does not add up is asked about in the very next turn.
+      memory.current = queueRechecks(memory.current, subject, facts, { drift, flags: runChecks(before, facts, subject, answered) });
 
       const action = getNextAction(memory.current, subject);
       if (action.memory) memory.current = action.memory;
@@ -581,7 +599,8 @@ export default function SarthiInterview() {
         const asked = transcript.current.filter((t) => t.role === 'assistant').at(-1)?.content ?? '';
         memory.current = recordRecheckAnswer(memory.current, answered.recheck, asked, text, borrowerTurn);
       }
-      memory.current = queueRechecks(memory.current, subject, gapFill);
+      // Anything the facts fence alone revealed is asked on the next turn.
+      memory.current = queueRechecks(memory.current, subject, gapFill, { flags: runChecks(before, { ...gapFill, ...facts }, subject, answered) });
       // Check a document the moment it is given, exactly as the scripted intake does.
       if (facts.aadhaar_number) intake.current.aadhaarCheck = validateAadhaar(String(facts.aadhaar_number));
       if (facts.pan_number) {
@@ -599,19 +618,6 @@ export default function SarthiInterview() {
         setCollected({ ...memory.current.collected, ...intake.current });
       }
 
-      const config = getInterviewConfig(subject);
-      // The trade's arithmetic, rerun every turn so a figure that does not add up is followed up while they are here.
-      const math = checkTradeMath(memory.current);
-      memory.current = { ...memory.current, tradeMath: math.results };
-      const found_flags = [
-        ...math.flags,
-        ...checkContradictions(before, facts, subject, { recheck: answered?.recheckOf }),
-        // A walk-in has nothing to check against, so their own numbers have to do the work.
-        ...(config.isNewApplicant ? checkInternalConsistency(memory.current, subject) : []),
-      ];
-      // Only flags we have not already raised — the same contradiction resurfaces every turn.
-      const fresh = found_flags.filter((f) => !memory.current.flags.some((p) => p.detail === f.detail));
-      memory.current = addFlags(memory.current, fresh);
       if (action.hyperLocal) memory.current = { ...memory.current, askedHyperLocal: true };
       if (action.riskAlert) memory.current = { ...memory.current, askedRisk: true };
 
@@ -845,52 +851,32 @@ export default function SarthiInterview() {
 
   /* ---------------------------------------------------------------- start */
   useEffect(() => {
-    if (!startCase) return;
-    let cancelled = false;
+    if (!startCase) return undefined;
     resetObservations();
     scriptRef.current = isIntake ? buildIntakeScript() : buildScript(startCase);
     // The file's questions, prepared on the brief screen; if the officer started before they came back, the file's own.
     memory.current = createEmptyMemory(startCase, { hot: isIntake || startCase.quickPd ? [] : (loadHot(startCase.id)?.questions ?? ruleHotQuestions(startCase)) });
     caseRef.current = startCase;
 
-    (async () => {
-      // The opening question is the reachability probe — no separate probe request.
+    // The greeting is a fixed line, so it is said at once instead of waiting ~3s on a model call for the same words.
+    // Turn two is the first live call and degrades per turn like any other (a permanent status sets demoRef there).
+    // Deferred one tick so StrictMode's throwaway mount is cancelled before it speaks.
+    const t = setTimeout(() => {
       setPhase('live');
       history.current = [{ role: 'user', content: '[System: the borrower has joined the call. Greet them and begin the interview.]' }];
-
-      try {
-        const opening = getNextAction(memory.current, startCase);
-        if (opening.memory) memory.current = opening.memory;
-        const raw = await askTurn({ caseData: startCase, action: opening, directive: directiveText(opening), messages: history.current, turn: 0 });
-        if (cancelled) return;
-        const { display, speech } = parseClaims(raw, 0);
-        demoRef.current = false;
-        liveRef.current = true;
-        if (cameraRef.current) startFrameCapture(VISION_URL, () => {});
-        memory.current = recordTurn(memory.current, 'assistant', display);
-        history.current.push({ role: 'assistant', content: raw });
-        transcript.current.push({ role: 'assistant', content: display });
-        say(display, { speech, topic: topicKey(opening) });
-        return;
-      } catch (e) {
-        if (cancelled) return;
-        const permanent = e?.status != null && !TRANSIENT.has(e.status);
-        demoRef.current = permanent;
-        liveRef.current = !permanent;
-        setDemoMode(permanent);
-        console.warn(`[sarthi] opening turn failed (${e?.message}) — ${permanent ? 'scripted for the rest of the interview' : 'scripted opening, retrying live on the next turn'}`);
-        if (!permanent && cameraRef.current) startFrameCapture(VISION_URL, () => {});
-      }
-
+      const opening = getNextAction(memory.current, startCase);
+      if (opening.memory) memory.current = opening.memory;
       const first = scriptRef.current[0];
+      demoRef.current = false;
+      liveRef.current = true;
+      stepRef.current = 1; // scripted fallback continues past the greeting
+      if (cameraRef.current) startFrameCapture(VISION_URL, () => {});
       memory.current = recordTurn(memory.current, 'assistant', first.text);
+      history.current.push({ role: 'assistant', content: `\`\`\`speech\n${first.speech}\n\`\`\`\n${first.text}` });
       transcript.current.push({ role: 'assistant', content: first.text });
-      // Keep the scripted cursor past the line we just used, or turn two repeats it.
-      stepRef.current = demoRef.current ? 0 : 1;
-      say(first.text, { speech: first.speech });
-    })();
-
-    return () => { cancelled = true; };
+      say(first.text, { speech: first.speech, topic: topicKey(opening) });
+    }, 0);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startCase]);
 

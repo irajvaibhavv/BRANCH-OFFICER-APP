@@ -74,6 +74,37 @@
   color: #1f1a33;
   text-align: center;
 }
+.hintBad { color: #ffd166; font-weight: 600; opacity: 1; }
+
+.tips { list-style: none; text-align: left; margin: 4px 0 18px; display: grid; gap: 10px; }
+.tips li { display: flex; gap: 10px; font-size: 14px; line-height: 1.4; color: #3b3355; }
+.tips span {
+  flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 12px; font-weight: 700; color: #fff; background: #2f8f86;
+}
+
+/* Framing guide: four corners and a level line */
+.guide { position: absolute; inset: 18% 8% 26%; z-index: 1; pointer-events: none; }
+.guide i { position: absolute; width: 28px; height: 28px; border: 3px solid rgba(255, 255, 255, 0.85); }
+.guide i:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 8px; }
+.guide i:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 8px; }
+.guide i:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 8px; }
+.guide i:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 8px; }
+.guide b { position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(255, 255, 255, 0.35); }
+
+.verdict {
+  display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px;
+  padding: 10px 14px; border-radius: 12px; font-size: 14px; font-weight: 600; text-align: center;
+}
+.good { background: rgba(47, 143, 134, 0.9); }
+.bad { background: rgba(180, 83, 9, 0.92); }
+.wait { background: rgba(0, 0, 0, 0.55); }
+.reviewBtns { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.ghostBtn {
+  display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 20px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18); color: #fff; font-size: 15px; font-weight: 600;
+}
+
 .failTitle { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
 .failSub { font-size: 13.5px; line-height: 1.5; color: #5f5482; margin-bottom: 16px; }
 .upload {

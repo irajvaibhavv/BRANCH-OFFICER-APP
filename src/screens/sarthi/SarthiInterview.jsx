@@ -587,7 +587,7 @@ export default function SarthiInterview() {
           });
         },
       });
-      const { display, speech, claims: found, facts: fenced, complete, photo } = parseClaims(raw, borrowerTurn);
+      const { display, speech, claims: found, facts: fenced, complete } = parseClaims(raw, borrowerTurn);
       claims.current.push(...found);
 
       // Gap-fill from the question call's facts fence, then run the code-only checks.
@@ -631,8 +631,8 @@ export default function SarthiInterview() {
       // Or the borrower is leaving ("ok bye", "band karo") and the model has closed — holding them there helps nobody.
       const reallyDone = complete && (getNextAction(memory.current, subject).action === 'end_interview' || LEAVING.test(text));
       if (complete && !reallyDone) console.warn('[sarthi] model tried to end the interview early — ignored');
-      // The shop photo is the controller's call (once they are at the shop); the model may only ask for the home.
-      const wantPhoto = action.photo ?? (photo === 'home' ? 'home' : null);
+      // Both photos are the controller's call (from current_place); a photo fence the model adds on its own is ignored.
+      const wantPhoto = action.photo ?? null;
       after = wantPhoto ? () => setPhotoAsk(wantPhoto) : reallyDone ? finish : null;
 
       if (spokenYet) {
@@ -694,11 +694,11 @@ export default function SarthiInterview() {
     if (wasVolunteered) beginListening();
   }, [capture, closeCapture, beginListening]);
 
-  const submitPhoto = useCallback(async ({ dataUrl: shot, file, facing }, { kind, volunteered }) => {
+  const submitPhoto = useCallback(async ({ dataUrl: shot, file, facing, quality, attempts }, { kind, volunteered }) => {
     closeCapture();
     setPhotoBusy(true);
     try {
-      const provenance = file ? await checkUpload(file, { startedAt: startedAt.current }) : liveProvenance(facing);
+      const provenance = file ? await checkUpload(file, { startedAt: startedAt.current }) : liveProvenance(facing, { quality, attempts });
       const dataUrl = shot ?? await downscale(file);
       setShownPhoto(dataUrl);
       setPhotoAsk(null);
@@ -1078,6 +1078,8 @@ export default function SarthiInterview() {
         <PhotoCapture
           title={PHOTO_ASKS[capture.kind].hint}
           hint={PHOTO_ASKS[capture.kind].frame}
+          tips={PHOTO_ASKS[capture.kind].tips}
+          kind={capture.kind}
           onCapture={(shot) => submitPhoto(shot, capture)}
           onUpload={(file) => submitPhoto({ file }, capture)}
           onCancel={cancelCapture}

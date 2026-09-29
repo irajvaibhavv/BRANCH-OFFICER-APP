@@ -41,7 +41,7 @@ export function createEmptyMemory(caseData, { hot = [] } = {}) {
     hot, // questions prepared from the file before the call — see prep.js
     hotAsked: [],
     hotAnswers: [],
-    shopPhotoAsked: false,
+    photosAsked: [], // 'shop' / 'home' — asked by the controller, from where they are (current_place)
     transcript: [],
     currentSection: 'greeting',
     sectionStartTurn: { greeting: 0 },
@@ -165,6 +165,7 @@ function conditionMet(field, memory) {
     if (field.condition === 'purpose_needs_probe') return p.newVenture || p.personal;
     if (field.condition === 'amount_stretch') return p.stretch;
   }
+  if (field.condition === 'place_known') return memory.collected.current_place != null;
   if (field.condition === 'name_mismatch') return !memory.caseData?.isNew && namesMatch(memory.collected.stated_name, memory.caseData?.name) === false;
   return true;
 }

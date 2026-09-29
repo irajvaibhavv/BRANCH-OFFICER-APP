@@ -247,9 +247,15 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   before anything else (`recheckQueue`), with the field in `missingFields` so a corrected figure may replace the old one.
   A corrected income resets `income_mentions` and skips the coaching check — a correction is not a coached answer.
   This is the one place the interviewer may point out a mismatch; the prompt still bans it everywhere else.
-- **At the shop, then its photo**: `at_business_place` is asked right after the name; "no" unlocks
-  `reached_business_place` ("pahunch kar bataiye"). Once either is yes, the controller asks for the shop photo
-  (`action.photo`). The model may only ask for the home photo itself — its own ```photo shop``` fence is ignored.
+- **Photos follow where they are** (2026-09-29): `current_place` (shop / home / other) is asked right after the name;
+  the controller asks that place's photo at once, then `other_place_possible` in the other place's words (`OTHER_PLACE_ASK`).
+  Yes → that photo too ("pahunch kar kholiye, main intezaar karunga"); no → the next turn opens with "Koi baat nahi"
+  (`placeNoAck`) and the PD carries on. Both photos are the controller's (`memory.photosAsked`); a photo fence the model adds
+  on its own is ignored. Replaced `at_business_place` / `reached_business_place`, whose "pahunch kar bataiye" held
+  the call hostage to a walk to the shop. Inside the camera Sarthi also **speaks** the guidance (`GUIDE` in photo.js, Devanagari
+  for the voice): tips, "frame ke andar rakhiye", a live light/blur hint once it holds for two checks (≥4.5s apart), and the
+  verdict. A shot that passes the code check gets `framingCheck` — the vision model picks ONE code (move_closer,
+  move_back, tilted, obstructed, missing, wrong) and every word said is ours; no vision service → the code check stands.
 - **Questions for this file** (`prep.js`): the brief screen drafts 12-15 file-specific questions with the LLM (cached in
   `bo_sarthi_hotq_<case>`), each with a `why` for the officer and a `section`; with no model, `ruleHotQuestions` builds
   them from the file's own figures (cash share, running loans, enquiries, ITR, GST threshold, deposits, purpose).
@@ -307,6 +313,12 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   EXIF. Each doubt becomes a `photo_provenance` flag (`Flag: photo_<kind>`) in the report — never a
   rejection. A vision description that mentions a screen, print or generated image adds a soft flag too.
   None of this catches someone photographing a real house that is not theirs; that stays the officer's job.
+  **Guided like a real PD photo** (2026-09-29): `PhotoCapture` shows the kind's `tips` first (framing, what must be
+  visible, where to stand, light), a framing guide and a live hint while aiming, then a review. `checkQuality` (photo.js)
+  measures a 160px greyscale copy in code — dark, blown out, backlit (centre much darker than a bright edge), flat (lens
+  covered), blurred (mean |Laplacian|); bad light suppresses "flat". A failing shot offers only "Dobara lijiye"; from the
+  2nd try "Phir bhi bhejiye" appears too, so bad light never strands a PD, and that photo carries a low `photo_provenance`
+  flag with the tries. `QUALITY_LIMITS` are calibration knobs — tuned on synthetic frames only, retune on real phones.
 - **Where it lives**: the Clients tab (`/dsas`) has a DSA | Customers toggle; Customers (`/dsas?tab=customers`, `screens/dsa/CustomerList.jsx`) is Sarthi's PD queue in the DSA card layout. `/sarthi` redirects there, so every "back to the queue" link still works.
 - **DSA review** (`/sarthi/dsa/:id`, `services/sarthi/dsa.js`, the Sarthi AI button on a DSA): the same video call, Claude only (`provider: 'llm'`). `DSA_TOPICS` (20, identity → sourcing → file quality → numbers → working with us → plan → conduct) are walked in order; a vague answer gets one follow-up (`needsProbe`); `rechecksFor` compares stated files/month, share given to us, approval %, main product, pending commission, the 3-month forecast and named customers against `dsaFile()` (monthly, productMix, commissionFor, loan files) and queues a FRIENDLY RECHECK. Stuck files are named on the rejections topic. The report (Sonnet via thinkingBudget, ~35s, else `fallbackDsaReport`) is saved to `bo_ai_reports` and shown on `/ai/reports/:id`. If Claude is unreachable a turn says the topic's plain `ask`.
   Found in live runs (2026-09-28, a second Haiku playing honest / inflating / pushy DSAs): (1) the DSA file is **not** in the interviewer prompt — with it Haiku read figures out unprompted; a recheck directive carries the only two numbers it may say. (2) THIS TURN is repeated at the end of the DSA's last message (`turnMessages`) — from the system prompt alone a pushy DSA pulled it off topic (asking for their phone number, saying goodbye mid-review). (3) The goodbye is fixed text (`closingLine`); asked to close, the model kept adding a question. (4) Figures come from `figureFrom`: Haiku picks which number answers, and code accepts it only if the DSA said it (or it in thousands/lakhs) — the parser alone read "ek-do NBFC" as 1 file and "sau mein se assi" as 100, and each became a false recheck. (5) `LEAVING` matches a goodbye to the call only; "questions band karo" had hung up on a complaint.

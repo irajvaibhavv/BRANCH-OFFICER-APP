@@ -65,8 +65,9 @@ Rules:
   monthly_income.
 - Enum fields take exactly one of their options:
 ${ENUM_GUIDE}
-- at_business_place is whether they are at their shop or place of work RIGHT NOW. reached_business_place is "yes"
-  only once they say they have got there ("pahunch gaya"); "aa raha hoon" is "no".
+- current_place is where they are RIGHT NOW: "shop" (shop or place of work), "home", or "other".
+  other_place_possible is "yes" if they can go to the other place now for its photo ("haan, 5 minute mein"),
+  "no" for "abhi nahi ja sakta", "baad mein", "door hai".
 - venture_* fields are about a NEW shop they plan to open with the loan: venture_location is the place they name,
   venture_rent is that shop's monthly rent, venture_sales_estimate its expected monthly sales, venture_setup_cost the
   total to start it. Never put these in shop_rent, monthly_sales or business_location, which are the current shop.

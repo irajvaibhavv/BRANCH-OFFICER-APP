@@ -17,7 +17,7 @@ const hotKey = (id) => `bo_sarthi_hotq2_${id}`;
 const COVERABLE = Object.fromEntries(pdSchema.sections
   .filter((s) => SECTIONS.includes(s.id))
   .flatMap((s) => (s.fields ?? [])
-    .filter((f) => !f.typed && !['stated_name', 'speaker_relation', 'applicant_name', 'at_business_place', 'reached_business_place'].includes(f.key))
+    .filter((f) => !f.typed && !['stated_name', 'speaker_relation', 'applicant_name', 'current_place', 'other_place_possible'].includes(f.key))
     .map((f) => [f.key, { label: f.label, section: s.id }])));
 
 export function loadHot(caseId) {

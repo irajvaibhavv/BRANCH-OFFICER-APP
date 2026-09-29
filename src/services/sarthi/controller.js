@@ -211,19 +211,31 @@ export function getNextAction(memory, caseData) {
   // A short PD for a demo with no time: a fixed list of questions from the file, still rechecked live.
   if (caseData?.quickPd?.length) return quickAction(memory, caseData);
 
-  // At the shop → its photo now, while they are standing in it.
+  // Photos follow where they are, like an officer on a PD: the place they are in now, then — only if they can go
+  // there now — the other one. "Abhi nahi ja sakta" gets a "koi baat nahi" and the PD carries on.
   const c = memory.collected;
-  if (!memory.shopPhotoAsked && (c.at_business_place === 'yes' || c.reached_business_place === 'yes')) {
-    return {
-      action: 'ask_question',
-      section: memory.currentSection,
-      sectionLabel: here()?.label ?? '',
-      photo: 'shop',
-      directive: 'Ask them to take one photo of their shop from the front now — board, counter and maal in view — for the'
-        + " officer's record. Say the camera will open on their phone. Output the ```photo shop``` fence. No other question this turn.",
-      known: knownFacts(memory),
-      memory: { ...memory, shopPhotoAsked: true },
-    };
+  const asked = memory.photosAsked ?? [];
+  const hereKind = c.current_place === 'shop' ? 'shop' : c.current_place === 'home' ? 'home' : null;
+  const otherKind = hereKind === 'shop' ? 'home' : 'shop';
+  const photoTurn = (kind, lead) => ({
+    action: 'ask_question',
+    section: memory.currentSection,
+    sectionLabel: here()?.label ?? '',
+    photo: kind,
+    directive: `${lead}Ask them to take one photo of their ${PHOTO_WHAT[kind]} now, for the officer's record. Say the camera will`
+      + ` open on their phone and it will guide them. Output the \`\`\`photo ${kind}\`\`\` fence. No other question this turn.`,
+    known: knownFacts(memory),
+    memory: { ...memory, photosAsked: [...asked, kind] },
+  });
+  if (hereKind && !asked.includes(hereKind)) return photoTurn(hereKind, '');
+  if (c.other_place_possible === 'yes' && !asked.includes(otherKind)) {
+    return photoTurn(otherKind, `They said they can go to their ${otherKind === 'shop' ? 'shop' : 'home'} now. Tell them to take their time`
+      + ' and open the camera once they reach — you will wait. ');
+  }
+  let ack = '';
+  if (c.other_place_possible === 'no' && !memory.placeNoAck) {
+    ack = 'Start with a warm "Koi baat nahi" — they cannot go to the other place now, and that is fine. Then: ';
+    memory = { ...memory, placeNoAck: true };
   }
 
   // A field just answered for the first time may earn one cross-question (schema "cross"), asked now.
@@ -269,8 +281,20 @@ export function getNextAction(memory, caseData) {
   const hotAsked = instruction.hot ? [...(next.hotAsked ?? []), instruction.hot.id] : next.hotAsked;
   const target = instruction.missingFields?.[0];
   const askCount = target ? { ...next.askCount, [target]: (next.askCount?.[target] ?? 0) + 1 } : next.askCount;
-  return { ...instruction, memory: { ...next, flags, askCount, hotAsked } };
+  return { ...instruction, directive: ack + instruction.directive, memory: { ...next, flags, askCount, hotAsked } };
 }
+
+const PHOTO_WHAT = {
+  shop: 'shop from where the customer stands — counter, stock and the board in view',
+  home: 'home from outside — the door and the front of the house, the house number if there is one',
+};
+
+// Asked once they have said where they are: the OTHER place, in words.
+const OTHER_PLACE_ASK = {
+  home: 'Kya aap abhi dukaan ja sakte hain? Dukaan ki ek photo leni hai.',
+  shop: 'Aur kya aap abhi ghar ja kar ghar ki ek photo le sakte hain? Abhi mumkin na ho toh koi baat nahi.',
+  other: 'Kya aap abhi dukaan ja sakte hain? Dukaan ki ek photo leni hai.',
+};
 
 function buildInstruction(memory, section, caseData, config) {
   const area = lookupLocation(caseData.areaKey || caseData.area);
@@ -340,7 +364,9 @@ function buildInstruction(memory, section, caseData, config) {
     const missing = getMissingFields(memory, section);
     instruction.missingFields = missing.map((f) => f.key);
     const [first] = missing;
-    const ask = first.ask.replace('{applicant}', caseData.name);
+    const ask = first.key === 'other_place_possible'
+      ? OTHER_PLACE_ASK[memory.collected.current_place] ?? first.ask
+      : first.ask.replace('{applicant}', caseData.name);
     instruction.directive = `Ask about: ${first.label}. Plain-words example: "${ask}"`
       // Naming the next field made the model skip ahead to it; one topic only.
       + ` This turn's question is about ${first.label} only — no other topic.`

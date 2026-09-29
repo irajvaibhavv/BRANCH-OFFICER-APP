@@ -35,25 +35,26 @@
           "ask": "Aapka poora naam kya hai?"
         },
         {
-          "key": "at_business_place",
-          "label": "At the shop / place of work right now",
+          "key": "current_place",
+          "label": "Where they are talking from right now",
           "type": "enum",
           "options": [
-            "yes",
-            "no"
+            "shop",
+            "home",
+            "other"
           ],
-          "ask": "Aap abhi apni dukaan pe hi hain na?"
+          "ask": "Aap abhi kahan se baat kar rahe hain — dukaan se ya ghar se?"
         },
         {
-          "key": "reached_business_place",
-          "label": "Reached the shop for the photo",
+          "key": "other_place_possible",
+          "label": "Can go to the other place (shop or home) now for its photo",
           "type": "enum",
           "options": [
             "yes",
             "no"
           ],
-          "condition": "at_business_place === 'no'",
-          "ask": "Koi baat nahi. Verification ke liye dukaan ki photo leni hai — dukaan pahunch kar bataiye, main intezaar karunga."
+          "condition": "place_known",
+          "ask": "Kya aap abhi wahan ja kar uski photo le sakte hain?"
         },
         {
           "key": "age",

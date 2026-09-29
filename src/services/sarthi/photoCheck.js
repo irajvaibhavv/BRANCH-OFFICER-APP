@@ -58,13 +58,16 @@ function exifDate(s) {
   return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) : null;
 }
 
-export function liveProvenance(facing) {
-  return {
-    source: 'live_camera',
-    facing,
-    checks: [{ label: 'Source', pass: true, detail: 'Taken with the live camera during the interview' }],
-    flags: [],
-  };
+// `quality` is the in-camera check (photo.js checkQuality); a shot sent despite failing it is flagged for the officer.
+export function liveProvenance(facing, { quality = null, attempts = 1 } = {}) {
+  const checks = [{ label: 'Source', pass: true, detail: 'Taken with the live camera during the interview' }];
+  if (quality) {
+    checks.push({ label: 'Quality', pass: quality.ok, detail: quality.ok ? `Clear (${attempts} ${attempts === 1 ? 'try' : 'tries'})` : `Sent after ${attempts} tries: ${quality.issues.map((x) => x.key).join(', ')}` });
+  }
+  const flags = quality && !quality.ok
+    ? [{ severity: 'low', detail: `Photo sent after ${attempts} tries without passing the quality check (${quality.issues.map((x) => x.key).join(', ')}) — it may be hard to read` }]
+    : [];
+  return { source: 'live_camera', facing, attempts, checks, flags };
 }
 
 export async function checkUpload(file, { startedAt } = {}) {

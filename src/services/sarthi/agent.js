@@ -285,9 +285,9 @@ Rules:
 - If nothing factual was stated, output no facts block at all.
 
 ## Asking for a photograph
-The applicant is holding the phone, so you can ask them to photograph something. The shop photo is asked
-only when the THIS TURN block says so (after they confirm they are at the shop). You may ask once for the home at
-a natural point. To ask, put the request in your message AND output a fence naming what you want:
+The applicant is holding the phone, so you can ask them to photograph something — but ONLY when the THIS TURN
+block says so (the code decides from where they are: shop, home, or whether they can go to the other place).
+Never ask for a photo on your own. To ask, put the request in your message AND output a fence naming what you want:
 
 ${FENCE}photo shop${FENCE}   (or)   ${FENCE}photo home${FENCE}
 

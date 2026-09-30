@@ -1,24 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
 import { FiCheck, FiX, FiVolume2, FiArrowLeft } from 'react-icons/fi';
-import { speak, stopSpeaking } from '../../services/voice';
-import { getSarthiGender, setSarthiGender, sarthiVoice, gendered } from '../../services/sarthi/voice';
+import { speak, stopSpeaking, prefetch } from '../../services/voice';
+import { getSarthiGender, setSarthiGender, sarthiVoice, gendered, prerendered } from '../../services/sarthi/voice';
+import { prefetchLine } from '../../services/sarthi/stream';
 import styles from './CallSetup.module.css';
 
 const VOICES = [
   { id: 'male', emoji: '👨', name: 'Purush awaaz', note: 'Professional' },
   { id: 'female', emoji: '👩', name: 'Mahila awaaz', note: 'Friendly' },
 ];
-const SAMPLE = { text: 'Namaste! Main Sarthi hoon — aaj aapse kuch aasaan sawaal poochhunga.', speech: 'नमस्ते! मैं सारथी हूँ, आज आपसे कुछ आसान सवाल पूछूँगा।' };
+const SAMPLE = { male: 'नमस्ते! मैं सारथी हूँ, आज आपसे कुछ आसान सवाल पूछूँगा।', female: 'नमस्ते! मैं सारथी हूँ, आज आपसे कुछ आसान सवाल पूछूँगी।' };
 
 // Before the call: camera and mic are checked and the voice is chosen here, so nothing on the call screen asks for a
 // choice mid-interview. The tap on Start also unlocks audio on Safari, so the greeting is heard at once.
-export default function CallSetup({ title, onStart, onBack }) {
+export default function CallSetup({ title, greeting, onStart, onBack }) {
   const video = useRef(null);
   const [cam, setCam] = useState('wait'); // wait | ok | off
   const [mic, setMic] = useState('wait'); // wait | ok | heard | off
   const [level, setLevel] = useState(0);
   const [gender, setGender] = useState(getSarthiGender);
   const [playing, setPlaying] = useState(null);
+
+  // Both samples are rendered as the screen opens, so Suniye plays at once instead of waiting 3-4s on the TTS render.
+  useEffect(() => { prefetch([SAMPLE.male], sarthiVoice('male')); prefetch([SAMPLE.female], sarthiVoice('female')); }, []);
+  // The greeting too, in the chosen voice (again when it changes), so it plays the moment Start is tapped.
+  useEffect(() => { if (greeting && !prerendered()) prefetchLine(gendered(greeting), sarthiVoice()); }, [greeting, gender]);
 
   useEffect(() => {
     let stream = null; let ctx = null; let raf = 0; let dead = false;
@@ -55,7 +61,7 @@ export default function CallSetup({ title, onStart, onBack }) {
     if (!listen) return;
     stopSpeaking();
     setPlaying(id);
-    speak(gendered(SAMPLE.speech), { voice: sarthiVoice(), onEnd: () => setPlaying((p) => (p === id ? null : p)) });
+    speak(SAMPLE[id], { voice: sarthiVoice(id), onEnd: () => setPlaying((p) => (p === id ? null : p)) });
   };
 
   const start = () => { stopSpeaking(); onStart(); };

@@ -48,7 +48,7 @@ export function setSarthiGender(g) {
 export const onSarthiGender = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 
 /** The profile for the voice chosen now — read per line, so a switch mid-call takes effect on the next line. */
-export const sarthiVoice = () => VOICES[gender];
+export const sarthiVoice = (g = gender) => VOICES[g];
 
 // public/sarthi-audio was rendered with the male Murf voice; next to a live ElevenLabs line, or as the female voice, it
 // would switch speakers mid-call.

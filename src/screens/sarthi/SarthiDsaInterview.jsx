@@ -220,7 +220,7 @@ export default function SarthiDsaInterview() {
     );
   }
 
-  if (!ready) return <CallSetup title={`DSA review · ${dsa.name}`} onStart={() => setReady(true)} onBack={() => navigate(-1)} />;
+  if (!ready) return <CallSetup title={`DSA review · ${dsa.name}`} greeting={openingLine().speech} onStart={() => setReady(true)} onBack={() => navigate(-1)} />;
 
   if (phase === 'generating') {
     return (

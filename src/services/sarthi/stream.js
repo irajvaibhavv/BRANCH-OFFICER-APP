@@ -53,15 +53,24 @@ export function splitSentences(text, { minChars = MIN_CHARS, maxChunks = MAX_CHU
   return [...merged.slice(0, maxChunks - 1), merged.slice(maxChunks - 1).join(' ')];
 }
 
+// The chunks speakStreamed asks the engine for — so a line can be rendered ahead with exactly the same cache keys.
+function chunksOf(text, voice) {
+  const whole = String(text ?? '').trim();
+  if (!whole) return [];
+  if (voiceProfile(voice).engine === 'browser') return [softStops(whole)];
+  return whole.length <= SPLIT_ABOVE ? [whole] : splitSentences(whole);
+}
+
+/** Render a line before it is said (the greeting, while the setup screen is open). */
+export const prefetchLine = (text, voice) => prefetch(chunksOf(text, voice), voice);
+
 // `onEnd` fires exactly once. A pre-rendered `src` is one file and is never split.
 export function speakStreamed(text, { voice, rate = 1, src, onEnd, onStart } = {}) {
   if (src) { speak(text, { voice, rate, src, onEnd, onStart }); return 1; }
 
   // Browser voices gain nothing from splitting — each utterance restarts the voice (Chrome's Hindi voice is a network
   // voice), which was a ~1s gap at every full stop. One utterance, no seams.
-  const whole = String(text ?? '').trim();
-  const browser = voiceProfile(voice).engine === 'browser';
-  const chunks = !whole ? [] : browser ? [softStops(whole)] : whole.length <= SPLIT_ABOVE ? [whole] : splitSentences(whole);
+  const chunks = chunksOf(text, voice);
   if (chunks.length === 0) { onStart?.(); onEnd?.(); return 0; }
   if (chunks.length === 1) { speak(chunks[0], { voice, rate, onEnd, onStart }); return 1; }
 

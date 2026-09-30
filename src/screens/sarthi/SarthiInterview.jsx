@@ -899,7 +899,7 @@ export default function SarthiInterview() {
     );
   }
 
-  if (!ready) return <CallSetup title={`PD interview · ${caseData.name}`} onStart={() => setReady(true)} onBack={() => navigate(-1)} />;
+  if (!ready) return <CallSetup title={`PD interview · ${caseData.name}`} greeting={(isIntake ? buildIntakeScript() : buildScript(startCase))[0]?.speech} onStart={() => setReady(true)} onBack={() => navigate(-1)} />;
 
   const total = scriptRef.current.length || 18;
 

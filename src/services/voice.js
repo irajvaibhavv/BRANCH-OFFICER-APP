@@ -31,7 +31,7 @@ export const ttsEngine = CLOUD ? engine : synth ? 'browser' : 'none';
 // Per-call voice profile; callers passing nothing get the .env default.
 // voiceId may be a map per engine, since a fallback engine cannot use the other's voice ids.
 export function voiceProfile(voice = {}) {
-  const { engine: want, voiceId, style, speed, model, lang, gender } = voice;
+  const { engine: want, voiceId, style, speed, model, lang, gender, settings } = voice;
   const engine = pickEngine(want ?? forced);
   return {
     voice, // kept so a failed line can be re-profiled for the next engine
@@ -42,6 +42,7 @@ export function voiceProfile(voice = {}) {
     speed: Number(speed) || SPEED,
     model: model ?? null,
     lang: lang ?? null,
+    settings: settings ?? null, // ElevenLabs voice_settings override
   };
 }
 const DEFAULT_PROFILE = voiceProfile();
@@ -79,7 +80,7 @@ function fetchEleven(text, p) {
       text,
       model_id: p.model || ENV.VITE_ELEVENLABS_MODEL || 'eleven_multilingual_v2',
       ...(p.lang && { language_code: p.lang }),
-      voice_settings: { stability: 0.6, similarity_boost: 0.8, style: 0.1, speed: p.speed },
+      voice_settings: { stability: 0.6, similarity_boost: 0.8, style: 0.1, ...p.settings, speed: p.speed },
     }),
   })
     .then((r) => (r.ok ? r.blob() : r.text().then((t) => Promise.reject(ttsError('ElevenLabs', r.status, t)))))

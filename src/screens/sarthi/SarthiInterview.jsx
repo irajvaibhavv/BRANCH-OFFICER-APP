@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { FiX } from 'react-icons/fi';
 import { IoCall, IoCamera, IoMic, IoMicOff, IoRefresh, IoSend, IoVolumeHigh, IoVolumeMute } from 'react-icons/io5';
 import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
-import VoiceToggle from '../../components/sarthi/VoiceToggle';
+import CallSetup from '../../components/sarthi/CallSetup';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { getCase, briefForCitation, buildNewCase, CUSTOM_CASES_KEY } from '../../services/sarthi/knowledge';
 import { parseClaims, peekSpeech, peekDisplay, writeReport, VISION_URL, COMPLETE_TAG } from '../../services/sarthi/agent';
@@ -74,6 +74,7 @@ export default function SarthiInterview() {
   const startCase = existing ?? placeholder;
   const caseData = existing ?? built.current ?? placeholder;
 
+  const [ready, setReady] = useState(false); // camera, mic and voice set on CallSetup
   const [phase, setPhase] = useState('connecting'); // connecting · live · generating · failed
   const [avatar, setAvatar] = useState('idle');     // idle · speaking · listening · thinking
   // The question stays on screen while they answer; only the next question replaces it.
@@ -131,7 +132,7 @@ export default function SarthiInterview() {
   useEffect(() => { mutedRef.current = muted; }, [muted]);
   // The mute lives in the shared voice module — never let it leak into the rest of the app.
   useEffect(() => () => setSilent(false), []);
-  useEffect(() => { startedAt.current = Date.now(); }, []);
+  useEffect(() => { if (ready) startedAt.current = Date.now(); }, [ready]);
 
   /* ---------------------------------------------------------------- teardown */
   const teardown = useCallback(() => {
@@ -857,7 +858,7 @@ export default function SarthiInterview() {
 
   /* ---------------------------------------------------------------- start */
   useEffect(() => {
-    if (!startCase) return undefined;
+    if (!startCase || !ready) return undefined;
     resetObservations();
     scriptRef.current = isIntake ? buildIntakeScript() : buildScript(startCase);
     // The file's questions, prepared on the brief screen; if the officer started before they came back, the file's own.
@@ -887,7 +888,7 @@ export default function SarthiInterview() {
     }, 0);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startCase]);
+  }, [startCase, ready]);
 
   if (!caseData) {
     return (
@@ -897,6 +898,8 @@ export default function SarthiInterview() {
       </div>
     );
   }
+
+  if (!ready) return <CallSetup title={`PD interview · ${caseData.name}`} onStart={() => setReady(true)} onBack={() => navigate(-1)} />;
 
   const total = scriptRef.current.length || 18;
 
@@ -938,7 +941,6 @@ export default function SarthiInterview() {
         <div className={styles.bandTop}>
           <LiveBadge on={cameraOn} />
           <span className={styles.who}>{collected.name ?? caseData.name}</span>
-          <VoiceToggle className={styles.voiceToggle} />
         </div>
         {cameraOn
           ? <div className={styles.pip}><AiAvatar state={avatar} size={58} label={false} /></div>

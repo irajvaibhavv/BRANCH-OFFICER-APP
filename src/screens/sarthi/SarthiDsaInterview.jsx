@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { FiX } from 'react-icons/fi';
 import { IoCall, IoMic, IoMicOff, IoRefresh, IoSend, IoVolumeHigh, IoVolumeMute } from 'react-icons/io5';
 import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
-import VoiceToggle from '../../components/sarthi/VoiceToggle';
+import CallSetup from '../../components/sarthi/CallSetup';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { askAgent, parseClaims } from '../../services/sarthi/agent';
 import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, openingLine, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport } from '../../services/sarthi/dsa';
@@ -30,6 +30,7 @@ export default function SarthiDsaInterview() {
   const dsa = getDsa(id);
   const file = useMemo(() => (dsa ? dsaFile(dsa, { loanFiles, engagements }) : null), [dsa?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const [ready, setReady] = useState(false); // camera, mic and voice set on CallSetup
   const [phase, setPhase] = useState('live'); // live · generating
   const [avatar, setAvatar] = useState('idle');
   const [question, setQuestion] = useState('');
@@ -194,7 +195,7 @@ export default function SarthiDsaInterview() {
   // mount (whose cleanup stops speech) is cancelled before it speaks.
   const started = useRef(false);
   useEffect(() => {
-    if (!file || started.current) return undefined;
+    if (!file || !ready || started.current) return undefined;
     const t = setTimeout(() => {
       started.current = true;
       const { text, speech } = openingLine();
@@ -208,7 +209,7 @@ export default function SarthiDsaInterview() {
     }, 0);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file]);
+  }, [file, ready]);
 
   if (!dsa) {
     return (
@@ -218,6 +219,8 @@ export default function SarthiDsaInterview() {
       </div>
     );
   }
+
+  if (!ready) return <CallSetup title={`DSA review · ${dsa.name}`} onStart={() => setReady(true)} onBack={() => navigate(-1)} />;
 
   if (phase === 'generating') {
     return (
@@ -244,7 +247,6 @@ export default function SarthiDsaInterview() {
         <div className={styles.bandTop}>
           <LiveBadge on={cameraOn} />
           <span className={styles.who}>{dsa.name} · DSA review</span>
-          <VoiceToggle className={styles.voiceToggle} />
         </div>
         {cameraOn
           ? <div className={styles.pip}><AiAvatar state={avatar} size={58} label={false} /></div>

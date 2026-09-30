@@ -1,7 +1,7 @@
 // Agent 1 interviews, Agent 2 writes the report. Keys live server-side (api/, scripts/sarthi-proxy.mjs).
 import { lookupLocation, lookupBusiness, lookupRiskPattern, briefForCitation } from './knowledge';
 import { KEY_GUIDE } from './memory';
-import { genderRule } from './voice';
+import { genderRule, SPOKEN_STYLE } from './voice';
 
 const BASE = import.meta.env.VITE_SARTHI_PROXY || '';
 export const CHAT_URL = `${BASE}/api/sarthi-chat`;
@@ -232,9 +232,7 @@ Rules for the spoken form:
 - Write EVERYTHING in Devanagari, including English words: shop → शॉप, monthly → मंथली, EMI → ईएमआई, loan → लोन, income → इनकम.
 - Same meaning and same sentence as your visible message — never add or drop a question.
 - Digits may stay as digits. Do not include the [INTERVIEW_COMPLETE] tag inside the speech block.
-- Shape it for the voice: short clauses, a comma where a person would pause, one idea per sentence.
-  FLAT:    महीने की इनकम कितनी हो जाती है, लगभग?
-  SPOKEN:  महीने की इनकम, लगभग कितनी हो जाती है?
+- ${SPOKEN_STYLE}
 ## Claim capture
 After each of YOUR messages, output a JSON block wrapped in ${FENCE}claim fences if the borrower's previous answer contained a verifiable claim:
 

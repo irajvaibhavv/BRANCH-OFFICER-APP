@@ -17,7 +17,8 @@ const SPLIT_ABOVE = 220;
 
 // The browser Hindi voice holds a long pause at every "।" / "." — mid-line full stops become commas (never between
 // digits: "2.5 lakh" is followed by a letter, not a space). The last one and every "?" stay.
-const softStops = (t) => t.replace(/[.।](?=\s+\S)/g, ',');
+// A thinking pause ("..." / "…") is kept — it is the one pause we want.
+const softStops = (t) => t.replace(/\.{2,}/g, '…').replace(/[.।](?=\s+\S)/g, ',');
 
 export function splitSentences(text, { minChars = MIN_CHARS, maxChunks = MAX_CHUNKS } = {}) {
   const trimmed = (text ?? '').trim();

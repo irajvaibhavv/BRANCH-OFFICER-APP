@@ -1,7 +1,7 @@
 // Sarthi's DSA review call. Same split as the PD: code picks the topic and does the hisaab against the DSA's own
 // numbers, Claude only phrases the question. Numbers are read in code (hindiNumbers), so there is no extraction call.
 import { askAgent } from './agent';
-import { genderRule } from './voice';
+import { genderRule, SPOKEN_STYLE } from './voice';
 import { readNumber, readNumbers } from './hindiNumbers';
 import { commissionFor, productMix } from '../../utils/commission';
 
@@ -154,6 +154,7 @@ ${genderRule()} You sound like a warm relationship manager who knows their numbe
 ## Output — exactly this order, nothing else
 1. ${FENCE}speech${FENCE} block FIRST: the same message fully in Devanagari — English words and names too (file → फ़ाइल, commission → कमीशन, LAP → एल ए पी). Digits may stay.
 2. Then the same message in Hinglish (Latin script), on its own.
+${SPOKEN_STYLE}
 
 ${FENCE}speech
 अच्छा, आठ साल का काम है। आपके साथ कितने लोग काम करते हैं?

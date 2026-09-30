@@ -1,5 +1,5 @@
 // Sarthi's own voice profile, passed per speak() so SAARTHI AI keeps the app default. Male or female, switched by the
-// officer (VoiceToggle) and kept in localStorage; the words follow the voice (`gendered`).
+// borrower before the call (CallSetup) and kept in localStorage; the words follow the voice (`gendered`).
 import { voiceProfile } from '../voice';
 
 const ENV = import.meta.env;
@@ -11,6 +11,8 @@ const BASE = {
   speed: Number(ENV.VITE_SARTHI_TTS_SPEED) || 1,
   model: ENV.VITE_SARTHI_ELEVEN_MODEL || 'eleven_flash_v2_5', // ~75ms model latency vs ~1s+ for multilingual_v2
   lang: 'hi',
+  // Lower stability = more rise and fall; 0.6 read every clause on one pitch and stopped dead at each comma. Knob.
+  settings: { stability: Number(ENV.VITE_SARTHI_STABILITY) || 0.35, similarity_boost: 0.75, style: 0.3, use_speaker_boost: true },
 };
 
 const VOICES = {
@@ -75,6 +77,15 @@ export function gendered(text) {
 
 /** Screen labels about Sarthi in the third person ("Sarthi bol rahe hain") — never questions, which are about them. */
 export const aboutSarthi = (label) => (gender === 'female' ? label.replace(/\brahe hain\b/g, 'rahi hain') : label);
+
+/** For both interviewer prompts: write the speech block the way a person talks, not the way a form reads. */
+export const SPOKEN_STYLE = `Make the speech block sound like a person on a call, not a form being read:
+  - Open by reacting to what they just said, in a word or two — अच्छा, / जी, / ठीक है, / हाँ जी, / अच्छा जी… — and vary it; never the same opener twice in a row. Mirror it in the visible message (Achha, Ji, Theek hai…).
+  - Few commas: only where a person takes a breath. A comma every two or three words is what makes the voice sound robotic.
+  - "…" (one character) for a natural thinking pause, at most once in a line: "अच्छा… तो दुकान कितने साल से चल रही है?"
+  - Link sentences the way people do ("तो", "और", "वैसे") instead of stacking short full stops.
+  FORM:   ठीक है। आपकी दुकान। कितने साल से है। बताइए।
+  SPOKEN: अच्छा जी… तो ये दुकान कितने साल से चल रही है?`;
 
 /** For prompts: which first-person forms the model must use. */
 export const genderRule = () => (gender === 'female'

@@ -254,7 +254,6 @@ export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN', end
   let final = '';
   let heard = '';
   let quiet = null;
-  let quietEnded = false;
   let watchdog = null;
   let settled = false;
   // Chrome sometimes never fires onend after stop() (the speech service stalls), which left an answer on screen
@@ -263,7 +262,10 @@ export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN', end
     if (settled) return;
     settled = true;
     clearTimeout(quiet); clearTimeout(watchdog);
-    const text = final.trim() || (quietEnded ? heard : '');
+    // Chrome also ends a session on its own at a short pause, before the words are marked final. Dropping them there
+    // restarted listening with an empty line, so the next words "replaced" the first. Callers that stop on purpose
+    // guard onFinal themselves.
+    const text = final.trim() || heard;
     if (text) onFinal?.(text);
     onEnd?.();
   };
@@ -279,7 +281,6 @@ export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN', end
     if (endAfterMs && heard) {
       clearTimeout(quiet);
       quiet = setTimeout(() => {
-        quietEnded = true;
         try { r.stop(); } catch { /* ignore */ }
         watchdog = setTimeout(() => { try { r.abort(); } catch { /* ignore */ } settle(); }, 1500);
       }, endAfterMs);

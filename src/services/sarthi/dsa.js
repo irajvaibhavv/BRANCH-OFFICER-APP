@@ -71,6 +71,7 @@ export async function figureFrom(topic, text) {
   const said = readNumbers(String(text).replace(/(\d+)\s*(?:-|se|to)\s*\d+/gi, '$1')).map((n) => n.value);
   if (!said.length) return null;
   try {
+  if (said.length === 1) return said[0]; // nothing to choose between — no model call, no wait
     const raw = await askAgent({
       systemPrompt: 'A loan agent answered a question on a call. Reply with ONLY the number that answers the question, as digits (rupees in full, e.g. 50000; a range → its lower end), or "none" if their answer gives no such number.',
       messages: [{ role: 'user', content: `Question: ${topic.goal}\nAnswer: ${text}` }],
@@ -95,7 +96,6 @@ export function needsProbe(topic, text, figure) {
   return words < 4 || (words < 8 && VAGUE.test(text.trim()));
 }
 
-const PRODUCT_WORDS = { 'Home Loan': /home|ghar|housing|होम/i, LAP: /lap|property|prop|प्रॉपर्टी/i, 'Business Loan': /business|bl\b|बिज़नेस/i, 'MSME WC': /msme|working|wc\b|capital/i };
 const LATIN = /[a-z]/i;
 export const DEVANAGARI = /[ऀ-ॿ]/;
 // "AD Capital Advisors" minus the person's own name and filler — the words that say the firm, not the DSA.
@@ -108,12 +108,12 @@ const firmOnlyWords = (file) => {
 export const nameOnly = (text, file) => firmOnlyWords(file).reduce((t, w) => t.replace(new RegExp(`\\b${w}\\w*`, 'gi'), ' '), String(text));
 
 const fmt = (n) => (n >= 100000 ? `${+(n / 100000).toFixed(1)} lakh` : n >= 1000 ? `${Math.round(n / 1000)} hazaar` : String(n));
+const PRODUCT_WORDS = { 'Home Loan': /home|ghar|housing|होम/i, LAP: /lap|property|prop|प्रॉपर्टी/i, 'Business Loan': /business|bl\b|बिज़नेस/i, 'MSME WC': /msme|working|wc\b|capital/i };
 
 /** The hisaab done on the call: a stated figure against the branch's record. Returns detail lines for the directive. */
 export function rechecksFor(topic, text, file, nums) {
   const v = nums[topic.id];
   const out = [];
-  if (topic.id === 'files_us' && v != null && file.avgFilesPerMonth) {
   // Words only: speech recognition's Devanagari cannot be compared with the record's Latin names.
   const said = LATIN.test(text) ? text.toLowerCase() : null;
   const firmWords = firmOnlyWords(file);
@@ -125,6 +125,7 @@ export function rechecksFor(topic, text, file, nums) {
     out.push(`They placed their office as "${text.slice(0, 60)}"; our record has it in ${file.location}. Ask kindly whether they moved, or have a second office.`);
   }
     if (v > file.avgFilesPerMonth * 1.5 || v < file.avgFilesPerMonth * 0.6) {
+  if (topic.id === 'files_us' && v != null && file.avgFilesPerMonth) {
       out.push(`They said ${v} files a month come to us; our record shows about ${Math.round(file.avgFilesPerMonth)} files a month from them (their 6-month average; best month ${file.bestMonth}). Ask where the difference is.`);
     }
     if (nums.files_total && v / nums.files_total < 0.3) {
@@ -205,7 +206,6 @@ export function closingLine(file) {
   };
 }
 
-// Fixed, like the closing: said the moment the call opens, with no model call to wait on.
 /**
  * The model left out the Devanagari speech fence: one small call turns the caption into Devanagari, because the Hindi
  * voice reads romanized Hindi in an English accent. null when that fails too — the caller then says the topic's own line.
@@ -238,6 +238,7 @@ export function presenceLines(file) {
 }
 
 export function openingLine() {
+// Fixed, like the closing: said the moment the call opens, with no model call to wait on.
   return {
     text: 'Namaste! Main Sarthi, branch se — aapke kaam ka chhota sa review hai, 10-15 minute lagenge. Pehle aapka poora naam aur firm ka naam bataiye?',
     speech: 'नमस्ते! मैं सारथी, ब्रांच से। आपके काम का छोटा सा रिव्यू है, दस-पंद्रह मिनट लगेंगे। पहले आपका पूरा नाम और फ़र्म का नाम बताइए?',

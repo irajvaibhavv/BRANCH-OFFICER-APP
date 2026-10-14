@@ -6,7 +6,7 @@ import { IoCall, IoMic, IoMicOff, IoRefresh, IoSend, IoVolumeHigh, IoVolumeMute 
 import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
 import CallSetup from '../../components/sarthi/CallSetup';
 import AiAvatar from '../../components/sarthi/AiAvatar';
-import { askAgent, parseClaims } from '../../services/sarthi/agent';
+import { askAgentStream, parseClaims, peekSpeech } from '../../services/sarthi/agent';
 import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, openingLine, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport, toDevanagari, presenceLines, nameOnly, DEVANAGARI } from '../../services/sarthi/dsa';
 import { nameVerdict, confirmReply, speakerIsSomeoneElse, applicantComing, relationOf } from '../../services/sarthi/idChecks';
 import { stopSpeaking, listen, canListen, canSpeak, setSilent } from '../../services/voice';
@@ -82,7 +82,7 @@ export default function SarthiDsaInterview() {
           if (cancelled || answered || doneRef.current || mutedRef.current) return;
           setTimeout(() => { if (!cancelled && !doneRef.current) session(); }, 250);
         },
-        endAfterMs: 1200,
+        endAfterMs: 1800, // a DSA explains; 1.2s cut them off mid-thought
       });
       stopListen.current = () => { cancelled = true; stop(); };
     };
@@ -137,10 +137,41 @@ export default function SarthiDsaInterview() {
       say(text, speech, finish);
       return;
     }
+    // Streamed: the voice starts the moment the Devanagari speech fence closes, not when the whole reply has arrived.
+    // The caption appears once both the voice has started and the Hinglish line is in.
+    let early = null; let voiceOn = false; let caption = ''; let audioDone = false; let streamDone = false;
+    const showCaption = () => { if (voiceOn && caption) { setQuestion(caption); setAnswer(''); } };
+    const advance = () => { if (audioDone && streamDone && !doneRef.current) { setAvatar('idle'); beginListening(); } };
     try {
       const directive = directiveFor(action, file);
-      const raw = await askAgent({ systemPrompt: interviewerPrompt(file, directive), messages: turnMessages(history.current, directive), maxTokens: 400 });
+      const raw = await askAgentStream({
+        systemPrompt: interviewerPrompt(file, directive), messages: turnMessages(history.current, directive), maxTokens: 400,
+        onChunk: (full) => {
+          if (early || doneRef.current) return;
+          const s = peekSpeech(full);
+          if (!s || !DEVANAGARI.test(s)) return;
+          early = gendered(s);
+          setAvatar('speaking');
+          setTimeout(() => { voiceOn = true; showCaption(); }, CAPTION_FALLBACK_MS);
+          speakStreamed(early, {
+            voice: sarthiVoice(),
+            onStart: () => { voiceOn = true; showCaption(); },
+            onEnd: () => { voiceOn = true; showCaption(); audioDone = true; advance(); },
+          });
+        },
+      });
       ({ display: text, speech } = parseClaims(raw, 0));
+      if (early) {
+        if (doneRef.current) return;
+        history.current.push({ role: 'assistant', content: raw });
+        caption = gendered(text);
+        lastLine.current = { text: caption, speech: early };
+        transcript.current.push({ from: 'ai', text });
+        showCaption();
+        streamDone = true;
+        advance();
+        return;
+      }
       // No Devanagari speech fence: the Hindi voice would read the Hinglish caption in an English accent.
       if (!DEVANAGARI.test(speech)) {
         speech = await toDevanagari(text);
@@ -148,6 +179,8 @@ export default function SarthiDsaInterview() {
       }
       history.current.push({ role: 'assistant', content: raw });
     } catch (e) {
+      // Failed mid-stream after the voice started: what was said stands as the question.
+      if (early) { caption = early; transcript.current.push({ from: 'ai', text: early }); history.current.push({ role: 'assistant', content: early }); showCaption(); streamDone = true; advance(); return; }
       console.warn(`[sarthi] DSA turn failed (${e?.message}) — plain question`);
       if (action.kind === 'topic') ({ ask: text, speech } = action.topic);
       else { text = 'Thoda aur bataiye?'; speech = 'थोड़ा और बताइए?'; }
@@ -156,7 +189,7 @@ export default function SarthiDsaInterview() {
     if (doneRef.current) return;
     transcript.current.push({ from: 'ai', text });
     say(text, speech);
-  }, [file, say, finish]);
+  }, [file, say, finish, beginListening]);
 
   // Who is on the call is decided in code, like the PD: a review with "Raj" is not a review of Priya's work.
   const lines = useMemo(() => (dsa ? presenceLines(dsa) : null), [dsa?.id]); // eslint-disable-line react-hooks/exhaustive-deps

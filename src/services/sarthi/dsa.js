@@ -70,9 +70,9 @@ export const readFigure = (text) => readNumber(String(text).replace(FRAME, ' ').
 export async function figureFrom(topic, text) {
   const said = readNumbers(String(text).replace(/(\d+)\s*(?:-|se|to)\s*\d+/gi, '$1')).map((n) => n.value);
   if (!said.length) return null;
-  try {
   if (said.length === 1) return said[0]; // nothing to choose between — no model call, no wait
     const raw = await askAgent({
+  try {
       systemPrompt: 'A loan agent answered a question on a call. Reply with ONLY the number that answers the question, as digits (rupees in full, e.g. 50000; a range → its lower end), or "none" if their answer gives no such number.',
       messages: [{ role: 'user', content: `Question: ${topic.goal}\nAnswer: ${text}` }],
       maxTokens: 12, temperature: 0, retries: 0,
@@ -107,9 +107,9 @@ const firmOnlyWords = (file) => {
 /** The name answer with the firm's words taken out, so "Anita, AD Capital" is not read as "Anita AD" (a clash). */
 export const nameOnly = (text, file) => firmOnlyWords(file).reduce((t, w) => t.replace(new RegExp(`\\b${w}\\w*`, 'gi'), ' '), String(text));
 
-const fmt = (n) => (n >= 100000 ? `${+(n / 100000).toFixed(1)} lakh` : n >= 1000 ? `${Math.round(n / 1000)} hazaar` : String(n));
 const PRODUCT_WORDS = { 'Home Loan': /home|ghar|housing|होम/i, LAP: /lap|property|prop|प्रॉपर्टी/i, 'Business Loan': /business|bl\b|बिज़नेस/i, 'MSME WC': /msme|working|wc\b|capital/i };
 
+const fmt = (n) => (n >= 100000 ? `${+(n / 100000).toFixed(1)} lakh` : n >= 1000 ? `${Math.round(n / 1000)} hazaar` : String(n));
 /** The hisaab done on the call: a stated figure against the branch's record. Returns detail lines for the directive. */
 export function rechecksFor(topic, text, file, nums) {
   const v = nums[topic.id];
@@ -124,9 +124,9 @@ export function rechecksFor(topic, text, file, nums) {
   if (topic.id === 'office' && said && locality && !said.includes(locality.toLowerCase().slice(0, 5))) {
     out.push(`They placed their office as "${text.slice(0, 60)}"; our record has it in ${file.location}. Ask kindly whether they moved, or have a second office.`);
   }
-    if (v > file.avgFilesPerMonth * 1.5 || v < file.avgFilesPerMonth * 0.6) {
   if (topic.id === 'files_us' && v != null && file.avgFilesPerMonth) {
       out.push(`They said ${v} files a month come to us; our record shows about ${Math.round(file.avgFilesPerMonth)} files a month from them (their 6-month average; best month ${file.bestMonth}). Ask where the difference is.`);
+    if (v > file.avgFilesPerMonth * 1.5 || v < file.avgFilesPerMonth * 0.6) {
     }
     if (nums.files_total && v / nums.files_total < 0.3) {
       out.push(`They log ${nums.files_total} files a month but give us only ${v}. Ask kindly why most go to other lenders.`);
@@ -224,6 +224,14 @@ export async function toDevanagari(text) {
 }
 
 /** Fixed lines for when someone other than the DSA on file answers — decided in code, like the PD's presence check. */
+/** "Priya ji bahar gayi hain" — the DSA, named in the third person, is not there. "Main Priya, bahar hoon" is her talking. */
+export function dsaAway(text, name) {
+  const s = String(text).toLowerCase();
+  const first = name.split(' ')[0].toLowerCase();
+  if (/\b(main|mai|mera naam|i am|i'm)\b/.test(s)) return false; // not "mein": that is "in" as often as "I"
+  return new RegExp(`\\b${first}\\b(\\s+\\S+){0,3}?\\s+(bahar|baahar|nahi|nahin|gayi|gaye|gai|busy|out|not)\\b`).test(s);
+}
+
 export function presenceLines(file) {
   const first = file.name.split(' ')[0];
   const full = file.name;
@@ -237,9 +245,9 @@ export function presenceLines(file) {
   };
 }
 
-export function openingLine() {
 // Fixed, like the closing: said the moment the call opens, with no model call to wait on.
   return {
+export function openingLine() {
     text: 'Namaste! Main Sarthi, branch se — aapke kaam ka chhota sa review hai, 10-15 minute lagenge. Pehle aapka poora naam aur firm ka naam bataiye?',
     speech: 'नमस्ते! मैं सारथी, ब्रांच से। आपके काम का छोटा सा रिव्यू है, दस-पंद्रह मिनट लगेंगे। पहले आपका पूरा नाम और फ़र्म का नाम बताइए?',
   };

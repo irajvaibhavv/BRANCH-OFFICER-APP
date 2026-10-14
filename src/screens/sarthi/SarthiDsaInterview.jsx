@@ -7,7 +7,7 @@ import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
 import CallSetup from '../../components/sarthi/CallSetup';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { askAgentStream, parseClaims, peekSpeech } from '../../services/sarthi/agent';
-import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, openingLine, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport, toDevanagari, presenceLines, nameOnly, DEVANAGARI } from '../../services/sarthi/dsa';
+import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, openingLine, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport, toDevanagari, presenceLines, nameOnly, dsaAway, DEVANAGARI } from '../../services/sarthi/dsa';
 import { nameVerdict, confirmReply, speakerIsSomeoneElse, applicantComing, relationOf } from '../../services/sarthi/idChecks';
 import { stopSpeaking, listen, canListen, canSpeak, setSilent } from '../../services/voice';
 import { speakStreamed } from '../../services/sarthi/stream';
@@ -212,7 +212,7 @@ export default function SarthiDsaInterview() {
   /** The name answer against the file. true = handled here (a presence step was asked), false = carry on with the review. */
   const checkName = (text) => {
     const other = speakerIsSomeoneElse(text, dsa.name);
-    if (other?.away) { endNoReview(lines.later); return true; }
+    if (other?.away || dsaAway(text, dsa.name)) { endNoReview(lines.later); return true; }
     const v = nameVerdict(nameOnly(text, dsa), dsa.name);
     if (other || v === 'different') {
       if (idCheck.current.handedOver) { endNoReview(lines.later); return true; }

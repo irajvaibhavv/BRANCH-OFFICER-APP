@@ -7,7 +7,7 @@ import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
 import CallSetup from '../../components/sarthi/CallSetup';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { askAgentStream, parseClaims, peekSpeech } from '../../services/sarthi/agent';
-import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, openingLine, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport, toDevanagari, presenceLines, nameOnly, dsaAway, DEVANAGARI } from '../../services/sarthi/dsa';
+import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, openingLine, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport, deepFor, deepRechecks, toDevanagari, presenceLines, nameOnly, dsaAway, DEVANAGARI } from '../../services/sarthi/dsa';
 import { nameVerdict, confirmReply, speakerIsSomeoneElse, applicantComing, relationOf } from '../../services/sarthi/idChecks';
 import { stopSpeaking, listen, canListen, canSpeak, setSilent } from '../../services/voice';
 import { speakStreamed } from '../../services/sarthi/stream';
@@ -48,6 +48,8 @@ export default function SarthiDsaInterview() {
   const transcript = useRef([]); // [{ from: 'ai' | 'user', text }]
   const qa = useRef([]);         // [{ section, q, a }] for the report
   const rechecks = useRef([]);   // [{ detail, answer }]
+  const flags = useRef([]);      // admissions in their own words: [{ tone, text }]
+  const deepDone = useRef(new Set());
   const nums = useRef({});
   const idx = useRef(0);
   const queue = useRef([]);
@@ -112,7 +114,7 @@ export default function SarthiDsaInterview() {
     doneRef.current = true;
     stopSpeaking(); stopListen.current?.(); stopCamera();
     setPhase('generating');
-    const input = { file, qa: qa.current, rechecks: rechecks.current };
+    const input = { file, qa: qa.current, rechecks: rechecks.current, flags: flags.current };
     let report;
     try { report = await writeDsaReport(input); } catch (e) {
       console.warn(`[sarthi] DSA report failed (${e?.message}) — built from the answers`);
@@ -175,14 +177,14 @@ export default function SarthiDsaInterview() {
       // No Devanagari speech fence: the Hindi voice would read the Hinglish caption in an English accent.
       if (!DEVANAGARI.test(speech)) {
         speech = await toDevanagari(text);
-        if (!speech && action.kind === 'topic') ({ ask: text, speech } = action.topic);
+        if (!speech && (action.kind === 'topic' || action.deep)) ({ ask: text, speech } = action.deep ?? action.topic);
       }
       history.current.push({ role: 'assistant', content: raw });
     } catch (e) {
       // Failed mid-stream after the voice started: what was said stands as the question.
       if (early) { caption = early; transcript.current.push({ from: 'ai', text: early }); history.current.push({ role: 'assistant', content: early }); showCaption(); streamDone = true; advance(); return; }
       console.warn(`[sarthi] DSA turn failed (${e?.message}) — plain question`);
-      if (action.kind === 'topic') ({ ask: text, speech } = action.topic);
+      if (action.kind === 'topic' || action.deep) ({ ask: text, speech } = action.deep ?? action.topic);
       else { text = 'Thoda aur bataiye?'; speech = 'थोड़ा और बताइए?'; }
       history.current.push({ role: 'assistant', content: text });
     }
@@ -267,6 +269,10 @@ export default function SarthiDsaInterview() {
     if (topic?.id === 'name' && !idCheck.current.verified && checkName(text)) return;
     if (cur.kind === 'recheck') {
       rechecks.current.push({ detail: cur.detail, answer: text });
+    } else if (cur.kind === 'deep') {
+      qa.current.push({ id: `${topic.id}_${cur.deep.id}`, section: topic.section, q: cur.deep.ask, a: text });
+      // Its own rechecks are asked next, while the answer is fresh.
+      deepRechecks(cur.deep, text, file).reverse().forEach((detail) => queue.current.unshift({ kind: 'recheck', topic, detail }));
     } else if (topic) {
       const prev = qa.current.find((x) => x.id === topic.id);
       if (prev) prev.a += ` / ${text}`; else qa.current.push({ id: topic.id, section: topic.section, q: topic.ask, a: text });
@@ -278,7 +284,14 @@ export default function SarthiDsaInterview() {
         ask({ kind: 'probe', topic, text });
         return;
       }
-      rechecksFor(topic, text, file, nums.current).forEach((detail) => queue.current.push({ kind: 'recheck', topic, detail }));
+      // Judged on everything they said on this topic, follow-up included.
+      const full = qa.current.find((x) => x.id === topic.id)?.a ?? text;
+      rechecksFor(topic, full, file, nums.current).forEach((detail) => queue.current.push({ kind: 'recheck', topic, detail }));
+      deepFor(topic, full).filter((d) => !deepDone.current.has(d.id)).forEach((d) => {
+        deepDone.current.add(d.id);
+        if (d.flag) flags.current.push(d.flag);
+        queue.current.push({ kind: 'deep', topic, deep: d });
+      });
     }
     ask(nextAction());
     // eslint-disable-next-line react-hooks/exhaustive-deps

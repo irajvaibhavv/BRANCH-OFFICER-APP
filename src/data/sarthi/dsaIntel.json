@@ -1,0 +1,67 @@
+{
+  "_note": "What the branch knows about each DSA beyond its own files: market checks, ops logs, customer complaints. Demo data. Stands in for the CRM / vendor-management feed. Keyed by DSA id; a DSA missing here is reviewed on the branch's file record alone.",
+  "dsa1": {
+    "yearsInTrade": 8,
+    "subAgents": ["Kunal Joshi"],
+    "otherLenders": ["HDFC Bank", "Bajaj Finance"],
+    "feeComplaints": 0,
+    "codeBlocked": null,
+    "preparesFinancials": false
+  },
+  "dsa2": {
+    "yearsInTrade": 12,
+    "subAgents": ["Santosh Kale", "Vijay More", "Amit Pawar"],
+    "otherLenders": ["Bajaj Finance", "Tata Capital", "IIFL"],
+    "feeComplaints": 2,
+    "codeBlocked": null,
+    "preparesFinancials": true
+  },
+  "dsa3": {
+    "yearsInTrade": 6,
+    "subAgents": [],
+    "otherLenders": ["ICICI Bank", "Axis Bank"],
+    "feeComplaints": 0,
+    "codeBlocked": null,
+    "preparesFinancials": false
+  },
+  "dsa4": {
+    "yearsInTrade": 4,
+    "subAgents": ["Raju Shinde", "Mahesh Gaikwad"],
+    "otherLenders": ["Lendingkart", "Bajaj Finance", "Hero FinCorp"],
+    "feeComplaints": 3,
+    "codeBlocked": { "lender": "Hero FinCorp", "year": 2025, "reason": "two files with altered bank statements" },
+    "preparesFinancials": true
+  },
+  "dsa5": {
+    "yearsInTrade": 10,
+    "subAgents": [],
+    "otherLenders": ["SBI", "Kotak Mahindra Bank"],
+    "feeComplaints": 0,
+    "codeBlocked": null,
+    "preparesFinancials": false
+  },
+  "dsa6": {
+    "yearsInTrade": 9,
+    "subAgents": ["Harpreet Gill", "Rohit Nair"],
+    "otherLenders": ["HDFC Bank", "Tata Capital", "Aditya Birla Finance"],
+    "feeComplaints": 0,
+    "codeBlocked": null,
+    "preparesFinancials": false
+  },
+  "dsa7": {
+    "yearsInTrade": 5,
+    "subAgents": ["Imran Sayyed"],
+    "otherLenders": ["IIFL", "Bajaj Finance"],
+    "feeComplaints": 1,
+    "codeBlocked": null,
+    "preparesFinancials": false
+  },
+  "dsa8": {
+    "yearsInTrade": 3,
+    "subAgents": ["Prakash Jagtap"],
+    "otherLenders": ["Lendingkart"],
+    "feeComplaints": 2,
+    "codeBlocked": { "lender": "Lendingkart", "year": 2026, "reason": "a customer complaint about a fee charged" },
+    "preparesFinancials": true
+  }
+}

@@ -352,6 +352,13 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   checked in code like the PD (`nameVerdict` on `nameOnly`, firm words stripped): partial → "aap X ji hi hain?", someone
   else → "aap unke kya lagte hain, X ji kahan hain?" → call them → handover, or a goodbye with no report. Firm and office
   are rechecked against the record (`rechecksFor` name / office).
+  (8) **What the branch knows** beyond its files is `src/data/sarthi/dsaIntel.json` (years in trade, sub-agents seen on
+  their code, other lenders, customer fee complaints, a code another lender closed, financials prepared on their side) —
+  `file.intel`, kept out of `dsas.json` so the AppState seed is untouched. `intelRechecks` challenges every denial against
+  it; `deepFor` asks the officer's second question in code (sub-agent names + which of our files, fee amount + receipt,
+  who prepares statements/ITR, which lender closed the code, where online leads come from), `deepRechecks` checks that
+  answer, and admissions become report `flags`. Every wrong answer is challenged: the DSA recheck queue has no cap, and
+  the PD's `MAX_RECHECKS` is 20 (a runaway guard, one per field) — at 7 the eighth mismatch went unasked.
 - Screens never import from other screens. A hook several screens share goes in `src/hooks/` (e.g. `useSarthiReports`); a shared component goes in `src/components/<area>/`.
 - Files inside a feature folder drop the feature prefix (`services/sarthi/model.js`, not `sarthiModel.js`).
 - Page transitions use framer-motion via `components/layout/Page.jsx` with `AnimatePresence` in the router.

@@ -5,9 +5,9 @@ import { toNumber } from './verifier';
 import { readNumbers } from './hindiNumbers';
 import { FIELD_DEFS } from './memory';
 
-// A PD is a conversation, not an audit — a few rechecks, one per field. Raised from 5 when contradiction and hisaab
-// flags, and their own changed figures, started being asked on the call too.
-export const MAX_RECHECKS = 7;
+// Every figure that does not add up is challenged, once per field (lead's ask, 2026-10-14) — at 7, the eighth mismatch
+// (worst-month EMI cover) went unasked. 20 is a runaway guard, not a budget; MAX_TURNS still bounds the call.
+export const MAX_RECHECKS = 20;
 
 // Spoken money: "3.8 lakh", "18 hazaar". The model turns these into Devanagari for the voice.
 export function inWords(n) {

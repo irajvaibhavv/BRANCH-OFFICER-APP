@@ -31,6 +31,7 @@ export function dsaFile(dsa, { loanFiles = [], engagements = [] } = {}) {
     lastVisit: dsa.lastVisit,
   };
 }
+    intel: dsaIntel[dsa.id] ?? null,
 
 // `num` topics are read as a number in code and rechecked; `noProbe` topics accept a plain yes/no.
 export const DSA_TOPICS = [
@@ -71,10 +72,10 @@ export async function figureFrom(topic, text) {
   const said = readNumbers(String(text).replace(/(\d+)\s*(?:-|se|to)\s*\d+/gi, '$1')).map((n) => n.value);
   if (!said.length) return null;
   if (said.length === 1) return said[0]; // nothing to choose between — no model call, no wait
-    const raw = await askAgent({
   try {
       systemPrompt: 'A loan agent answered a question on a call. Reply with ONLY the number that answers the question, as digits (rupees in full, e.g. 50000; a range → its lower end), or "none" if their answer gives no such number.',
       messages: [{ role: 'user', content: `Question: ${topic.goal}\nAnswer: ${text}` }],
+    const raw = await askAgent({
       maxTokens: 12, temperature: 0, retries: 0,
     });
     const v = Number(raw.replace(/[^\d.]/g, ''));
@@ -108,10 +109,10 @@ const firmOnlyWords = (file) => {
 export const nameOnly = (text, file) => firmOnlyWords(file).reduce((t, w) => t.replace(new RegExp(`\\b${w}\\w*`, 'gi'), ' '), String(text));
 
 const PRODUCT_WORDS = { 'Home Loan': /home|ghar|housing|होम/i, LAP: /lap|property|prop|प्रॉपर्टी/i, 'Business Loan': /business|bl\b|बिज़नेस/i, 'MSME WC': /msme|working|wc\b|capital/i };
-
 const fmt = (n) => (n >= 100000 ? `${+(n / 100000).toFixed(1)} lakh` : n >= 1000 ? `${Math.round(n / 1000)} hazaar` : String(n));
 /** The hisaab done on the call: a stated figure against the branch's record. Returns detail lines for the directive. */
 export function rechecksFor(topic, text, file, nums) {
+
   const v = nums[topic.id];
   const out = [];
   // Words only: speech recognition's Devanagari cannot be compared with the record's Latin names.
@@ -125,10 +126,10 @@ export function rechecksFor(topic, text, file, nums) {
     out.push(`They placed their office as "${text.slice(0, 60)}"; our record has it in ${file.location}. Ask kindly whether they moved, or have a second office.`);
   }
   if (topic.id === 'files_us' && v != null && file.avgFilesPerMonth) {
-      out.push(`They said ${v} files a month come to us; our record shows about ${Math.round(file.avgFilesPerMonth)} files a month from them (their 6-month average; best month ${file.bestMonth}). Ask where the difference is.`);
     if (v > file.avgFilesPerMonth * 1.5 || v < file.avgFilesPerMonth * 0.6) {
     }
     if (nums.files_total && v / nums.files_total < 0.3) {
+      out.push(`They said ${v} files a month come to us; our record shows about ${Math.round(file.avgFilesPerMonth)} files a month from them (their 6-month average; best month ${file.bestMonth}). Ask where the difference is.`);
       out.push(`They log ${nums.files_total} files a month but give us only ${v}. Ask kindly why most go to other lenders.`);
     }
   }
@@ -153,6 +154,109 @@ export function rechecksFor(topic, text, file, nums) {
   }
   return out;
 }
+  if (topic.id === 'files_us' && v != null && nums.files_total && v > nums.files_total) {
+    out.push(`They said they log ${nums.files_total} files a month in all, but give us ${v} — more than their total. Ask kindly how the two fit.`);
+  }
+  return [...out, ...intelRechecks(topic, text, file)];
+}
+
+// ---- what the branch knows beyond its own files (dsaIntel.json) ----
+
+const LENDERS = {
+  'HDFC Bank': /hdfc|एचडीएफसी/i, 'ICICI Bank': /icici|आईसीआईसीआई/i, 'Axis Bank': /axis|एक्सिस/i, SBI: /\bsbi\b|state bank|एसबीआई|स्टेट बैंक/i,
+  'Kotak Mahindra Bank': /kotak|कोटक/i, 'Bajaj Finance': /bajaj|बजाज/i, 'Tata Capital': /tata|टाटा/i, IIFL: /iifl|infoline|आईआईएफएल/i,
+  'Hero FinCorp': /hero|हीरो/i, Lendingkart: /lending ?kart|लेंडिंग/i, 'Aditya Birla Finance': /birla|aditya|बिड़ला|बिरला/i,
+};
+const lendersIn = (text) => Object.keys(LENDERS).filter((l) => LENDERS[l].test(text));
+const NO = /\b(nahi|nahin|nhi|nai|no|never|kabhi nahi|bilkul nahi|koi nahi)\b|नहीं|कभी नहीं/i;
+const ONLY_US = /\b(sirf|only|bas|keval)\s+(aap|aapke|aapka|humare|hamare|tumhare|you|isi|yahi|yahin)|kisi aur (ke saath|ko) nahi|aur kahin nahi|no other|koi aur nahi|सिर्फ़? आप/i;
+const NO_TEAM = /\b(akela|akeli|alone|khud hi|sirf main|main hi|koi sub.?agent nahi|sub.?agent nahi|agent nahi|koi nahi)\b|अकेल/i;
+const HAS_AGENTS = /sub.?agent|freelanc|agent|ladke|bande|log (laate|late|dete)|सब.?एजेंट|एजेंट/i;
+const FIRST = (name) => name.toLowerCase().split(/\s+/)[0];
+const yearsSaid = (text) => {
+  const m = /(\S+(?:\s+\S+)?)\s+(saal|sal|years?|varsh|साल|वर्ष)/i.exec(String(text));
+  return m ? readNumber(m[1]) : null;
+};
+
+/** Their words against what the branch knows (other lenders, sub-agents on their code, fee complaints, a blocked code). */
+function intelRechecks(topic, text, file) {
+  const k = file.intel;
+  if (!k) return [];
+  const out = [];
+  if (topic.id === 'office' && k.yearsInTrade) {
+    const y = yearsSaid(text);
+    if (y != null && y > 0 && y < 60 && Math.abs(y - k.yearsInTrade) >= 3) out.push(`They said ${y} years in loan work; the branch's record says about ${k.yearsInTrade} years. Ask kindly when they actually started.`);
+  }
+  if (topic.id === 'team' && k.subAgents.length && NO_TEAM.test(text) && !HAS_AGENTS.test(text.replace(NO_TEAM, ''))) {
+    out.push(`They say no sub-agent works with them; the branch has seen ${k.subAgents.length > 1 ? `${k.subAgents.length} people` : 'someone'} bring files under their code (for example ${k.subAgents[0]}). Ask kindly who ${k.subAgents[0]} is and how they work together.`);
+  }
+  if (topic.id === 'lenders' && k.otherLenders.length) {
+    const named = lendersIn(text);
+    if (ONLY_US.test(text) || (NO.test(text) && !named.length)) {
+      out.push(`They say they work only with us; the branch knows they also log files with ${k.otherLenders.slice(0, 2).join(' and ')}. Ask kindly, without accusing, how much goes there.`);
+    } else if (named.length) {
+      const missing = k.otherLenders.filter((l) => !named.includes(l));
+      if (missing.length) out.push(`They named ${named.join(', ')}; the branch also knows of files with ${missing.slice(0, 2).join(' and ')}. Ask whether they still send files there.`);
+    }
+  }
+  if (topic.id === 'charges' && k.feeComplaints > 0 && NO.test(text)) {
+    out.push(`They say they take no fee from customers; ${k.feeComplaints} of their customer${k.feeComplaints > 1 ? 's' : ''} told the branch they paid a fee to the agent. Ask kindly, without accusing, how a customer may have come to say that.`);
+  }
+  if (topic.id === 'conduct' && k.codeBlocked && NO.test(text)) {
+    out.push(`They say no lender ever closed their code; the branch knows ${k.codeBlocked.lender} closed it in ${k.codeBlocked.year} (${k.codeBlocked.reason}). Ask gently what happened there.`);
+  }
+  if (topic.id === 'docs' && k.preparesFinancials && /\b(customer|khud|apne aap|wo log|woh log)\b|कस्टमर|ख़ुद|खुद/i.test(text) && !/\b(hum|main|humara|hamara|hamari|humari|mera|meri)\b/i.test(text)) {
+    out.push(`They say the customer brings their own documents; the branch has seen statements and ITRs on their files prepared in one place. Ask kindly who prepares the bank statements and ITR on their files.`);
+  }
+  return out;
+}
+
+/**
+ * The second question an officer would ask, decided in code: a DSA who admits sub-agents is asked their names and
+ * which of our files they brought; one who takes fees, prepares financials or had a code closed is asked the detail.
+ * Each comes with `check` for the answer and `flag` for the report.
+ */
+export function deepFor(topic, text) {
+  const out = [];
+  const t = String(text);
+  if (topic.id === 'team' && HAS_AGENTS.test(t) && !NO_TEAM.test(t)) {
+    out.push({ id: 'subagent_names', goal: 'The names of their sub-agents, and which of the files they gave us came through them', ask: 'Unke naam bataiye — aur humein di hui kaunsi files unke through aayi thi?', speech: 'उनके नाम बताइए। और हमें दी हुई कौन सी फ़ाइलें उनके ज़रिए आई थीं?' });
+  }
+  if (topic.id === 'charges' && !NO.test(t) && /lete|leti|charge|fee|fees|percent|%|hazaar|rupay|rupees|लेते|फ़ीस|फीस|चार्ज/i.test(t)) {
+    out.push({ id: 'fee_detail', goal: 'How much they charge a customer, for what, and whether the customer gets a receipt', ask: 'Kitna lete hain, kis kaam ke liye, aur customer ko uski receipt milti hai?', speech: 'कितना लेते हैं, किस काम के लिए, और कस्टमर को उसकी रसीद मिलती है?', flag: { tone: 'danger', text: `Takes a fee from customers, in their words: "${t.slice(0, 80)}"` } });
+  }
+  if (topic.id === 'docs' && /(statement|itr|financial|balance|stat|स्टेटमेंट|आईटीआर)/i.test(t) && /\b(hum|main|humara|hamara|hamari|humari|mera|meri|office|ca)\b.{0,40}(bana|banwa|taiyar|tayyar|prepare|kar dete|nikal)/i.test(t)) {
+    out.push({ id: 'financials_who', goal: 'Who exactly prepares the statements or ITR, and whether the customer sees and signs them', ask: 'Statement ya ITR kaun banata hai, aur customer use dekh kar sign karta hai?', speech: 'स्टेटमेंट या आईटीआर कौन बनाता है, और कस्टमर उसे देखकर साइन करता है?', flag: { tone: 'danger', text: `Their side prepares customer financials, in their words: "${t.slice(0, 80)}"` } });
+  }
+  if (topic.id === 'conduct' && !NO.test(t) && /haan|ha\b|yes|hua tha|kiya tha|band (hua|kiya|ho gaya)|हाँ|हां|हुआ था/i.test(t)) {
+    out.push({ id: 'block_detail', goal: 'Which lender closed their code, when, why, and whether it is settled now', ask: 'Kis lender ne, kab, aur kis wajah se band kiya tha? Ab woh maamla suljha?', speech: 'किस लेंडर ने, कब, और किस वजह से बंद किया था? अब वो मामला सुलझा?', flag: { tone: 'danger', text: `A lender closed their code, in their words: "${t.slice(0, 80)}"` } });
+  }
+  if (topic.id === 'sourcing' && /online|facebook|instagram|google|website|lead|ऑनलाइन|लीड/i.test(t)) {
+    out.push({ id: 'online_leads', goal: 'Where the online leads come from (own page, bought lists, a lead company) and how they check them', ask: 'Online leads kahan se aate hain — apna page hai ya kahin se lete hain?', speech: 'ऑनलाइन लीड्स कहाँ से आती हैं? अपना पेज है, या कहीं से लेते हैं?' });
+  }
+  return out;
+}
+
+/** The answer to a deep follow-up against the branch's record. Returns recheck detail lines. */
+export function deepRechecks(deep, text, file) {
+  const said = String(text).toLowerCase();
+  const out = [];
+  if (deep.id === 'subagent_names') {
+    const k = file.intel;
+    if (k?.subAgents.length && LATIN.test(said) && !k.subAgents.some((n) => said.includes(FIRST(n)))) {
+      out.push(`The sub-agents they named are not the ones the branch has seen on their files (${k.subAgents.slice(0, 2).join(', ')}). Ask kindly who ${k.subAgents[0]} is.`);
+    }
+    const ours = file.files.filter((f) => f.borrower.toLowerCase().split(/\s+/).some((w) => w.length > 3 && said.includes(w)));
+    if (file.files.length && LATIN.test(said) && !ours.length && !NO.test(said)) {
+      out.push(`None of the files they say came through sub-agents is in their files with us. Ask which of ours — for example ${file.files.slice(0, 2).map((f) => f.borrower).join(' or ')} — came that way.`);
+    }
+  }
+  if (deep.id === 'block_detail' && file.intel?.codeBlocked) {
+    const named = lendersIn(said);
+    if (named.length && !named.includes(file.intel.codeBlocked.lender)) {
+      out.push(`They say ${named.join(', ')} closed their code; the branch knows of ${file.intel.codeBlocked.lender} (${file.intel.codeBlocked.year}, ${file.intel.codeBlocked.reason}). Ask gently about that one too.`);
+    }
+  }
 
 export function interviewerPrompt(file, directive) {
   return `You are Sarthi, an AI from the branch, on a video call reviewing the work of a DSA (a loan agent who brings loan files to the branch).
@@ -223,7 +327,6 @@ export async function toDevanagari(text) {
   }
 }
 
-/** Fixed lines for when someone other than the DSA on file answers — decided in code, like the PD's presence check. */
 /** "Priya ji bahar gayi hain" — the DSA, named in the third person, is not there. "Main Priya, bahar hoon" is her talking. */
 export function dsaAway(text, name) {
   const s = String(text).toLowerCase();
@@ -234,6 +337,7 @@ export function dsaAway(text, name) {
 
 export function presenceLines(file) {
   const first = file.name.split(' ')[0];
+/** Fixed lines for when someone other than the DSA on file answers — decided in code, like the PD's presence check. */
   const full = file.name;
   return {
     confirm: { text: `Achha. Yeh review ${full} ji ke saath hai. Kya aap ${full} ji hi hain?`, speech: `अच्छा। यह रिव्यू ${full} जी के साथ है। क्या आप ${full} जी ही हैं?` },
@@ -246,10 +350,10 @@ export function presenceLines(file) {
 }
 
 // Fixed, like the closing: said the moment the call opens, with no model call to wait on.
-  return {
 export function openingLine() {
     text: 'Namaste! Main Sarthi, branch se — aapke kaam ka chhota sa review hai, 10-15 minute lagenge. Pehle aapka poora naam aur firm ka naam bataiye?',
     speech: 'नमस्ते! मैं सारथी, ब्रांच से। आपके काम का छोटा सा रिव्यू है, दस-पंद्रह मिनट लगेंगे। पहले आपका पूरा नाम और फ़र्म का नाम बताइए?',
+  return {
   };
 }
 
@@ -258,6 +362,7 @@ export function directiveFor(action, file) {
   if (action.kind === 'recheck') return `FRIENDLY RECHECK. ${action.detail}\nSay both figures kindly, like doing the hisaab together, and ask them to explain. One question. These two figures are the only numbers you may say.`;
   if (action.kind === 'probe') return `FOLLOW UP on "${action.topic.goal}". Their answer was: "${action.text}". It gave nothing concrete — ask ONE specific follow-up on this same topic to get a name, a number or an example.${action.topic.num ? ' They must give a number; ask for a rough one.' : ''}`;
   const t = action.topic;
+  if (action.kind === 'deep') return `FOLLOW UP on their last answer — the officer's next question: ${action.deep.goal}\nPlain example: "${action.deep.ask}"\nAsk it open and curious, never suspicious, and never say why you ask. One question.`;
   const stuck = t.stuck && file.stuck.length
     ? `\nOur record: ${file.stuck.map((f) => `${f.borrower} (${f.stage}, pending: ${f.pendingDocs.join(', ')})`).join('; ')}${file.rejected.length ? `; rejected: ${file.rejected.join(', ')}` : ''}. Name one of these files and ask what is holding it.`
     : '';
@@ -271,6 +376,8 @@ You get the DSA's record from the branch, the question-by-question answers, and 
 Judge: is this partner bringing genuine files, how loyal are they to us, and what should the officer do next.
 Red flags to look for: sub-agents they cannot name, not knowing their own customers, charging customers, someone else preparing
 statements/ITR, a code blocked by another lender, figures far from the record, most files going to other lenders.
+The record's "intel" is what the branch knows beyond its files (other lenders, sub-agents seen on their code, customer fee
+complaints, a code another lender closed) — weigh their answers against it. "Flags raised on the call" are admissions in their own words.
 Use only what is in the input — never invent a figure. Quote their words when it matters.
 
 Reply with ONLY a JSON object:
@@ -282,8 +389,8 @@ Reply with ONLY a JSON object:
 Sections, in order: "Who they are", "Where their customers come from", "File quality", "Their numbers vs our record", "Working with us", "Pipeline and plan".
 Keep it tight — the officer reads it on a phone: at most 6 flags, 3 items per section, 5 todos, each under 30 words.`;
 
-export async function writeDsaReport({ file, qa, rechecks }) {
-  const input = `## Branch record\n${JSON.stringify(file, null, 1)}\n\n## Answers\n${qa.map((x) => `[${x.section}] ${x.q}\n→ ${x.a}`).join('\n\n')}\n\n## Rechecks on the call\n${rechecks.length ? rechecks.map((r) => `- ${r.detail}\n  Their answer: ${r.answer ?? '(none)'}`).join('\n') : 'None'}`;
+export async function writeDsaReport({ file, qa, rechecks, flags = [] }) {
+  const input = `## Branch record\n${JSON.stringify(file, null, 1)}\n\n## Answers\n${qa.map((x) => `[${x.section}] ${x.q}\n→ ${x.a}`).join('\n\n')}\n\n## Rechecks on the call\n${rechecks.length ? rechecks.map((r) => `- ${r.detail}\n  Their answer: ${r.answer ?? '(none)'}`).join('\n') : 'None'}\n\n## Flags raised on the call\n${flags.length ? flags.map((f) => `- ${f.text}`).join('\n') : 'None'}`;
   const raw = await askAgent({ systemPrompt: REPORT_SYSTEM, messages: [{ role: 'user', content: input }], temperature: 0.2, maxTokens: 6000, thinkingBudget: 2000 });
   const json = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
   if (!Array.isArray(json.sections) || typeof json.score !== 'number') throw new Error('DSA report: bad shape');
@@ -291,20 +398,20 @@ export async function writeDsaReport({ file, qa, rechecks }) {
 }
 
 /** No model reachable: the same report shape, built from the answers and rechecks alone. */
-export function fallbackDsaReport({ file, qa, rechecks }) {
+export function fallbackDsaReport({ file, qa, rechecks, flags: raised = [] }) {
   const sections = [];
   qa.forEach((x) => {
     let s = sections.find((y) => y.title === x.section);
     if (!s) { s = { title: x.section, items: [] }; sections.push(s); }
     s.items.push(`${x.q} — "${x.a}"`);
   });
-  const score = Math.round(file.approvalRate * 0.8 + (file.quality === 'high' ? 20 : file.quality === 'average' ? 10 : 0) - rechecks.length * 5);
+  const score = Math.round(file.approvalRate * 0.8 + (file.quality === 'high' ? 20 : file.quality === 'average' ? 10 : 0) - rechecks.length * 5 - raised.length * 8);
   return {
     score: Math.max(0, Math.min(100, score)),
     sentiment: score >= 75 ? 'strong' : score >= 60 ? 'positive' : score >= 45 ? 'moderate' : 'weak',
     headline: `${file.name}: ${rechecks.length ? `${rechecks.length} figure${rechecks.length > 1 ? 's' : ''} did not match our record` : 'answers in line with our record'}`,
     escalate: false,
-    flags: rechecks.map((r) => ({ tone: 'warning', text: `${r.detail} Their answer: "${r.answer ?? '—'}"` })),
+    flags: [...raised, ...rechecks.map((r) => ({ tone: 'warning', text: `${r.detail} Their answer: "${r.answer ?? '—'}"` }))],
     sections,
     todos: [
       ...file.stuck.map((f) => ({ owner: 'BO', text: `Clear pending docs on ${f.borrower}: ${f.pendingDocs.join(', ')}` })),

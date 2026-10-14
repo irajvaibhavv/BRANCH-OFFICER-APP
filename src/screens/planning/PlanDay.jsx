@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, Reorder, motion } from 'framer-motion';
-import { FiMapPin, FiStar, FiTrendingUp, FiFolder, FiClock, FiLifeBuoy, FiCheck, FiChevronRight, FiMove, FiZap, FiPlus, FiNavigation, FiX, FiSearch, FiUser, FiLink } from 'react-icons/fi';
+import { FiFlag, FiMapPin, FiStar, FiTrendingUp, FiFolder, FiClock, FiLifeBuoy, FiCheck, FiChevronRight, FiMove, FiZap, FiPlus, FiNavigation, FiX, FiSearch, FiUser, FiLink } from 'react-icons/fi';
 import Page, { listContainer, listItem } from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import Card from '../../components/ui/Card';
@@ -9,8 +9,11 @@ import Button from '../../components/ui/Button';
 import Avatar from '../../components/ui/Avatar';
 import Badge, { QualityBadge } from '../../components/ui/Badge';
 import { useAppState } from '../../context/AppStateContext';
+import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../hooks/useToast';
 import { formatINR, toISODate } from '../../utils/formatters';
+import { withCredit } from '../../utils/fileStages';
+import { isConnector } from '../../utils/channel';
 import { km, optimise } from '../../utils/route';
 import RouteMap from '../../components/charts/RouteMap';
 import { useLivePosition } from '../../hooks/useGeolocation';
@@ -40,7 +43,7 @@ const clock12 = (t) => `${Math.floor(t / 60) % 12 || 12}:${String(t % 60).padSta
 function rank(dsas, loanFiles, criteria) {
   const pendingBy = {};
   loanFiles.forEach((f) => {
-    const n = f.docs.filter(([, s]) => s !== 'done').length + (f.status === 'under review' || f.status === 'submitted' ? 1 : 0);
+    const n = f.docs.filter(([, s]) => s !== 'done').length + (withCredit(f.status) || f.status === 'submitted' ? 1 : 0);
     pendingBy[f.dsaId] = (pendingBy[f.dsaId] ?? 0) + n;
   });
   const dist = dsas.map((d) => d.distanceKm), dis = dsas.map((d) => d.disbursed), stale = dsas.map((d) => daysSince(d.lastVisit));
@@ -71,13 +74,14 @@ function rank(dsas, loanFiles, criteria) {
 export default function PlanDay() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const { dsas, customers, getDsa, loanFiles, todayVisits, dayPlan, planDay } = useAppState();
+  const { dsas, customers, getDsa, loanFiles, todayVisits, dayPlan, planDay, marketing } = useAppState();
+  const { officer } = useAuth();
   const { toast } = useToast();
   // Edit mode: today's plan exists and the officer wants to add / remove stops. Pre-fill with what's still upcoming.
   const editing = params.get('edit') === '1' && dayPlan?.date === toISODate();
   const [step, setStep] = useState(0); // 0 choose DSAs · 1 route
   const [criteria, setCriteria] = useState(() => (editing ? dayPlan.criteria ?? [] : []));
-  const [custOnly, setCustOnly] = useState(false); // "Customers" chip — show only customers
+  const [only, setOnly] = useState(null); // 'customer' | 'connector' chip — show just that group
   const [query, setQuery] = useState('');
   const [picks, setPicks] = useState(() => {
     if (editing) return todayVisits.filter((v) => v.status === 'upcoming').map((v) => v.dsaId);
@@ -89,10 +93,32 @@ export default function PlanDay() {
   const pickedStops = picks.map(getDsa).filter(Boolean);
 
   const doneToday = todayVisits.filter((v) => v.status === 'completed').map((v) => v.dsaId);
-  const pool = useMemo(() => dsas.filter((d) => !doneToday.includes(d.id) && (!query || `${d.name} ${d.firm} ${d.location}`.toLowerCase().includes(query.toLowerCase()))), [dsas, doneToday, query]);
+  const pool = useMemo(() => dsas.filter((d) => !doneToday.includes(d.id) && (only !== 'connector' || isConnector(d)) && (!query || `${d.name} ${d.firm ?? ''} ${d.location} ${d.vendorCode ?? ''}`.toLowerCase().includes(query.toLowerCase()))), [dsas, doneToday, only, query]);
   const ranked = useMemo(() => rank(pool, loanFiles, criteria), [pool, loanFiles, criteria]);
   const matches = criteria.length ? ranked.slice(0, MATCHES) : [];
   const others = criteria.length ? ranked.slice(MATCHES) : [...ranked].sort((a, b) => a.d.name.localeCompare(b.d.name));
+  // Today's marketing activities — the ones you are on first. They run at a fixed time, so they are stops, not ranked.
+  const mkPool = useMemo(() => marketing
+    .filter((m) => m.date === toISODate() && m.status !== 'done' && !doneToday.includes(m.id))
+    .map((m) => ({ m, mine: m.assignees.includes(officer.id) }))
+    .sort((a, b) => (b.mine ? 1 : 0) - (a.mine ? 1 : 0) || a.m.start.localeCompare(b.m.start)), [marketing, doneToday, officer.id]);
+  const otherDsas = others.filter((r) => !isConnector(r.d));
+  const otherCons = others.filter((r) => isConnector(r.d));
+  const custOnly = only === 'customer';
+  const toggleOnly = (g) => setOnly((o) => (o === g ? null : g));
+  const partnerRow = (r) => {
+    const on = picks.includes(r.d.id);
+    return (
+      <button key={r.d.id} className={`${styles.miniRow} ${on ? styles.miniOn : ''}`} onClick={() => togglePick(r.d.id)}>
+        <Avatar name={r.d.name} size={32} />
+        <div className="grow" style={{ minWidth: 0 }}>
+          <div className={styles.miniName}>{r.d.name}</div>
+          <div className="hint truncate">{isConnector(r.d) && r.d.profession ? `${r.d.profession} · ` : ''}{r.d.location} · {r.d.distanceKm} km · {r.d.rating}★</div>
+        </div>
+        <span className={`${styles.addBtn} ${on ? styles.addOn : ''}`}>{on ? <><FiCheck size={13} /> Added</> : <><FiPlus size={13} /> Add</>}</span>
+      </button>
+    );
+  };
   // Customers: those in a picked DSA's circle float to the top, then nearest first
   const custPool = useMemo(
     () => customers
@@ -131,7 +157,7 @@ export default function PlanDay() {
       <TopBar
         back
         onBack={step > 0 ? () => setStep(0) : undefined}
-        title={step === 0 ? (editing ? "Edit today's plan" : 'Visit DSAs') : custom ? 'Your priority order' : 'Fastest route'}
+        title={step === 0 ? (editing ? "Edit today's plan" : 'Visit DSAs & Connectors') : custom ? 'Your priority order' : 'Fastest route'}
         subtitle={step === 0 ? `${picks.length} of ${MAX_STOPS} picked` : `${order.length} stops · ${total.toFixed(0)} km`}
         hideBell
       />
@@ -144,12 +170,15 @@ export default function PlanDay() {
             <div className={styles.filterBar}>
               <div className={styles.search}>
                 <FiSearch size={16} />
-                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search DSA, firm or area" />
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, area or vendor code" />
                 {query && <button onClick={() => setQuery('')} aria-label="Clear"><FiX size={14} /></button>}
               </div>
               <div className={styles.chips}>
-                <button className={`${styles.chip} ${custOnly ? styles.chipOn : ''}`} style={{ '--tile': '#0f766e' }} onClick={() => setCustOnly((v) => !v)}>
+                <button className={`${styles.chip} ${custOnly ? styles.chipOn : ''}`} style={{ '--tile': '#0f766e' }} onClick={() => toggleOnly('customer')}>
                   <FiUser size={13} /> Customers {custOnly && <FiX size={12} />}
+                </button>
+                <button className={`${styles.chip} ${only === 'connector' ? styles.chipOn : ''}`} style={{ '--tile': '#db2777' }} onClick={() => toggleOnly('connector')}>
+                  <FiLink size={13} /> Connectors {only === 'connector' && <FiX size={12} />}
                 </button>
                 {CRITERIA.map((c) => {
                   const on = criteria.includes(c.id);
@@ -163,7 +192,7 @@ export default function PlanDay() {
             </div>
 
             {/* Live map of what's picked so far, from where the officer is now */}
-            <RouteMap stops={pickedStops} origin={here} height={150} className={styles.mapGap} label="Live · Pune" empty="Add DSAs or customers to see them on the map" />
+            <RouteMap stops={pickedStops} origin={here} height={150} className={styles.mapGap} label="Live · Pune" empty="Add DSAs, connectors or customers to see them on the map" />
 
             {!custOnly && matches.length > 0 && (
               <>
@@ -177,20 +206,37 @@ export default function PlanDay() {
               </>
             )}
 
-            {!custOnly && others.length > 0 && (
+            {!only && otherDsas.length > 0 && (
               <>
                 <div className={styles.secHead} style={{ marginTop: matches.length ? 18 : 4 }}>
                   <div><div className={styles.secTitle}>{criteria.length ? 'Other DSAs' : 'All DSAs'}</div><div className="hint">{criteria.length ? 'Lower fit for these filters — add anyone you still want to see' : 'Pick a filter above, or add DSAs directly'}</div></div>
                 </div>
+                <Card padding={0} noChevron>{otherDsas.map(partnerRow)}</Card>
+              </>
+            )}
+            {!custOnly && otherCons.length > 0 && (
+              <>
+                <div className={styles.secHead} style={{ marginTop: matches.length || (!only && otherDsas.length) ? 18 : 4 }}>
+                  <div><div className={styles.secTitle}>{criteria.length ? 'Other connectors' : 'Connectors'}</div><div className="hint">Shopkeepers, CAs and agents who refer customers</div></div>
+                </div>
+                <Card padding={0} noChevron>{otherCons.map(partnerRow)}</Card>
+              </>
+            )}
+            {!only && mkPool.length > 0 && (
+              <>
+                <div className={styles.secHead} style={{ marginTop: 18 }}>
+                  <div><div className={styles.secTitle}>Marketing activities today</div><div className="hint">Fixed-time stops — add the ones you will attend</div></div>
+                </div>
                 <Card padding={0} noChevron>
-                  {others.map((r) => {
-                    const on = picks.includes(r.d.id);
+                  {mkPool.map(({ m, mine }) => {
+                    const on = picks.includes(m.id);
                     return (
-                      <button key={r.d.id} className={`${styles.miniRow} ${on ? styles.miniOn : ''}`} onClick={() => togglePick(r.d.id)}>
-                        <Avatar name={r.d.name} size={32} />
+                      <button key={m.id} className={`${styles.miniRow} ${on ? styles.miniOn : ''}`} onClick={() => togglePick(m.id)}>
+                        <span className="icon-tile" style={{ '--tile': '#0f766e', width: 32, height: 32, borderRadius: 10, flexShrink: 0 }}><FiFlag size={15} /></span>
                         <div className="grow" style={{ minWidth: 0 }}>
-                          <div className={styles.miniName}>{r.d.name}</div>
-                          <div className="hint truncate">{r.d.location} · {r.d.distanceKm} km · {r.d.rating}★</div>
+                          <div className={styles.miniName}>{m.title}</div>
+                          <div className="hint truncate">{m.start}–{m.end} · {[m.spot, m.area].filter(Boolean).join(', ')}</div>
+                          {mine && <div className={styles.via}><FiUser size={11} /> You are assigned</div>}
                         </div>
                         <span className={`${styles.addBtn} ${on ? styles.addOn : ''}`}>{on ? <><FiCheck size={13} /> Added</> : <><FiPlus size={13} /> Add</>}</span>
                       </button>
@@ -200,7 +246,7 @@ export default function PlanDay() {
               </>
             )}
             {/* Customers — in a picked DSA's circle first, so they can be met on the same trip */}
-            {custPool.length > 0 && (
+            {only !== 'connector' && custPool.length > 0 && (
               <>
                 <div className={styles.secHead} style={{ marginTop: custOnly ? 4 : 18 }}>
                   <div><div className={styles.secTitle}>Customers</div><div className="hint">{custPool.some((x) => x.via) ? 'Referred by a DSA on your plan are listed first' : 'New walk-ins, leads and existing borrowers'}</div></div>
@@ -223,7 +269,7 @@ export default function PlanDay() {
                 </Card>
               </>
             )}
-            {(custOnly ? custPool.length === 0 : pool.length === 0 && custPool.length === 0) && <p className="hint" style={{ marginTop: 16, textAlign: 'center' }}>No {custOnly ? 'customer' : 'DSA or customer'} matches "{query}".</p>}
+            {(custOnly ? custPool.length === 0 : only === 'connector' ? pool.length === 0 : pool.length === 0 && custPool.length === 0) && <p className="hint" style={{ marginTop: 16, textAlign: 'center' }}>No {custOnly ? 'customer' : only === 'connector' ? 'connector' : 'DSA, connector or customer'} matches "{query}".</p>}
             {doneToday.length > 0 && <p className="hint" style={{ marginTop: 12 }}>Already visited today ({doneToday.length}) are left out.</p>}
           </motion.div>
         )}
@@ -252,7 +298,7 @@ export default function PlanDay() {
                       <div className="grow" style={{ minWidth: 0 }}>
                         <div style={{ fontWeight: 600 }} className="truncate">{leg.d.name}</div>
                         <div className="hint truncate">{leg.d.location} · {leg.dist.toFixed(1)} km from {i === 0 ? 'you' : 'previous'}</div>
-                        <div className="hint" style={{ color: 'var(--primary)', fontWeight: 600, marginTop: 2 }}>ETA {leg.eta}</div>
+                        <div className="hint" style={{ color: 'var(--primary)', fontWeight: 600, marginTop: 2 }}>ETA {leg.eta}{leg.d.isMarketing ? ` · starts ${leg.d.start}` : ''}</div>
                       </div>
                       {custom ? <FiMove size={20} color="var(--text-3)" /> : <FiChevronRight size={18} color="var(--text-3)" style={{ visibility: 'hidden' }} />}
                     </div>
@@ -284,9 +330,12 @@ function SuggestionCard({ r, index, picked, onToggle }) {
           <div className="grow" style={{ minWidth: 0 }}>
             <div className="row-between">
               <div style={{ fontWeight: 600 }} className="truncate">{d.name}</div>
-              <QualityBadge quality={d.quality} soft />
+              <div className="row" style={{ gap: 4, flexShrink: 0 }}>
+                {isConnector(d) && <Badge tone="primary" soft>Connector</Badge>}
+                <QualityBadge quality={d.quality} soft />
+              </div>
             </div>
-            <div className="hint truncate">{d.firm} · {d.location}</div>
+            <div className="hint truncate">{[d.firm, d.location].filter(Boolean).join(' · ')}</div>
             <div className={styles.reasons}>
               {reasons.map((x) => { const c = CRITERIA.find((k) => k.id === x.c); return <span key={x.c} className={styles.reason} style={{ '--tile': c.tone }}><c.icon size={11} /> {x.text}</span>; })}
             </div>

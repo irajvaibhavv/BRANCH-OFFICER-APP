@@ -5,7 +5,9 @@ import { IoLogoWhatsapp, IoSparkles } from 'react-icons/io5';
 import { listContainer, listItem } from '../../components/layout/Page';
 import Card from '../../components/ui/Card';
 import Avatar from '../../components/ui/Avatar';
-import Badge from '../../components/ui/Badge';
+import Badge, { StatusBadge } from '../../components/ui/Badge';
+import { pdCaseStage } from '../../utils/fileStages';
+import { customerStage } from '../../utils/channel';
 import Button from '../../components/ui/Button';
 import EmptyState from '../../components/ui/EmptyState';
 import { MiniMetricRow } from '../../components/charts/MiniMetric';
@@ -49,6 +51,9 @@ export default function CustomerList({ files, reports, onClear }) {
                         </div>
                       </div>
                       <div className="row" style={{ gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                        {customerStage(c) === 'lead' && <Badge tone="warning" soft>Lead</Badge>}
+                        {customerStage(c) === 'existing' && <Badge tone="success" soft>Existing</Badge>}
+                        <StatusBadge status={pdCaseStage(c, !!report)} soft />
                         <Badge tone={riskTone}>{riskLabel}</Badge>
                         {report && <Badge tone="primary" soft>Report ready</Badge>}
                       </div>
@@ -70,7 +75,8 @@ export default function CustomerList({ files, reports, onClear }) {
                         Report {timeAgo(report.createdAt)} <FiChevronRight size={14} />
                       </button>
                     ) : (
-                      <span className={styles.link}><IoSparkles size={13} /> Start PD</span>
+                      c.stage === 'disbursed' ? <span className="hint" style={{ color: 'var(--success)', fontWeight: 600 }}>Disbursed · paid</span>
+                        : <span className={styles.link}><IoSparkles size={13} /> Start PD</span>
                     )}
                   </div>
                 </Card>

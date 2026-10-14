@@ -1,0 +1,10 @@
+.head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.now { font-weight: 700; font-size: 15px; }
+.bar { display: flex; gap: 3px; margin: 10px 0 6px; }
+.seg { flex: 1; height: 6px; border-radius: 3px; background: var(--border); }
+.toggle { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--primary); }
+.list { display: flex; flex-direction: column; margin-top: 12px; }
+.row { display: flex; gap: 12px; position: relative; padding-bottom: 16px; }
+.row:last-child { padding-bottom: 0; }
+.dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; position: relative; z-index: 1; box-shadow: 0 0 0 3px var(--card); }
+.line { position: absolute; left: 6px; top: 17px; bottom: 0; width: 2px; background: var(--border); }

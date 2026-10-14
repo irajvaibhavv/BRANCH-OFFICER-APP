@@ -1,0 +1,12 @@
+[
+  { "id": "submitted", "label": "Application Submitted", "short": "Submitted", "owner": "DSA / BO" },
+  { "id": "login", "label": "System Login", "short": "Login", "owner": "Branch ops" },
+  { "id": "bureau", "label": "Bureau Passed", "short": "Bureau", "owner": "Credit" },
+  { "id": "pd", "label": "PD Cleared", "short": "PD", "owner": "Credit" },
+  { "id": "credit_query", "label": "In Credit Query", "short": "Credit query", "owner": "Credit" },
+  { "id": "pending_docs", "label": "Pending Documents", "short": "Pending docs", "owner": "DSA / BO" },
+  { "id": "ops_query", "label": "Operations Query", "short": "Ops query", "owner": "Operations" },
+  { "id": "ops_disbursal", "label": "Submitted to Ops for Disbursement", "short": "With ops", "owner": "Operations" },
+  { "id": "otc_pdd", "label": "OTC / PDD", "short": "OTC/PDD", "owner": "DSA / BO" },
+  { "id": "disbursed", "label": "Fund Transferred", "short": "Disbursed", "owner": "Operations" }
+]

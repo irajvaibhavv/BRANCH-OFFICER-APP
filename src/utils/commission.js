@@ -51,3 +51,18 @@ export function productMix(dsa) {
   const rawSum = raw.reduce((a, b) => a + b, 0) || 1;
   return rows.map((r, i) => ({ ...r, disbursed: Math.round((dsa.disbursed * raw[i]) / rawSum), share: Math.round((100 * raw[i]) / rawSum) }));
 }
+
+/** Disbursal per month for the last 6 months: approved files × this DSA's average ticket. */
+export function disbursedMonthly(dsa) {
+  const ticket = dsa.disbursed / Math.max(1, Math.round((dsa.filesSubmitted * dsa.approvalRate) / 100));
+  return approvedMonthly(dsa).map((n) => Math.round(n * ticket));
+}
+
+/** NPA = 90+ days past due; DPD keeps counting from the day the account crossed 90. */
+export function npaSummary(dsa, today = new Date()) {
+  const accounts = (dsa.npa ?? []).map((n) => ({ ...n, dpd: 90 + Math.max(0, Math.floor((today - new Date(n.npaSince)) / 86400000)) }))
+    .sort((a, b) => b.dpd - a.dpd);
+  const outstanding = accounts.reduce((s, n) => s + n.outstanding, 0);
+  return { accounts, outstanding, pct: dsa.disbursed ? +((outstanding / dsa.disbursed) * 100).toFixed(1) : 0 };
+}
+

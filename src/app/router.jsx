@@ -20,6 +20,10 @@ import AddDSA from '../screens/dsa/AddDSA';
 import RouteResult from '../screens/planning/RouteResult';
 import PlanDay from '../screens/planning/PlanDay';
 import CustomerPlan, { CustomerDetail } from '../screens/planning/CustomerPlan';
+import MarketingPlan from '../screens/marketing/MarketingPlan';
+import ActivityRun from '../screens/marketing/ActivityRun';
+import PayoutTracker from '../screens/payouts/PayoutTracker';
+import RewardsHome, { RewardsTarget, RewardsPlan, RewardsMissions, RewardsLevelUp, RewardsHub } from '../screens/rewards/Rewards';
 import BranchPlan from '../screens/planning/BranchPlan';
 import AIHome, { AISession, AIReport } from '../screens/assistant/Assistant';
 import VisitLogger from '../screens/visits/VisitLogger';
@@ -127,6 +131,15 @@ export function AnimatedRoutes() {
           <Route path="/documents" element={<DocumentChecklist />} />
           <Route path="/files" element={<LoanFileTracker />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/payouts" element={<PayoutTracker />} />
+          <Route path="/rewards" element={<RewardsHome />} />
+          <Route path="/rewards/target" element={<RewardsTarget />} />
+          <Route path="/rewards/plan" element={<RewardsPlan />} />
+          <Route path="/rewards/missions" element={<RewardsMissions />} />
+          <Route path="/rewards/level-up" element={<RewardsLevelUp />} />
+          <Route path="/rewards/store" element={<RewardsHub />} />
+          <Route path="/marketing" element={<MarketingPlan />} />
+          <Route path="/marketing/:id" element={<ActivityRun />} />
           <Route path="/calendar" element={<CalendarView />} />
           <Route path="/reports" element={<ReportGenerator />} />
           <Route path="/scheduler" element={<MeetingScheduler />} />

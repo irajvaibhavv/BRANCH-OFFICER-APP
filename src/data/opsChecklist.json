@@ -1,0 +1,29 @@
+{
+  "source": "Operations team checklist — stands in for the admin-portal feed. OTC is collected at signing/disbursal; PDD after. dueDays counts from the day the file reached the OTC/PDD stage.",
+  "products": {
+    "Business Loan": [
+      { "doc": "Signed loan agreement", "type": "OTC", "dueDays": 3 },
+      { "doc": "NACH / e-mandate form", "type": "OTC", "dueDays": 3 },
+      { "doc": "Original KYC (self-attested)", "type": "OTC", "dueDays": 7 },
+      { "doc": "Insurance policy copy", "type": "PDD", "dueDays": 30 },
+      { "doc": "NACH registration confirmation", "type": "PDD", "dueDays": 30 },
+      { "doc": "End-use proof (invoices)", "type": "PDD", "dueDays": 60 }
+    ],
+    "MSME Working Capital": [
+      { "doc": "Signed loan agreement", "type": "OTC", "dueDays": 3 },
+      { "doc": "NACH / e-mandate form", "type": "OTC", "dueDays": 3 },
+      { "doc": "Hypothecation deed (stock & debtors)", "type": "OTC", "dueDays": 7 },
+      { "doc": "Stock statement", "type": "PDD", "dueDays": 30 },
+      { "doc": "CERSAI registration", "type": "PDD", "dueDays": 30 },
+      { "doc": "End-use proof (invoices)", "type": "PDD", "dueDays": 60 }
+    ],
+    "Loan Against Property": [
+      { "doc": "Signed loan agreement", "type": "OTC", "dueDays": 3 },
+      { "doc": "NACH / e-mandate form", "type": "OTC", "dueDays": 3 },
+      { "doc": "Original title documents", "type": "OTC", "dueDays": 7 },
+      { "doc": "Registered mortgage deed (MODT)", "type": "PDD", "dueDays": 30 },
+      { "doc": "Property insurance (lender as loss payee)", "type": "PDD", "dueDays": 30 },
+      { "doc": "CERSAI registration", "type": "PDD", "dueDays": 30 }
+    ]
+  }
+}

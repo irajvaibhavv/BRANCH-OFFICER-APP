@@ -30,6 +30,24 @@ Demo login: any 10-digit number starting 6–9 → OTP `1234` → set a 4-digit 
 - Each slice (`dsas`, `visits`, `loanFiles`, `notifications`, `meetings`, `recordings`, `dayPlan`) is a `useLocalStorage('bo_*', seed)` value; mutations are `useCallback` helpers exposed via `useAppState()`.
 - **Date shifting**: seed JSON is written around `SEED_TODAY = 2026-09-17`; every seed date is shifted by `(today − SEED_TODAY)` at load so "today" always has data. When writing new seed data, date it relative to 2026-09-17.
 - **Daily re-seed**: `bo_seed_day` stores `"<today>:<version>"`; if it differs, `resetDemo()` wipes all slices back to seed. **Bump the version suffix whenever the shape of seeded data changes**, otherwise returning users keep stale localStorage.
+- **File lifecycle** is data: `src/data/fileStages.json` (ordered stages with `label`, `short`, `owner`), read through
+  `src/utils/fileStages.js`. A file's `status` is a stage id (or `rejected`); never compare against stage names in a
+  screen — use `isOpen` / `withCredit` / `stageOf`, so reordering or renaming stages touches only the JSON.
+- **OTC/PDD** (DSA profile tab): the document list per product is `src/data/opsChecklist.json`, standing in for the
+  operations team's admin-portal feed; a file only stores what ops received (`opsReceived`, doc → date). Due dates count
+  from the file's `otc_pdd` timeline date (`src/utils/opsDocs.js`). The BO view is read-only by design — ops marks receipt.
+- **Connectors** are DSA-shaped records in `dsas.json` with `channel: 'connector'` (`src/utils/channel.js`), so profile,
+  visits, files and routes need no branching; screens split them only where the lead asked (Clients, Plan your day).
+- **Incentive = the month's total disbursement only** (lead, 2026-10-14). The grid is `src/data/incentivePlan.json`
+  (minimum, retrospective slabs, which stages count as close to disbursal, the payout rules); `src/utils/incentive.js`
+  computes incentive from disbursement, the reverse (`disbursementFor`), and `incentiveRoadmap` — done this month,
+  near / early pipeline, new files and logins at the BO's own approval rate and average ticket, working days left, files
+  whose overdue OTC/PDD holds the payout. The BO types the amount on `/rewards/target`; `/rewards/plan` shows the steps.
+  The "What to do" screen (`/rewards/missions`) counts it in disbursements (`perFile`, `filesLeft`); there are no
+  missions any more, and points are the store balance only. `npm run check:incentive` asserts the maths — run it after editing the grid.
+- **New / Existing / Lead** on Clients is derived in `src/utils/channel.js`, never stored as a label: a DSA or connector the
+  BO adds gets `stage: 'lead'` (`addDsa`); otherwise `empanelled` within 180 days is new, older is existing. A customer
+  added by the BO (`isNew` walk-in) is a lead, a disbursed one existing, the rest new.
 - `getDsa(id)` also resolves customer ids (prefix `cust`) into a DSA-shaped object (`isCustomer: true`), so schedule/route/visit screens handle DSA and customer stops without branching.
 - Mutations call `track(type, payload)`, which pushes to the offline sync queue when offline.
 
@@ -87,6 +105,10 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   ~2 turns a minute. Extraction is on the SLM to save Gemini's per-day quota: Qwen drops some fields
   outright (5/8 captured in testing), which the question call's `facts` fence backfills, and its
   numeral misreads are corrected by `hindiNumbers.js`. Shorter extractor prompts scored *worse*.
+  Qwen3 thinks by default — the `<think>` text spent the 300-token budget, no JSON came back, and the extraction's
+  backoff retries (plus its bad-JSON retry) held the question for 5-10s. Both proxies now send `reasoning_effort: 'none'`
+  and strip `<think>`; `extractFacts` has no backoff retries and a 2.5s budget (`VITE_SARTHI_EXTRACT_MS`), after which
+  the question call goes ahead and the facts fence backfills.
 - **Numbers are parsed in code, never trusted to the model** (`hindiNumbers.js`). Every figure in a
   PD is load-bearing — it feeds contradiction flags, the walk-in income rebuild and eligibility — so
   a misread number does not look like an error, it looks like a *finding*, cited, in a report an
@@ -95,10 +117,6 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   (with none or several, the parser cannot know which field is meant, so it abstains). Measured
   saves: "pandrah hazaar" read as 12,000, "bais hazaar" as 20,000, "saath customer" as 6. `saath`
   is read as 60 only before a scale word or countable noun, so "mere saath partner hai" stays text.
-  Qwen3 thinks by default — the `<think>` text spent the 300-token budget, no JSON came back, and the extraction's
-  backoff retries (plus its bad-JSON retry) held the question for 5-10s. Both proxies now send `reasoning_effort: 'none'`
-  and strip `<think>`; `extractFacts` has no backoff retries and a 2.5s budget (`VITE_SARTHI_EXTRACT_MS`), after which
-  the question call goes ahead and the facts fence backfills.
   Checked against the 978-example extraction set (2026-09-26): spellings are folded ("baarah" = "barah"), sawa/
   saade/paune shift the next number (+¼, +½, −¼), "sau" is a scale, "no" is never 9, and a model value that is a
   conversion of the spoken one (implied thousands, daily/yearly → monthly) or a zero ("koi nahi") is kept. Summed
@@ -339,14 +357,6 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
 - **Where it lives**: the Clients tab (`/dsas`) has a DSA | Customers toggle; Customers (`/dsas?tab=customers`, `screens/dsa/CustomerList.jsx`) is Sarthi's PD queue in the DSA card layout. `/sarthi` redirects there, so every "back to the queue" link still works.
 - **DSA review** (`/sarthi/dsa/:id`, `services/sarthi/dsa.js`, the Sarthi AI button on a DSA): the same video call, Claude only (`provider: 'llm'`). `DSA_TOPICS` (20, identity → sourcing → file quality → numbers → working with us → plan → conduct) are walked in order; a vague answer gets one follow-up (`needsProbe`); `rechecksFor` compares stated files/month, share given to us, approval %, main product, pending commission, the 3-month forecast and named customers against `dsaFile()` (monthly, productMix, commissionFor, loan files) and queues a FRIENDLY RECHECK. Stuck files are named on the rejections topic. The report (Sonnet via thinkingBudget, ~35s, else `fallbackDsaReport`) is saved to `bo_ai_reports` and shown on `/ai/reports/:id`. If Claude is unreachable a turn says the topic's plain `ask`.
   Found in live runs (2026-09-28, a second Haiku playing honest / inflating / pushy DSAs): (1) the DSA file is **not** in the interviewer prompt — with it Haiku read figures out unprompted; a recheck directive carries the only two numbers it may say. (2) THIS TURN is repeated at the end of the DSA's last message (`turnMessages`) — from the system prompt alone a pushy DSA pulled it off topic (asking for their phone number, saying goodbye mid-review). (3) The goodbye is fixed text (`closingLine`); asked to close, the model kept adding a question. (4) Figures come from `figureFrom`: Haiku picks which number answers, and code accepts it only if the DSA said it (or it in thousands/lakhs) — the parser alone read "ek-do NBFC" as 1 file and "sau mein se assi" as 100, and each became a false recheck. (5) `LEAVING` matches a goodbye to the call only; "questions band karo" had hung up on a complaint.
-- Sarthi state is `bo_sarthi_*` in localStorage (cleared on logout like every `bo_` key); it is not part of
-  the AppState seed/date-shift system.
-
-## Conventions
-
-- One folder per feature under `src/screens/`, each with its own `*.module.css`. Screens never import another screen's CSS — shared styles go in `src/styles/` (`variables.css` holds design tokens incl. dark theme) or become a `src/components/ui/` primitive.
-- Several related screens can live in one file and be exported as named exports (e.g. `MeetingRecorder.jsx` exports `RecordingDetail`, `RecordingsList`, `EngagementDetail`).
-- New screen: add folder under `screens/` → register route in `app/router.jsx` → map its path in `BottomTabBar.jsx` `activeTab()`.
   (6) Every topic carries a Devanagari `speech`; a reply with no Devanagari speech fence gets one `toDevanagari` call, else the
   topic's own line — Roman Hinglish fed to the Hindi voice was the "English accent after the first line". (7) The name is
   checked in code like the PD (`nameVerdict` on `nameOnly`, firm words stripped): partial → "aap X ji hi hain?", someone
@@ -359,6 +369,14 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   who prepares statements/ITR, which lender closed the code, where online leads come from), `deepRechecks` checks that
   answer, and admissions become report `flags`. Every wrong answer is challenged: the DSA recheck queue has no cap, and
   the PD's `MAX_RECHECKS` is 20 (a runaway guard, one per field) — at 7 the eighth mismatch went unasked.
+- Sarthi state is `bo_sarthi_*` in localStorage (cleared on logout like every `bo_` key); it is not part of
+  the AppState seed/date-shift system.
+
+## Conventions
+
+- One folder per feature under `src/screens/`, each with its own `*.module.css`. Screens never import another screen's CSS — shared styles go in `src/styles/` (`variables.css` holds design tokens incl. dark theme) or become a `src/components/ui/` primitive.
+- Several related screens can live in one file and be exported as named exports (e.g. `MeetingRecorder.jsx` exports `RecordingDetail`, `RecordingsList`, `EngagementDetail`).
+- New screen: add folder under `screens/` → register route in `app/router.jsx` → map its path in `BottomTabBar.jsx` `activeTab()`.
 - Screens never import from other screens. A hook several screens share goes in `src/hooks/` (e.g. `useSarthiReports`); a shared component goes in `src/components/<area>/`.
 - Files inside a feature folder drop the feature prefix (`services/sarthi/model.js`, not `sarthiModel.js`).
 - Page transitions use framer-motion via `components/layout/Page.jsx` with `AnimatePresence` in the router.

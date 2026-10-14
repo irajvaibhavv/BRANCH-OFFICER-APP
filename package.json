@@ -6,11 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:file": "vite build --mode file",
     "lint": "oxlint",
     "preview": "vite preview",
     "sarthi": "node --env-file-if-exists=.env.local scripts/sarthi-proxy.mjs",
     "sarthi:voice": "node scripts/prerender-voice.mjs",
-    "sarthi:training": "node scripts/build-training-data.mjs"
+    "sarthi:training": "node scripts/build-training-data.mjs",
+    "check:incentive": "node scripts/check-incentive.mjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",

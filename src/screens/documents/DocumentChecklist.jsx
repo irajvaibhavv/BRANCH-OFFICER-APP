@@ -12,6 +12,7 @@ import { ProgressBar } from '../../components/charts/MiniMetric';
 import { useAppState } from '../../context/AppStateContext';
 import { useToast } from '../../hooks/useToast';
 import { formatINR } from '../../utils/formatters';
+import { withCredit } from '../../utils/fileStages';
 import styles from './documents.module.css';
 
 const FILTERS = ['All', 'Complete', 'Incomplete', 'Under Review'];
@@ -19,7 +20,7 @@ const FILTERS = ['All', 'Complete', 'Incomplete', 'Under Review'];
 const docStatus = (f) => {
   const done = f.docs.filter(([, s]) => s === 'done').length;
   if (done === f.docs.length) return 'Complete';
-  if (f.status === 'under review') return 'Under Review';
+  if (withCredit(f.status)) return 'Under Review';
   return 'Incomplete';
 };
 

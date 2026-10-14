@@ -69,6 +69,7 @@ a { color: var(--primary); text-decoration: none; }
 .screen--fab { padding-bottom: calc(var(--tabbar-safe) + 96px); }
 
 .stack { display: flex; flex-direction: column; gap: var(--card-gap); }
+.stack > :empty { display: none; } /* a widget that renders nothing should not leave a gap */
 .row { display: flex; align-items: center; gap: var(--s-1); }
 .row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--s-1); }
 .grow { flex: 1; min-width: 0; }

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { IoSparkles } from 'react-icons/io5';
-import { FiPhone, FiCalendar, FiMapPin, FiMic, FiUsers, FiFileText, FiChevronRight, FiPercent, FiMessageSquare } from 'react-icons/fi';
+import { FiCheckCircle, FiClock, FiAlertTriangle, FiPhone, FiCalendar, FiMapPin, FiMic, FiUsers, FiFileText, FiChevronRight, FiPercent, FiMessageSquare } from 'react-icons/fi';
 import { IoLogoWhatsapp } from 'react-icons/io5';
 import Page from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
@@ -12,7 +12,8 @@ import Badge, { QualityBadge, StatusBadge } from '../../components/ui/Badge';
 import StarRating from '../../components/ui/StarRating';
 import EmptyState from '../../components/ui/EmptyState';
 import { GroupedBarChart } from '../../components/charts/BarChart';
-import { commissionFor, approvedMonthly, productMix } from '../../utils/commission';
+import { commissionFor, approvedMonthly, productMix, disbursedMonthly, npaSummary } from '../../utils/commission';
+import BarChart from '../../components/charts/BarChart';
 import { useAppState } from '../../context/AppStateContext';
 import { useToast } from '../../hooks/useToast';
 import { formatINR, formatDate, fmtTime } from '../../utils/formatters';
@@ -20,16 +21,19 @@ import RecordingCard from '../../components/meeting/RecordingCard';
 import BottomSheet from '../../components/ui/BottomSheet';
 import QuestionList, { useMeetingQuestions } from '../../components/meeting/MeetingPrep';
 import { TOPICS } from '../../services/meeting/prep';
+import { isConnector, partnerStage } from '../../utils/channel';
+import { hasOpsDocs, opsChecklist } from '../../utils/opsDocs';
 import styles from './dsa.module.css';
 
-const TABS = ['Overview', 'Business', 'Files', 'Meetings', 'Notes'];
-const MONTHS = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'];
+const TABS = ['Overview', 'Business', 'Files', 'OTC/PDD', 'Meetings', 'Notes'];
+// The last 6 months ending this one — seed data is date-shifted, so fixed month names drift.
+const MONTHS = Array.from({ length: 6 }, (_, i) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 5 + i); return d.toLocaleString('en-IN', { month: 'short' }); });
 
 export default function DSADetail() {
   const { id } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { getDsa, loanFiles, visits, rateDsa, recordings, engagements } = useAppState();
+  const { getDsa, loanFiles, visits, rateDsa, recordings, engagements, team } = useAppState();
   const { toast } = useToast();
   const [tab, setTab] = useState(TABS.includes(params.get('tab')) ? params.get('tab') : 'Overview');
   const [allEng, setAllEng] = useState(false);
@@ -47,6 +51,7 @@ export default function DSADetail() {
   const dsa = getDsa(id);
   const questions = useMeetingQuestions(dsa);
   if (dsa?.isCustomer) return <Navigate to={`/customers/${dsa.id}`} replace />;
+  if (dsa?.isMarketing) return <Navigate to="/marketing" replace />;
   const mustAsk = questions.filter((x) => x.priority === 'high').length;
 
   if (!dsa) return <Page mode="slide"><TopBar back title="DSA" /><EmptyState emoji="🤷" title="DSA not found" /></Page>;
@@ -67,8 +72,13 @@ export default function DSADetail() {
       <div className={styles.detailHead}>
         <Avatar name={dsa.name} size={84} ring />
         <h1 style={{ fontSize: 24 }}>{dsa.name}</h1>
-        <span className="label">{dsa.firm} · {dsa.location}</span>
-        <QualityBadge quality={dsa.quality} size="md" />
+        <span className="label">{[dsa.firm, dsa.location].filter(Boolean).join(' · ')}</span>
+        <div className="row" style={{ gap: 6 }}>
+          {isConnector(dsa) && <Badge tone="primary" size="md">Connector{dsa.profession ? ` · ${dsa.profession}` : ''}</Badge>}
+          {partnerStage(dsa) === 'lead' ? <Badge tone="warning" size="md">Lead · not empanelled</Badge> : <QualityBadge quality={dsa.quality} size="md" />}
+          {partnerStage(dsa) === 'new' && <Badge tone="primary" size="md">New</Badge>}
+        </div>
+        <span className={styles.code}>{dsa.vendorCode ?? 'Vendor code pending'}</span>
         <StarRating value={dsa.rating} onChange={(n) => { rateDsa(dsa.id, n); toast(`Rated ${n}★`, 'success', 1500); }} size={22} />
         {/* Actions: reach the DSA, then run the meeting. Equal-width cells so nothing wraps or overflows. */}
         <div className={styles.actions}>
@@ -115,6 +125,8 @@ export default function DSADetail() {
                 <MetricCard value={formatINR(dsa.disbursed)} label="Total disbursed" tone="primary" onClick={() => setTab('Business')} />
                 <MetricCard value={dsa.lastVisit ? formatDate(dsa.lastVisit) : '—'} label="Last visit" onClick={() => setTab('Meetings')} />
               </div>
+              <SixMonthCard dsa={dsa} approved={approved} onMore={() => setTab('Business')} />
+              <NpaCard dsa={dsa} />
               <Card className="tint-primary" onClick={() => setTab('Meetings')} noChevron>
                 <div className="row-between">
                   <div className="hint" style={{ color: 'var(--primary)', fontWeight: 600 }}><FiUsers size={13} style={{ verticalAlign: '-2px' }} /> Relationship with us</div>
@@ -222,7 +234,7 @@ export default function DSADetail() {
           )}
 
           {tab === 'Files' && (
-            files.length === 0 ? <EmptyState compact emoji="📁" title="No files yet" subtitle="Files this DSA submits will show up here." /> : (
+            files.length === 0 ? <EmptyState compact emoji="📁" title="No files yet" subtitle={`Files this ${isConnector(dsa) ? 'connector refers' : 'DSA submits'} will show up here.`} /> : (
               <div className="stack">
                 {files.map((f) => (
                   <Card key={f.id} padding={16} onClick={() => navigate(`/files?open=${f.id}`)}>
@@ -241,6 +253,8 @@ export default function DSADetail() {
               </div>
             )
           )}
+
+          {tab === 'OTC/PDD' && <OpsDocsTab dsa={dsa} files={files} />}
 
           {tab === 'Meetings' && (
             <div className="stack">
@@ -294,6 +308,7 @@ export default function DSADetail() {
                       <div>
                         <div style={{ fontWeight: 600 }}>{formatDate(m.date, { day: 'numeric', month: 'short', year: 'numeric' })} · {fmtTime(m.time)}</div>
                         <div className="hint">{m.type}{m.outcome ? ` · ${m.outcome}` : ''}</div>
+                        {m.tagged?.length > 0 && <div className="hint" style={{ color: 'var(--primary)', fontWeight: 600 }}>with {m.tagged.map((c) => team.find((x) => x.empCode === c)?.name.split(' ')[0] ?? c).join(', ')}</div>}
                         {m.recordingId && <span className="hint row" style={{ gap: 4, color: 'var(--danger)', fontWeight: 600, marginTop: 4 }}><FiMic size={12} /> Transcript &amp; summary</span>}
                         {!m.recordingId && m.status === 'upcoming' && <span className="hint row" style={{ gap: 4, color: 'var(--primary)', fontWeight: 600, marginTop: 4 }}><FiMic size={12} /> Tap to record when it starts</span>}
                       </div>
@@ -338,3 +353,133 @@ export default function DSADetail() {
     </Page>
   );
 }
+
+/** Business in the last 6 months, on the Overview so it is the first thing the officer reads. */
+function SixMonthCard({ dsa, approved, onMore }) {
+  const files = (dsa.monthly ?? []).reduce((a, b) => a + b, 0);
+  const ok = approved.reduce((a, b) => a + b, 0);
+  const disb = disbursedMonthly(dsa);
+  return (
+    <Card padding={16} onClick={onMore} noChevron>
+      <div className="row-between" style={{ marginBottom: 10 }}>
+        <h3>Last 6 months</h3>
+        <span className="hint">{MONTHS[0]} – {MONTHS[5]} <FiChevronRight size={13} style={{ verticalAlign: '-2px' }} /></span>
+      </div>
+      <div className="row" style={{ gap: 20 }}>
+        <div><div className="big-number">{files}</div><div className="hint">files</div></div>
+        <div><div className="big-number" style={{ color: 'var(--success)' }}>{ok}</div><div className="hint">approved</div></div>
+        <div><div className="big-number" style={{ color: 'var(--primary)' }}>{formatINR(disb.reduce((a, b) => a + b, 0))}</div><div className="hint">disbursed</div></div>
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <BarChart data={MONTHS.map((m, i) => ({ label: m, value: disb[i] }))} height={90} formatValue={(v) => formatINR(v)} />
+      </div>
+    </Card>
+  );
+}
+
+/** NPA accounts this DSA sourced. Zero is shown too — a clean book is worth seeing. */
+function NpaCard({ dsa }) {
+  const { accounts, outstanding, pct } = npaSummary(dsa);
+  if (!accounts.length) {
+    return <Card padding={14} noChevron><div className="row-between"><span style={{ fontWeight: 600 }}>NPA accounts</span><Badge tone="success" soft>None · 0%</Badge></div></Card>;
+  }
+  return (
+    <Card padding={16} noChevron status="danger">
+      <div className="row-between" style={{ marginBottom: 4 }}>
+        <h3>NPA accounts</h3>
+        <Badge tone="danger">{accounts.length} · {pct}% of book</Badge>
+      </div>
+      <div className="hint" style={{ marginBottom: 10 }}>{formatINR(outstanding)} outstanding on loans past 90 days due</div>
+      <div className="stack" style={{ gap: 10 }}>
+        {accounts.map((n) => (
+          <div key={n.loanId} className="row-between" style={{ gap: 10 }}>
+            <div className="grow" style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 14 }} className="truncate">{n.borrower}</div>
+              <div className="hint truncate">{n.loanId} · {n.product} · NPA since {formatDate(n.npaSince)}</div>
+            </div>
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{formatINR(n.outstanding)}</div>
+              <div className="hint" style={{ color: 'var(--danger)', fontWeight: 600 }}>{n.dpd} DPD</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+const DOC_ICON = { received: [FiCheckCircle, 'var(--success)'], pending: [FiClock, 'var(--warning)'], overdue: [FiAlertTriangle, 'var(--danger)'] };
+
+/** OTC/PDD: what this DSA's disbursal-stage files still owe operations. Read-only — only ops marks a document received. */
+function OpsDocsTab({ dsa, files }) {
+  const [showDone, setShowDone] = useState({});
+  const rows = files.filter(hasOpsDocs).map((f) => ({ f, docs: opsChecklist(f) }))
+    .map((r) => ({ ...r, open: r.docs.filter((d) => d.status !== 'received'), late: r.docs.filter((d) => d.status === 'overdue') }))
+    .sort((a, b) => b.late.length - a.late.length || b.open.length - a.open.length);
+  if (!rows.length) return <EmptyState compact emoji="📄" title="Nothing pending" subtitle="Files reaching the OTC/PDD stage will list their documents here." />;
+
+  const pending = rows.reduce((n, r) => n + r.open.length, 0);
+  const overdue = rows.reduce((n, r) => n + r.late.length, 0);
+  const remind = (r) => {
+    const lines = r.open.map((d) => `• ${d.doc} (${d.type}, due ${formatDate(d.due)})`).join('\n');
+    const text = `Hi ${dsa.name.split(' ')[0]}, for ${r.f.borrower} (${r.f.id}) operations still needs:\n${lines}\nPlease share at the earliest. Thanks!`;
+    window.open(`https://wa.me/${dsa.phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+  };
+
+  return (
+    <div className="stack">
+      <Card padding={16} noChevron status={overdue ? 'danger' : pending ? 'warning' : 'success'}>
+        <div className="row" style={{ gap: 20 }}>
+          <div><div className="big-number">{pending}</div><div className="hint">docs pending</div></div>
+          <div><div className="big-number">{rows.filter((r) => r.open.length).length}</div><div className="hint">files</div></div>
+          <div><div className="big-number" style={{ color: overdue ? 'var(--danger)' : undefined }}>{overdue}</div><div className="hint">overdue</div></div>
+        </div>
+        <div className="hint" style={{ marginTop: 10 }}>
+          {overdue ? 'Payout is held on files with an overdue document until operations receives it.' : 'Checklist from the operations team · updated when ops receives a document.'}
+        </div>
+      </Card>
+
+      {rows.map((r) => {
+        const done = r.docs.length - r.open.length;
+        const list = showDone[r.f.id] ? r.docs : r.open;
+        return (
+          <Card key={r.f.id} padding={16} noChevron status={r.late.length ? 'danger' : undefined}>
+            <div className="row-between" style={{ gap: 10 }}>
+              <div className="grow" style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 600 }} className="truncate">{r.f.borrower}</div>
+                <div className="hint truncate">{r.f.id} · {r.f.product} · {formatINR(r.f.amount)}</div>
+              </div>
+              <StatusBadge status={r.f.status} soft />
+            </div>
+            {r.late.length > 0 && <div className="hint" style={{ color: 'var(--danger)', fontWeight: 600, marginTop: 8 }}>Payout on hold · {r.late.length} overdue</div>}
+            <div className="stack" style={{ gap: 10, marginTop: 12 }}>
+              {list.map((d) => {
+                const [Icon, color] = DOC_ICON[d.status];
+                return (
+                  <div key={d.doc} className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
+                    <Icon size={18} color={color} style={{ flexShrink: 0, marginTop: 2 }} />
+                    <div className="grow" style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>{d.doc}</div>
+                      <div className="hint" style={{ color: d.status === 'overdue' ? 'var(--danger)' : undefined }}>
+                        {d.status === 'received' ? `Received ${formatDate(d.received)}` : d.status === 'overdue' ? `${d.overdueDays} day${d.overdueDays === 1 ? '' : 's'} overdue · was due ${formatDate(d.due)}` : `Due ${formatDate(d.due)}`}
+                      </div>
+                    </div>
+                    <Badge tone={d.type === 'OTC' ? 'primary' : 'neutral'} soft>{d.type}</Badge>
+                  </div>
+                );
+              })}
+              {!list.length && <div className="hint">All documents received.</div>}
+            </div>
+            <div className="row-between" style={{ marginTop: 12 }}>
+              {done > 0
+                ? <button className="link" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)' }} onClick={() => setShowDone((s) => ({ ...s, [r.f.id]: !s[r.f.id] }))}>{showDone[r.f.id] ? 'Hide received' : `${done} received · show`}</button>
+                : <span />}
+              {r.open.length > 0 && <button className="link" style={{ fontSize: 13, fontWeight: 600, color: '#16a34a' }} onClick={() => remind(r)}><IoLogoWhatsapp size={14} style={{ verticalAlign: '-2px' }} /> Remind {dsa.name.split(' ')[0]}</button>}
+            </div>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+

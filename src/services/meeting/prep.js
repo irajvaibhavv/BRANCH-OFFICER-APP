@@ -1,6 +1,7 @@
 // Rule-based meeting questions for a DSA, from approval rate, product mix, pending files, visit gap and commitments.
 import { productMix, commissionFor } from '../../utils/commission';
 import { buildTranscript } from './transcript';
+import { withCredit } from '../../utils/fileStages';
 
 const daysSince = (iso) => (iso ? Math.floor((Date.now() - new Date(iso)) / 86400000) : null);
 
@@ -23,7 +24,7 @@ export function buildQuestions(dsa, { loanFiles = [], visits = [], recordings = 
   const { facts } = buildTranscript(dsa);
   const files = loanFiles.filter((f) => f.dsaId === dsa.id);
   const stuck = files.filter((f) => f.docs.some(([, s]) => s !== 'done'));
-  const underReview = files.filter((f) => f.status === 'under review' || f.status === 'submitted');
+  const underReview = files.filter((f) => withCredit(f.status) || f.status === 'submitted');
   const rejected = files.filter((f) => f.status === 'rejected');
   const gap = daysSince(dsa.lastVisit);
   const lastRec = recordings.filter((r) => r.dsaId === dsa.id)[0];

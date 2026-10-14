@@ -1,4 +1,4 @@
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, HashRouter } from 'react-router-dom';
 import { ThemeProvider } from '../context/ThemeContext';
 import { AuthProvider } from '../context/AuthContext';
 import { OfflineProvider } from '../context/OfflineContext';
@@ -8,6 +8,9 @@ import OfflineBanner from '../components/layout/OfflineBanner';
 import PhoneFrame from '../components/layout/PhoneFrame';
 import { AnimatedRoutes, PersistentTabBar } from './router';
 
+// Opened as a file (npm run build:file), there is no server to rewrite paths — routes live in the hash.
+const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter;
+
 /** App root: global providers → phone frame → routed screens. Routes live in ./router.jsx. */
 export default function App() {
   return (
@@ -15,7 +18,7 @@ export default function App() {
       <AuthProvider>
         <OfflineProvider>
           <AppStateProvider>
-            <BrowserRouter>
+            <Router>
               <PhoneFrame>
                 {/* ToastProvider sits inside the frame so toasts render within the phone screen */}
                 <ToastProvider>
@@ -26,7 +29,7 @@ export default function App() {
                   </div>
                 </ToastProvider>
               </PhoneFrame>
-            </BrowserRouter>
+            </Router>
           </AppStateProvider>
         </OfflineProvider>
       </AuthProvider>

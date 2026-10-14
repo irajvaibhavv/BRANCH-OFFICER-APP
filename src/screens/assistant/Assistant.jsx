@@ -63,7 +63,7 @@ export default function AIHome() {
         {list.map((p) => (
           <button key={p.id} className={styles.row} onClick={() => navigate(`/ai/session?kind=${kind}&id=${p.id}`)}>
             <Avatar name={p.name} size={36} />
-            <span className="grow" style={{ minWidth: 0, textAlign: 'left' }}><div style={{ fontWeight: 600, fontSize: 14 }} className="truncate">{p.name}</div><div className="hint truncate">{p.firm ?? p.business} · {p.location}</div></span>
+            <span className="grow" style={{ minWidth: 0, textAlign: 'left' }}><div style={{ fontWeight: 600, fontSize: 14 }} className="truncate">{p.name}</div><div className="hint truncate">{[p.firm ?? p.business, p.location].filter(Boolean).join(' · ')}</div></span>
             <FiChevronRight size={16} color="var(--text-3)" />
           </button>
         ))}
@@ -213,7 +213,7 @@ export function AISession() {
             <Card padding={12} noChevron style={{ marginTop: 18, width: '100%' }}>
               <div className="row" style={{ gap: 10 }}>
                 <Avatar name={party.name} size={36} />
-                <div className="grow" style={{ minWidth: 0, textAlign: 'left' }}><div style={{ fontWeight: 600, fontSize: 14 }}>{party.name}</div><div className="hint truncate">{party.firm ?? party.business} · {party.location}</div></div>
+                <div className="grow" style={{ minWidth: 0, textAlign: 'left' }}><div style={{ fontWeight: 600, fontSize: 14 }}>{party.name}</div><div className="hint truncate">{[party.firm ?? party.business, party.location].filter(Boolean).join(' · ')}</div></div>
               </div>
             </Card>
           )}

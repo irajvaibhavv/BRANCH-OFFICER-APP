@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FiSun, FiMoon, FiGlobe, FiBell, FiLock, FiShield, FiFileText, FiLogOut, FiChevronRight, FiWifiOff, FiRefreshCw, FiLayout, FiType } from 'react-icons/fi';
+import { FiSun, FiMoon, FiGlobe, FiBell, FiLock, FiShield, FiFileText, FiLogOut, FiChevronRight, FiWifiOff, FiRefreshCw, FiType } from 'react-icons/fi';
 import Page from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import Card from '../../components/ui/Card';
@@ -24,7 +24,6 @@ export default function ProfileSettings() {
   const { toast } = useToast();
   const [notif, setNotif] = useLocalStorage('bo_notif_prefs', { visit: true, inactivity: true, incentive: true, announcement: false });
   const [lang, setLang] = useState('en');
-  const [homeLayout, setHomeLayout] = useLocalStorage('bo_home_layout', 'focused');
   const [pinSheet, setPinSheet] = useState(false);
   const [newPin, setNewPin] = useState('');
   const [logoutSheet, setLogoutSheet] = useState(false);
@@ -94,16 +93,6 @@ export default function ProfileSettings() {
 
       <div className="section-head"><h2 className="section-title">Demo controls</h2></div>
       <Card padding="4px 20px">
-        <div className={styles.rowItem}>
-          <span className={styles.rowIcon}><FiLayout size={18} /></span>
-          <div className="grow"><div style={{ fontWeight: 500 }}>Home layout</div><div className="hint">Focused = 3 priorities · Detailed = full overview</div></div>
-          <div className={styles.seg}>
-            {[['focused', 'Focused'], ['detailed', 'Detailed']].map(([k, l]) => (
-              <button key={k} className={`${styles.segBtn} ${homeLayout === k ? styles.segOn : ''}`} onClick={() => setHomeLayout(k)}>{l}</button>
-            ))}
-          </div>
-        </div>
-        <div className={styles.divider} />
         <Toggle label="Simulate offline" description={queue.length ? `${queue.length} actions queued for sync` : 'Shows the offline banner and queues actions'} checked={simulateOffline} onChange={setSimulateOffline} icon={<FiWifiOff size={18} />} />
         <div className={styles.divider} />
         <button className={styles.rowItem} onClick={() => { resetDemo(); toast('Demo data reset', 'success'); }} style={{ width: '100%' }}>

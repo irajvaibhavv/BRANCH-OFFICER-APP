@@ -1,6 +1,7 @@
 import styles from './Badge.module.css';
 import { QUALITY } from '../../utils/qualityTags';
 import { STATUS_COLORS } from '../../utils/colors';
+import { stageOf } from '../../utils/fileStages';
 
 /** Pill badge. tone: success | warning | danger | primary | neutral */
 export default function Badge({ children, tone = 'neutral', soft = false, size = 'sm', className = '' }) {
@@ -16,6 +17,6 @@ export function QualityBadge({ quality, ...rest }) {
 
 export function StatusBadge({ status, ...rest }) {
   const tone = STATUS_COLORS[status?.toLowerCase()] ?? 'neutral';
-  const label = status.replace(/\b\w/g, (c) => c.toUpperCase());
+  const label = stageOf(status)?.short ?? status.replace(/\b\w/g, (c) => c.toUpperCase());
   return <Badge tone={tone} {...rest}>{label}</Badge>;
 }

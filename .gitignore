@@ -7,3 +7,5 @@ dist
 
 # Generated training data (npm run sarthi:training) — rebuildable, and may be built from private source files
 /training/
+dist-file
+dist.zip

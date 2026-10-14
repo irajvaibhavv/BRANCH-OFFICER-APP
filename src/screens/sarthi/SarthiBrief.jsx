@@ -14,6 +14,9 @@ import EmptyState from '../../components/ui/EmptyState';
 import Card, { MetricCard } from '../../components/ui/Card';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
+import FileLifecycle from '../../components/files/FileLifecycle';
+import CustomerPayout from '../../components/files/CustomerPayout';
+import { pdCaseStage } from '../../utils/fileStages';
 import { useToast } from '../../hooks/useToast';
 import { useSarthiReports } from '../../hooks/useSarthiReports';
 import { formatINR } from '../../utils/formatters';
@@ -21,6 +24,7 @@ import { getCase, lookupRiskPattern, bankIncome } from '../../services/sarthi/kn
 import { computeEligibility } from '../../services/sarthi/verifier';
 import { validatePan, maskPan } from '../../services/sarthi/idChecks';
 import { loadHot, prepareHotQuestions } from '../../services/sarthi/prep';
+import customersRaw from '../../data/mock/customers.json';
 import styles from './SarthiBrief.module.css';
 
 const RISK = { low: 'Low risk', medium: 'Medium risk', high: 'High risk' };
@@ -129,6 +133,15 @@ export default function SarthiBrief() {
             : !isNew && <button className={styles.actBtn} style={{ color: 'var(--primary)' }} onClick={() => navigate(`/sarthi/officer/${c.id}`)}><FiUser size={16} /> Take PD yourself</button>}
         </div>
       </div>
+
+      <Card padding={16} noChevron>
+        <div className="label" style={{ marginBottom: 8 }}>Loan file stage</div>
+        <FileLifecycle status={pdCaseStage(c, !!report)} />
+      </Card>
+      {/* PD files carry no source DSA; a customer who came through one is linked in customers.json */}
+      <CustomerPayout amount={c.loanAmountRequested} product={c.product} stage={pdCaseStage(c, !!report)}
+        dsaId={c.sourceDsa ?? customersRaw.find((x) => x.sarthiCase === c.id)?.sourceDsa}
+        paidOn={c.disbursedOn} feePaidOn={c.payoutPaidOn} feeUtr={c.payoutUtr} style={{ marginBottom: 14 }} />
 
       <div className={styles.tabs}>
         {tabs.map((t) => (

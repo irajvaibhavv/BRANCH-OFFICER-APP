@@ -1,0 +1,32 @@
+.wrap { display: flex; flex-direction: column; gap: 8px; }
+/* Fixed height: the headline wraps to two lines inside the banner, never pushes Home down. */
+.viewport { position: relative; height: 138px; overflow: hidden; border-radius: 20px; touch-action: pan-y; }
+/* Light banner tinted from the type's accent (--c, set per slide); dark text. In dark mode the tint mixes into the card. */
+.slide {
+  --tint: #fff;
+  position: absolute; inset: 0; display: flex; align-items: stretch; padding: 16px 18px; text-align: left; overflow: hidden;
+  color: var(--text-1); border-radius: 20px; cursor: grab; user-select: none; -webkit-tap-highlight-color: transparent;
+  background:
+    radial-gradient(140px 140px at 88% 20%, color-mix(in srgb, var(--c) 22%, transparent), transparent 70%),
+    linear-gradient(135deg, color-mix(in srgb, var(--c) 7%, var(--tint)) 0%, color-mix(in srgb, var(--c) 17%, var(--tint)) 100%);
+  border: 1px solid color-mix(in srgb, var(--c) 18%, transparent);
+}
+/* --ink: the accent as text — the same colour lifted toward white in dark mode, where the dark accents would not read. */
+.slide { --ink: var(--c); }
+:global([data-theme='dark']) .slide { --tint: var(--card); --ink: color-mix(in srgb, var(--c) 45%, #fff); }
+.slide:active { cursor: grabbing; }
+/* Large icon as the banner's artwork, in a soft disc on the right. */
+.art {
+  position: absolute; right: 14px; top: 50%; margin-top: -48px; width: 96px; height: 96px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; color: var(--ink);
+  background: color-mix(in srgb, var(--c) 12%, var(--tint)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 20%, transparent);
+}
+.body { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; max-width: calc(100% - 112px); min-width: 0; }
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.title { font-size: 17px; font-weight: 800; line-height: 1.25; letter-spacing: -0.01em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cta { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; color: #fff; background: var(--c); box-shadow: 0 6px 14px -8px var(--c); }
+/* 24px tap target around a 7px dot */
+.dots { display: flex; justify-content: center; }
+.dots button { height: 24px; padding: 0 3px; display: flex; align-items: center; }
+.dots button::before { content: ''; display: block; width: 7px; height: 7px; border-radius: 999px; background: var(--border); transition: width 0.2s ease, background 0.2s ease; }
+.dots .dotOn::before { width: 20px; background: var(--primary); }

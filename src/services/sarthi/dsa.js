@@ -4,6 +4,8 @@ import { askAgent } from './agent';
 import { genderRule, SPOKEN_STYLE } from './voice';
 import { readNumber, readNumbers } from './hindiNumbers';
 import { commissionFor, productMix } from '../../utils/commission';
+import dsaIntel from '../../data/sarthi/dsaIntel.json';
+import { stageLabel } from '../../utils/fileStages';
 
 const FENCE = '```';
 
@@ -14,7 +16,7 @@ export function dsaFile(dsa, { loanFiles = [], engagements = [] } = {}) {
   const mix = productMix(dsa);
   const pay = commissionFor(dsa);
   const files = loanFiles.filter((f) => f.dsaId === dsa.id).map((f) => ({
-    borrower: f.borrower, product: f.product, amount: f.amount, status: f.status,
+    borrower: f.borrower, product: f.product, amount: f.amount, status: f.status, stage: stageLabel(f.status),
     pendingDocs: (f.docs ?? []).filter(([, s]) => s !== 'done').map(([d]) => d),
   }));
   return {
@@ -29,9 +31,9 @@ export function dsaFile(dsa, { loanFiles = [], engagements = [] } = {}) {
     rejected: files.filter((f) => f.status === 'rejected').map((f) => f.borrower),
     meetings: engagements.filter((e) => e.dsaId === dsa.id).length,
     lastVisit: dsa.lastVisit,
+    intel: dsaIntel[dsa.id] ?? null,
   };
 }
-    intel: dsaIntel[dsa.id] ?? null,
 
 // `num` topics are read as a number in code and rechecked; `noProbe` topics accept a plain yes/no.
 export const DSA_TOPICS = [
@@ -73,9 +75,9 @@ export async function figureFrom(topic, text) {
   if (!said.length) return null;
   if (said.length === 1) return said[0]; // nothing to choose between — no model call, no wait
   try {
+    const raw = await askAgent({
       systemPrompt: 'A loan agent answered a question on a call. Reply with ONLY the number that answers the question, as digits (rupees in full, e.g. 50000; a range → its lower end), or "none" if their answer gives no such number.',
       messages: [{ role: 'user', content: `Question: ${topic.goal}\nAnswer: ${text}` }],
-    const raw = await askAgent({
       maxTokens: 12, temperature: 0, retries: 0,
     });
     const v = Number(raw.replace(/[^\d.]/g, ''));
@@ -110,9 +112,9 @@ export const nameOnly = (text, file) => firmOnlyWords(file).reduce((t, w) => t.r
 
 const PRODUCT_WORDS = { 'Home Loan': /home|ghar|housing|होम/i, LAP: /lap|property|prop|प्रॉपर्टी/i, 'Business Loan': /business|bl\b|बिज़नेस/i, 'MSME WC': /msme|working|wc\b|capital/i };
 const fmt = (n) => (n >= 100000 ? `${+(n / 100000).toFixed(1)} lakh` : n >= 1000 ? `${Math.round(n / 1000)} hazaar` : String(n));
+
 /** The hisaab done on the call: a stated figure against the branch's record. Returns detail lines for the directive. */
 export function rechecksFor(topic, text, file, nums) {
-
   const v = nums[topic.id];
   const out = [];
   // Words only: speech recognition's Devanagari cannot be compared with the record's Latin names.
@@ -127,9 +129,9 @@ export function rechecksFor(topic, text, file, nums) {
   }
   if (topic.id === 'files_us' && v != null && file.avgFilesPerMonth) {
     if (v > file.avgFilesPerMonth * 1.5 || v < file.avgFilesPerMonth * 0.6) {
+      out.push(`They said ${v} files a month come to us; our record shows about ${Math.round(file.avgFilesPerMonth)} files a month from them (their 6-month average; best month ${file.bestMonth}). Ask where the difference is.`);
     }
     if (nums.files_total && v / nums.files_total < 0.3) {
-      out.push(`They said ${v} files a month come to us; our record shows about ${Math.round(file.avgFilesPerMonth)} files a month from them (their 6-month average; best month ${file.bestMonth}). Ask where the difference is.`);
       out.push(`They log ${nums.files_total} files a month but give us only ${v}. Ask kindly why most go to other lenders.`);
     }
   }
@@ -152,8 +154,6 @@ export function rechecksFor(topic, text, file, nums) {
     const known = file.files.filter((f) => f.borrower.toLowerCase().split(/\s+/).some((w) => w.length > 3 && said.includes(w)));
     if (!known.length) out.push(`None of the names they gave is in their files with us. Our files from them include ${file.files.slice(0, 2).map((f) => f.borrower).join(' and ')}. Ask about one of these: what the customer does and how they came to them.`);
   }
-  return out;
-}
   if (topic.id === 'files_us' && v != null && nums.files_total && v > nums.files_total) {
     out.push(`They said they log ${nums.files_total} files a month in all, but give us ${v} — more than their total. Ask kindly how the two fit.`);
   }
@@ -257,6 +257,8 @@ export function deepRechecks(deep, text, file) {
       out.push(`They say ${named.join(', ')} closed their code; the branch knows of ${file.intel.codeBlocked.lender} (${file.intel.codeBlocked.year}, ${file.intel.codeBlocked.reason}). Ask gently about that one too.`);
     }
   }
+  return out;
+}
 
 export function interviewerPrompt(file, directive) {
   return `You are Sarthi, an AI from the branch, on a video call reviewing the work of a DSA (a loan agent who brings loan files to the branch).
@@ -335,9 +337,9 @@ export function dsaAway(text, name) {
   return new RegExp(`\\b${first}\\b(\\s+\\S+){0,3}?\\s+(bahar|baahar|nahi|nahin|gayi|gaye|gai|busy|out|not)\\b`).test(s);
 }
 
+/** Fixed lines for when someone other than the DSA on file answers — decided in code, like the PD's presence check. */
 export function presenceLines(file) {
   const first = file.name.split(' ')[0];
-/** Fixed lines for when someone other than the DSA on file answers — decided in code, like the PD's presence check. */
   const full = file.name;
   return {
     confirm: { text: `Achha. Yeh review ${full} ji ke saath hai. Kya aap ${full} ji hi hain?`, speech: `अच्छा। यह रिव्यू ${full} जी के साथ है। क्या आप ${full} जी ही हैं?` },
@@ -351,18 +353,18 @@ export function presenceLines(file) {
 
 // Fixed, like the closing: said the moment the call opens, with no model call to wait on.
 export function openingLine() {
+  return {
     text: 'Namaste! Main Sarthi, branch se — aapke kaam ka chhota sa review hai, 10-15 minute lagenge. Pehle aapka poora naam aur firm ka naam bataiye?',
     speech: 'नमस्ते! मैं सारथी, ब्रांच से। आपके काम का छोटा सा रिव्यू है, दस-पंद्रह मिनट लगेंगे। पहले आपका पूरा नाम और फ़र्म का नाम बताइए?',
-  return {
   };
 }
 
 /** THIS TURN for an action: { kind: topic | probe | recheck, topic, detail, text }. */
 export function directiveFor(action, file) {
   if (action.kind === 'recheck') return `FRIENDLY RECHECK. ${action.detail}\nSay both figures kindly, like doing the hisaab together, and ask them to explain. One question. These two figures are the only numbers you may say.`;
+  if (action.kind === 'deep') return `FOLLOW UP on their last answer — the officer's next question: ${action.deep.goal}\nPlain example: "${action.deep.ask}"\nAsk it open and curious, never suspicious, and never say why you ask. One question.`;
   if (action.kind === 'probe') return `FOLLOW UP on "${action.topic.goal}". Their answer was: "${action.text}". It gave nothing concrete — ask ONE specific follow-up on this same topic to get a name, a number or an example.${action.topic.num ? ' They must give a number; ask for a rough one.' : ''}`;
   const t = action.topic;
-  if (action.kind === 'deep') return `FOLLOW UP on their last answer — the officer's next question: ${action.deep.goal}\nPlain example: "${action.deep.ask}"\nAsk it open and curious, never suspicious, and never say why you ask. One question.`;
   const stuck = t.stuck && file.stuck.length
     ? `\nOur record: ${file.stuck.map((f) => `${f.borrower} (${f.stage}, pending: ${f.pendingDocs.join(', ')})`).join('; ')}${file.rejected.length ? `; rejected: ${file.rejected.join(', ')}` : ''}. Name one of these files and ask what is holding it.`
     : '';
@@ -374,10 +376,10 @@ export function directiveFor(action, file) {
 const REPORT_SYSTEM = `You write a DSA review report for a branch officer from a call Sarthi (an AI) had with the DSA.
 You get the DSA's record from the branch, the question-by-question answers, and the rechecks where their figures did not match the record.
 Judge: is this partner bringing genuine files, how loyal are they to us, and what should the officer do next.
-Red flags to look for: sub-agents they cannot name, not knowing their own customers, charging customers, someone else preparing
-statements/ITR, a code blocked by another lender, figures far from the record, most files going to other lenders.
 The record's "intel" is what the branch knows beyond its files (other lenders, sub-agents seen on their code, customer fee
 complaints, a code another lender closed) — weigh their answers against it. "Flags raised on the call" are admissions in their own words.
+Red flags to look for: sub-agents they cannot name, not knowing their own customers, charging customers, someone else preparing
+statements/ITR, a code blocked by another lender, figures far from the record, most files going to other lenders.
 Use only what is in the input — never invent a figure. Quote their words when it matters.
 
 Reply with ONLY a JSON object:

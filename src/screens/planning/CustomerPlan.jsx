@@ -10,9 +10,14 @@ import Button from '../../components/ui/Button';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
 import EmptyState from '../../components/ui/EmptyState';
+import FileLifecycle from '../../components/files/FileLifecycle';
+import CustomerPayout from '../../components/files/CustomerPayout';
 import { useAppState } from '../../context/AppStateContext';
 import { useToast } from '../../hooks/useToast';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
+import { useSarthiReports } from '../../hooks/useSarthiReports';
+import { getCase } from '../../services/sarthi/knowledge';
+import { pdCaseStage } from '../../utils/fileStages';
 import { formatINR, formatDate } from '../../utils/formatters';
 import { PRODUCT_RATES, PRODUCTS, emi, maxLoan, BASIC_QUESTIONS, FOIR } from '../../utils/loanCalc';
 import { START, km, optimise } from '../../utils/route';
@@ -111,6 +116,7 @@ export function CustomerDetail() {
   const [picks, setPicks] = useLocalStorage('bo_cust_picks', []);
   const [allAnswers, setAllAnswers] = useLocalStorage('bo_cust_answers', {});
   const [view, setView] = useState('questions');
+  const [reports] = useSarthiReports();
   const answers = useMemo(() => ({ employment: c?.employment, income: c?.income, existingEmi: c?.existingEmi, age: c?.age, ...(allAnswers[id] ?? {}) }), [allAnswers, id, c]);
   const setAnswer = (k, v) => setAllAnswers((a) => ({ ...a, [id]: { ...(a[id] ?? {}), [k]: v } }));
 
@@ -132,6 +138,9 @@ export function CustomerDetail() {
   const dsa = c.sourceDsa ? getDsa(c.sourceDsa) : null;
   const file = c.loanFileId ? loanFiles.find((f) => f.id === c.loanFileId) : null;
   const k = kindOf(c.kind);
+  // An existing customer back for a new loan is a Sarthi PD case; a lead carries its file's stage; a new customer has none yet.
+  const stage = c.sarthiCase ? pdCaseStage(getCase(c.sarthiCase), reports.some((r) => r.caseId === c.sarthiCase))
+    : c.kind === 'existing' ? 'disbursed' : c.stage ?? null;
 
   return (
     <Page mode="slide" style={{ paddingBottom: 'calc(var(--tabbar-safe) + 104px)' }}>
@@ -160,6 +169,12 @@ export function CustomerDetail() {
           </button>
         )}
       </Card>
+
+      <Card padding={16} noChevron style={{ marginTop: 12 }}>
+        <div className="label" style={{ marginBottom: 8 }}>Loan file stage</div>
+        <FileLifecycle status={stage} timeline={file?.timeline} />
+      </Card>
+      <CustomerPayout amount={c.amount} product={c.product} stage={stage} dsaId={c.sourceDsa} paidOn={c.disbursedOn} />
 
       <div className={styles.seg} style={{ margin: '14px 0 12px' }}>
         <button className={`${styles.segBtn} ${view === 'questions' ? styles.segOn : ''}`} onClick={() => setView('questions')}><FiHelpCircle size={14} /> Basic questions · {answered}/{BASIC_QUESTIONS.length}</button>

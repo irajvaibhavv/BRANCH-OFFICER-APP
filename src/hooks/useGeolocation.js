@@ -33,3 +33,20 @@ export function useGeolocation() {
 
   return { ...state, capture };
 }
+
+/** One-off position for a timestamped check-in; far from Pune (the demo data) falls back to the mock, marked `mock`. */
+export function currentPosition() {
+  return new Promise((resolve) => {
+    const mock = () => resolve({ ...MOCK_COORDS, mock: true });
+    if (!navigator.geolocation) return setTimeout(mock, 600);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const c = { lat: +pos.coords.latitude.toFixed(5), lng: +pos.coords.longitude.toFixed(5), accuracy: Math.round(pos.coords.accuracy) };
+        const far = Math.abs(c.lat - MOCK_COORDS.lat) > 0.5 || Math.abs(c.lng - MOCK_COORDS.lng) > 0.5;
+        if (far) mock(); else resolve(c);
+      },
+      mock,
+      { timeout: 5000, enableHighAccuracy: true },
+    );
+  });
+}

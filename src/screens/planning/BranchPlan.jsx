@@ -10,6 +10,7 @@ import { useAppState } from '../../context/AppStateContext';
 import { useToast } from '../../hooks/useToast';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { toISODate } from '../../utils/formatters';
+import { stageLabel, withCredit } from '../../utils/fileStages';
 import styles from './plan.module.css';
 
 // No-travel day: tasks built from live data. Ticks persist for the day.
@@ -30,11 +31,11 @@ export default function BranchPlan() {
       const missing = f.docs.filter(([, s]) => s !== 'done').map(([d]) => d);
       t.push({ id: `docs-${f.id}`, group: 'Chase documents', icon: FiFileText, tone: '#dc2626', title: `${f.borrower} — ${missing.slice(0, 2).join(', ')}${missing.length > 2 ? ` +${missing.length - 2}` : ''}`, sub: `Call ${getDsa(f.dsaId)?.name.split(' ')[0] ?? 'DSA'} · ${f.id}`, to: `/files/${f.id}` });
     });
-    loanFiles.filter((f) => f.status === 'under review' || f.status === 'submitted').forEach((f) => {
-      t.push({ id: `rev-${f.id}`, group: 'Follow up with credit', icon: FiFileText, tone: '#4c1d95', title: `${f.borrower} · ${f.status}`, sub: `Check status with credit team · ${f.id}`, to: `/files/${f.id}` });
+    loanFiles.filter((f) => withCredit(f.status) || f.status === 'submitted').forEach((f) => {
+      t.push({ id: `rev-${f.id}`, group: 'Follow up with credit', icon: FiFileText, tone: '#4c1d95', title: `${f.borrower} · ${stageLabel(f.status)}`, sub: `Check status with credit team · ${f.id}`, to: `/files/${f.id}` });
     });
     dsas.filter((d) => daysSince(d.lastVisit) > 14).forEach((d) => {
-      t.push({ id: `call-${d.id}`, group: 'Calls to make', icon: FiPhone, tone: '#0f766e', title: `Call ${d.name}`, sub: `${daysSince(d.lastVisit)} days since last visit · ${d.firm}`, to: `/dsas/${d.id}` });
+      t.push({ id: `call-${d.id}`, group: 'Calls to make', icon: FiPhone, tone: '#0f766e', title: `Call ${d.name}`, sub: [`${daysSince(d.lastVisit)} days since last visit`, d.firm].filter(Boolean).join(' · '), to: `/dsas/${d.id}` });
     });
     meetings.filter((m) => m.date > today).slice(0, 3).forEach((m) => {
       t.push({ id: `mtg-${m.id}`, group: 'Confirm meetings', icon: FiCalendar, tone: '#d97706', title: `Confirm ${getDsa(m.dsaId)?.name ?? 'meeting'} · ${m.date.slice(5).replace('-', '/')}`, sub: `${m.time} · ${m.agenda ?? 'Scheduled'}`, to: '/calendar' });

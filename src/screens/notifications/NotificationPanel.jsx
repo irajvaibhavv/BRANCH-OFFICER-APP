@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useMotionValue, useTransform } from 'framer-motion';
-import { FiBell, FiAlertTriangle, FiTrendingUp, FiInfo, FiCheck, FiAlertCircle } from 'react-icons/fi';
+import { FiFlag, FiBell, FiAlertTriangle, FiTrendingUp, FiInfo, FiCheck, FiAlertCircle } from 'react-icons/fi';
 import Page from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import EmptyState from '../../components/ui/EmptyState';
@@ -14,6 +14,7 @@ const TYPES = {
   visit: { icon: FiBell, color: 'var(--primary)', bg: 'var(--primary-soft)' },
   inactivity: { icon: FiAlertTriangle, color: '#b45309', bg: 'var(--warning-soft)' },
   incentive: { icon: FiTrendingUp, color: 'var(--success)', bg: 'var(--success-soft)' },
+  marketing: { icon: FiFlag, color: '#0f766e', bg: 'color-mix(in srgb, #0f766e 14%, transparent)' },
   announcement: { icon: FiInfo, color: 'var(--text-2)', bg: 'var(--border)' },
 };
 

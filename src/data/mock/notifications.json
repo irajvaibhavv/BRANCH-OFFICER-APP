@@ -1,4 +1,6 @@
 [
+  { "id": "n0", "type": "marketing", "title": "New activity from Branch Head", "message": "Sunil Bhosale assigned you: Loan mela – Shivajinagar. Review and accept.", "at": "2026-09-17T09:40:00", "read": false, "link": "/marketing?from=bh&open=mk8" },
+  { "id": "n0b", "type": "marketing", "title": "New activity from Branch Head", "message": "Sunil Bhosale assigned you: Leaflet drive – Hinjewadi Phase 1. Review and accept.", "at": "2026-09-17T09:38:00", "read": false, "link": "/marketing?from=bh&open=mk9" },
   { "id": "n1", "type": "visit", "title": "Visit reminder", "message": "Anita Deshmukh at 3:00 PM today in Baner", "at": "2026-09-17T13:30:00", "read": false, "link": "/route" },
   { "id": "n2", "type": "incentive", "title": "Almost there!", "message": "₹45,000 more to Silver slab - about 3 files away", "at": "2026-09-17T09:05:00", "read": false, "link": "/incentive" },
   { "id": "n3", "type": "inactivity", "title": "DSA going quiet", "message": "Suresh Jadhav hasn't submitted a file in 20 days", "at": "2026-09-17T08:00:00", "read": false, "link": "/dsas/dsa4" },

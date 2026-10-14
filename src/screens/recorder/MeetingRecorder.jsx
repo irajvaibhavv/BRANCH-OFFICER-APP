@@ -20,6 +20,7 @@ import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { formatDate, fmtTime, capitalize } from '../../utils/formatters';
 import { buildTranscript, buildSummary, buildEngagementTranscript, summaryToText, fmtClock } from '../../services/meeting/transcript';
 import styles from './recorder.module.css';
+import { isConnector } from '../../utils/channel';
 
 const CAPTION_START = 2; // seconds before the first live caption appears
 const CAPTION_EVERY = 5; // seconds between captions while recording
@@ -89,7 +90,7 @@ export default function MeetingRecorder() {
 
   return (
     <Page mode="slide">
-      <TopBar back title={phase === 'result' ? 'Meeting summary' : 'Record meeting'} subtitle={dsa ? `${dsa.name} · ${dsa.firm}` : undefined} hideBell />
+      <TopBar back title={phase === 'result' ? 'Meeting summary' : 'Record meeting'} subtitle={dsa ? [dsa.name, dsa.firm].filter(Boolean).join(' · ') : undefined} hideBell />
 
       {/* DSA picker */}
       {phase === 'ready' && (
@@ -105,7 +106,7 @@ export default function MeetingRecorder() {
             </div>
           </Card>
         ) : (
-          <Select label="Who are you meeting?" placeholder="Select DSA" value={dsaId} onChange={(e) => setDsaId(e.target.value)} options={dsas.map((d) => ({ value: d.id, label: `${d.name} · ${d.location}` }))} />
+          <Select label="Who are you meeting?" placeholder="Select DSA" value={dsaId} onChange={(e) => setDsaId(e.target.value)} options={dsas.map((d) => ({ value: d.id, label: `${d.name}${isConnector(d) ? ' (Connector)' : ''} · ${d.location}` }))} />
         )
       )}
 

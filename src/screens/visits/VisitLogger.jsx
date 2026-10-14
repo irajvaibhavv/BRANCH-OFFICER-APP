@@ -15,7 +15,9 @@ import { useOffline } from '../../context/OfflineContext';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import { useToast } from '../../hooks/useToast';
 import { summaryToText, fmtClock } from '../../services/meeting/transcript';
+import CoworkerTags from '../../components/team/CoworkerTags';
 import styles from './visits.module.css';
+import { isConnector } from '../../utils/channel';
 
 const VISIT_TYPES = ['Scheduled Visit', 'Walk-in', 'Follow-up'];
 const OUTCOMES = [
@@ -41,6 +43,7 @@ export default function VisitLogger() {
   const [notes, setNotes] = useState(recording ? summaryToText(recording.summary) : '');
   const [rating, setRating] = useState(0);
   const [outcome, setOutcome] = useState('');
+  const [tagged, setTagged] = useState([]); // co-workers on this visit, by employee code
   const [errors, setErrors] = useState({});
   const [done, setDone] = useState(false);
 
@@ -85,7 +88,7 @@ export default function VisitLogger() {
       dsaId, type, notes, rating, outcome, location: dsa?.location,
       time: new Date().toTimeString().slice(0, 5),
       geo: geo.coords, photo, voiceNoteSecs: rec === 'done' ? secs : 0,
-      recordingId: recording?.id,
+      recordingId: recording?.id, tagged,
     });
     if (recording) linkRecordingToVisit(recording.id, saved.id);
     setDone(true);
@@ -116,7 +119,7 @@ export default function VisitLogger() {
             </div>
           </Card>
         ) : (
-          <Select label="Which DSA did you visit?" placeholder="Select DSA" value={dsaId} onChange={(e) => setDsaId(e.target.value)} options={dsas.map((d) => ({ value: d.id, label: `${d.name} · ${d.location}` }))} error={errors.dsa} />
+          <Select label="Who did you visit?" placeholder="Select DSA or connector" value={dsaId} onChange={(e) => setDsaId(e.target.value)} options={dsas.map((d) => ({ value: d.id, label: `${d.name}${isConnector(d) ? ' (Connector)' : ''} · ${d.location}` }))} error={errors.dsa} />
         )}
 
         {/* Geo-tag */}
@@ -156,6 +159,8 @@ export default function VisitLogger() {
         </div>
 
         <PillSelect label="Visit type" options={VISIT_TYPES} value={type} onChange={setType} />
+
+        <CoworkerTags label="Co-workers on this visit (optional)" value={tagged} onChange={setTagged} />
 
         {/* Attached recording */}
         {recording ? (

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FiCamera, FiCheckCircle } from 'react-icons/fi';
 import Page from '../../components/layout/Page';
@@ -10,6 +10,7 @@ import Avatar from '../../components/ui/Avatar';
 import { Input, Select } from '../../components/ui/Input';
 import { SuccessScreen } from '../../components/ui/SuccessCheck';
 import { useAppState } from '../../context/AppStateContext';
+import { CHANNELS } from '../../utils/channel';
 import styles from './dsa.module.css';
 
 const STEPS = ['Basic details', 'Location & area', 'Documents', 'Review'];
@@ -18,6 +19,9 @@ const AREAS = ['Kothrud', 'Baner', 'Wakad', 'Hadapsar', 'Deccan', 'Camp', 'Pimpr
 export default function AddDSA() {
   const navigate = useNavigate();
   const { addDsa } = useAppState();
+  const [params] = useSearchParams();
+  const channel = params.get('channel') === 'connector' ? 'connector' : 'dsa';
+  const who = CHANNELS[channel].label;
   const fileRef = useRef();
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
@@ -29,10 +33,9 @@ export default function AddDSA() {
   const validate = () => {
     const e = {};
     if (step === 0) {
-      if (f.name.trim().length < 3) e.name = 'Enter the DSA’s full name';
+      if (f.name.trim().length < 3) e.name = `Enter the ${who}’s full name`;
       if (!/^[6-9]\d{9}$/.test(f.phone)) e.phone = 'Enter a valid 10-digit number';
       if (f.email && !/^\S+@\S+\.\S+$/.test(f.email)) e.email = 'Enter a valid email';
-      if (!f.firm.trim()) e.firm = 'Firm name is required';
     }
     if (step === 1) {
       if (!f.area) e.area = 'Pick an area';
@@ -49,7 +52,7 @@ export default function AddDSA() {
   const next = () => { if (!validate()) return; setDir(1); setStep((s) => s + 1); };
   const back = () => { setDir(-1); setStep((s) => s - 1); };
   const submit = () => {
-    const rec = addDsa({ name: f.name.trim(), phone: `+91 ${f.phone.slice(0, 5)} ${f.phone.slice(5)}`, email: f.email, firm: f.firm, location: `${f.area}, Pune`, address: f.address, pan: f.pan.toUpperCase(), idProof: f.idProof });
+    const rec = addDsa({ name: f.name.trim(), phone: `+91 ${f.phone.slice(0, 5)} ${f.phone.slice(5)}`, email: f.email, firm: f.firm.trim() || null, location: `${f.area}, Pune`, ...(channel === 'connector' && { channel }), address: f.address, pan: f.pan.toUpperCase(), idProof: f.idProof });
     setDone(rec);
   };
 
@@ -64,10 +67,10 @@ export default function AddDSA() {
 
   if (done) {
     return (
-      <SuccessScreen title="DSA added" subtitle={`${done.name} is now in your directory.`}>
+      <SuccessScreen title={`${who} added`} subtitle={`${done.name} is now in your directory.`}>
         <div className="stack">
           <Button full onClick={() => navigate(`/dsas/${done.id}`, { replace: true })}>View profile</Button>
-          <Button full variant="secondary" onClick={() => navigate('/dsas', { replace: true })}>Back to directory</Button>
+          <Button full variant="secondary" onClick={() => navigate(channel === 'connector' ? '/dsas?tab=connectors' : '/dsas', { replace: true })}>Back to directory</Button>
         </div>
       </SuccessScreen>
     );
@@ -75,7 +78,7 @@ export default function AddDSA() {
 
   return (
     <Page mode="slide">
-      <TopBar back title="Add new DSA" subtitle={`Step ${step + 1} of ${STEPS.length} · ${STEPS[step]}`} hideBell onBack={step > 0 ? back : undefined} />
+      <TopBar back title={`Add new ${who}`} subtitle={`Step ${step + 1} of ${STEPS.length} · ${STEPS[step]}`} hideBell onBack={step > 0 ? back : undefined} />
       <div className={styles.steps}>
         {STEPS.map((_, i) => (
           <div key={i} className={styles.step}>
@@ -91,7 +94,7 @@ export default function AddDSA() {
               <Input label="Full name" placeholder="e.g. Priya Sharma" value={f.name} onChange={set('name')} error={errors.name} autoFocus />
               <Input label="Mobile number" prefix="+91" type="tel" inputMode="numeric" maxLength={10} placeholder="98765 43210" value={f.phone} onChange={(e) => setF((x) => ({ ...x, phone: e.target.value.replace(/\D/g, '') }))} error={errors.phone} />
               <Input label="Email (optional)" type="email" placeholder="name@firm.in" value={f.email} onChange={set('email')} error={errors.email} />
-              <Input label="Firm name" placeholder="e.g. Sharma Finserv" value={f.firm} onChange={set('firm')} error={errors.firm} />
+              <Input label="Firm name (optional)" placeholder="e.g. Sharma Finserv" value={f.firm} onChange={set('firm')} error={errors.firm} />
             </>
           )}
           {step === 1 && (
@@ -99,7 +102,7 @@ export default function AddDSA() {
               <Select label="Area" placeholder="Select area" options={AREAS.map((a) => ({ value: a, label: a }))} value={f.area} onChange={set('area')} error={errors.area} />
               <Input label="Office address" textarea placeholder="Shop no., street, landmark" value={f.address} onChange={set('address')} error={errors.address} />
               <Card padding={16} className="grad-sky" noChevron>
-                <div className="hint" style={{ color: 'var(--text-2)' }}>📍 Location will be geo-tagged on your first visit to this DSA.</div>
+                <div className="hint" style={{ color: 'var(--text-2)' }}>📍 Location will be geo-tagged on your first visit.</div>
               </Card>
             </>
           )}
@@ -133,7 +136,7 @@ export default function AddDSA() {
                 <Avatar name={f.name} size={52} />
                 <div>
                   <h3>{f.name}</h3>
-                  <span className="label">{f.firm}</span>
+                  <span className="label">{f.firm.trim() || 'Independent · no firm'}</span>
                 </div>
               </div>
               <div className={styles.review}>
@@ -154,7 +157,7 @@ export default function AddDSA() {
         {step < STEPS.length - 1 ? (
           <Button onClick={next} style={{ flex: 2 }}>Continue</Button>
         ) : (
-          <Button onClick={submit} style={{ flex: 2 }}>Add DSA</Button>
+          <Button onClick={submit} style={{ flex: 2 }}>Add {who}</Button>
         )}
       </div>
     </Page>

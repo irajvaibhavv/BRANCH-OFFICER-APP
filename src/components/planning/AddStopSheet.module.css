@@ -1,0 +1,11 @@
+.seg { display: flex; padding: 4px; border-radius: 12px; background: var(--bg); border: 1.5px solid var(--border); margin-bottom: 12px; }
+.seg button { flex: 1; height: 36px; border-radius: 9px; font-weight: 600; font-size: 13px; color: var(--text-2); }
+.seg .on { background: var(--primary); color: #fff; }
+.search { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card); color: var(--text-3); }
+.search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 15px; color: var(--text-1); }
+.group { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-3); margin: 14px 0 6px; }
+.row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 4px; text-align: left; border-bottom: 1px solid var(--border); }
+.row:disabled { opacity: 0.45; }
+.add { flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--primary); padding: 4px 10px; border-radius: 999px; background: var(--primary-soft); }
+.list { max-height: 46vh; overflow-y: auto; }
+.newRow { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 4px; margin-top: 8px; text-align: left; color: var(--primary); border-bottom: 1px solid var(--border); }

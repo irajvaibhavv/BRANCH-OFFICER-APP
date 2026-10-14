@@ -1,0 +1,103 @@
+Summary,Issue Type,Status,Priority,Labels,Description
+"Standard loan file lifecycle (10 stages, configurable)",Story,Done,Highest,bo-app lifecycle,"Replace the 3 old statuses with the standard flow: Application Submitted → System Login → Bureau Passed → PD Cleared → In Credit Query → Pending Documents → Operations Query → Submitted to Ops for Disbursement → OTC/PDD → Fund Transferred (Rejected stays outside the flow).
+
+Acceptance criteria:
+- Stages, labels and owner (Credit / Operations / DSA-BO) come from one config file, so the flow can be changed without code changes
+- Loan Files screen: swipeable stage pipeline (tap to filter), tabs All / In progress / Disbursed / Rejected
+- Opening a file shows the full lifecycle: done stages with dates, current stage with ""now with <owner>"", upcoming stages greyed, next step
+- All status badges, plans, reports and meeting prep use the new stages"
+"Show loan file stage on customer profile",Story,Done,High,bo-app lifecycle customers,"Every customer shows where their loan file currently stands.
+
+Acceptance criteria:
+- Customer card (Clients > Customers) shows a stage badge
+- Customer profile has a 'Loan file stage' card: stage name, 'Stage X of 10', 10-segment progress bar, who holds it now and the next step; 'See all stages' expands the full list
+- PD-queue customers sit at Bureau Passed and move to PD Cleared automatically once the Sarthi PD report exists; leads show their file stage; new enquiries show 'Not applied yet'"
+"Connector as a separate channel from DSA",Story,Done,Highest,bo-app connector,"Connectors (shopkeepers, CAs, agents who refer customers) get their own channel, with the same capabilities as a DSA.
+
+Acceptance criteria:
+- Clients tab has a DSA | Connector | Customers switch; search, filters, counts and compare work per channel
+- Adding from the Connector tab creates a connector
+- Connector profile = same as DSA (visits, files, meetings, Sarthi AI, scheduling) with a 'Connector · <profession>' badge
+- Plan your day has a separate Connectors section and a Connectors filter chip; matched connectors carry a Connector tag
+- Visit logger and meeting recorder pickers list connectors"
+"Firm name optional for DSA / connector",Story,Done,Medium,bo-app dsa,"Acceptance criteria:
+- Add DSA form: 'Firm name (optional)', no longer blocks saving; review shows 'Independent · no firm' when blank
+- No stray 'null' or dangling separators anywhere a firm is displayed (lists, profile, Home, branch plan, recorder, AI pickers)"
+"Vendor code on DSA / connector + search by code",Story,Done,Medium,bo-app dsa search,"Acceptance criteria:
+- Each DSA has a vendor code (VND-xxxxx), each connector CON-xxxxx; newly added ones show 'Vendor code pending'
+- Code shown on Clients cards and on the profile header
+- Clients and Plan your day search match the vendor code
+Note: free-text tags were built and then removed on review — code only."
+"DSA summary: last 6 months business + NPA accounts",Story,Done,High,bo-app dsa risk,"On the DSA profile Overview tab.
+
+Acceptance criteria:
+- 'Last 6 months' card: files, approved, amount disbursed, month-by-month disbursal chart; tap opens Business tab
+- 'NPA accounts' card: count and % of book, total outstanding, each account with borrower, loan ID, product, NPA-since date, outstanding and DPD (worst first)
+- DSAs with no NPA show 'None · 0%'
+- Month labels always show the last 6 months up to today"
+"OTC / PDD tab on DSA profile (pending documents from operations checklist)",Story,Done,High,bo-app otc-pdd,"New tab: Overview | Business | Files | OTC/PDD | Meetings | Notes.
+
+Acceptance criteria:
+- Document list per product comes from the operations checklist (stand-in for the admin-portal feed); each document is OTC (at signing/disbursal) or PDD (after) with a due period
+- Summary: documents pending, files, overdue count; 'payout held' note when anything is overdue
+- One card per file: each pending document with type, due date or days overdue; received documents expandable with dates; 'Payout on hold' on files with an overdue document
+- 'Remind <DSA>' opens WhatsApp pre-filled with the pending list
+- Read-only for the BO — only operations marks a document received"
+"Marketing activity calendar plan",Story,Done,High,bo-app marketing,"More > Marketing.
+
+Acceptance criteria:
+- Month calendar with a coloured dot per activity type, legend, tap a day to list its activities
+- Plan an activity: type (Loan mela, Canopy/stall, Society/market camp, Trade association meet, Leaflet drive, DSA/connector meet, Branch event), optional title, date, start/end time, area, exact spot, field force picked from the branch team with employee codes
+- Validation: past dates blocked, end after start, area and at least one person required
+- Edit and delete own activities"
+"Loan mela as a marketing activity type",Story,Done,Medium,bo-app marketing,"Acceptance criteria:
+- 'Loan mela' is the first and default activity type
+- Plan your day and More menu copy mention loan melas"
+"Marketing activities in Plan your day",Story,Done,High,bo-app marketing planning,"Acceptance criteria:
+- Plan your day sheet has a 4th option: Marketing activity
+- 'Visit DSAs & connectors' shows 'Marketing activities today' (assigned-to-me first); an activity can be added as a stop and appears on the map/route with its start time
+- Once planned it shows on Home's next-stop card with a button to open the activity"
+"Branch Head schedules marketing activity for BO",Story,Done,High,bo-app marketing,"Acceptance criteria:
+- Activities can come 'From Branch Head' (name + employee code) with a 'To accept' badge and a notification
+- Marketing screen filter: All activities | From Branch Head (with count of new)
+- Accept sheet: type, date, time, area and spot are locked; BO assigns field force and taps 'Accept & assign'; no delete
+- Home shows a card in the 'Plan your day' style: '<Type> from <name>' + NEW / +N MORE; tap opens the accept sheet (or the filtered list)"
+"Run a marketing activity: start/end time, photos, geo-tag monitoring, leads",Story,Done,Highest,bo-app marketing,"Tap any activity to open its activity screen.
+
+Acceptance criteria:
+- Start activity (only on the activity's date) records actual time + GPS; live timer while running; End records time + GPS and shows started/ended/time on site
+- Location checks: start, each photo and end measured against the planned area; more than 3 km flagged red
+- Photos from the camera, each stamped with time and coordinates; allowed while running and after it ends
+- Add lead: name, 10-digit mobile (validated), business, product, amount, note
+- Past activities from before tracking show 'Not tracked'"
+"Tag co-worker by employee code",Story,Done,Medium,bo-app team,"Acceptance criteria:
+- Reusable picker: type employee code or name, choose from suggestions; wrong code shows an error; own code refused
+- Available on Log visit ('Co-workers on this visit') and on Add lead ('Tag a co-worker to follow up')
+- Tagged people shown on the lead row and on the visit in the DSA's Meetings tab"
+"Lead verification via one-tap link (customisable message)",Story,Done,High,bo-app leads,"Acceptance criteria:
+- Each lead has Verify; sheet shows the message to +91 number, editable
+- Default message filled per lead (name, officer, branch, product, link); 'Use this wording for future leads' saves it as the template
+- Send opens SMS pre-filled and marks the lead 'Link sent' (button becomes Resend)
+- Borrower tap marks the lead 'Verified' (demo: 'Simulate tap')
+Production follow-up: SMS gateway + backend endpoint for the link."
+"Plan on the go (add stop, skip/move, no plan required)",Story,Done,Highest,bo-app planning,"Acceptance criteria:
+- '+ Add stop' on Route and Home: search DSAs, connectors, customers and today's marketing; add as Next stop or Later today without rebuilding the plan; route updates
+- Each upcoming stop: Move to tomorrow, or Skip today with a reason; skipped stops leave the map and the day's target
+- Visits added during the day are labelled 'On the go' (never 'unplanned'); Home shows '+N added on the go'
+- 'Plan your day' card steps aside once the BO has logged or added a stop; Route empty state offers 'Just add a stop'"
+"Bug: logging a planned visit left the stop as upcoming",Bug,Done,High,bo-app planning,"Logging a visit for a stop already planned today created a second visit and left the planned one 'upcoming', so Home kept showing it as next.
+Fix: logging completes the matching planned stop; only a visit with no matching stop is a new ('On the go') visit."
+"Bug: DSA charts showed fixed Apr–Sep month labels",Bug,Done,Low,bo-app dsa,"Month labels on DSA charts were hard-coded. Fix: labels are the last 6 months ending with the current month."
+"Offline single-file build that opens by double-clicking index.html",Task,Done,Low,bo-app build,"npm run build:file produces dist-file/index.html with all JS/CSS inlined and hash routing, so it runs from the file system without a server. Share the whole dist-file folder (voice clips live next to it). Live AI is unavailable in this mode; Sarthi runs scripted."
+"Payout tracking (due and paid)",Story,Won't Do,Medium,bo-app incentive,"Dropped for this round. Idea: payouts due vs paid per DSA/connector, with 'On hold' for files that have overdue OTC/PDD documents."
+"WhatsApp lead journey",Story,Won't Do,Medium,bo-app leads,"Dropped for this round. Idea: a sequence of ready-made WhatsApp follow-ups per lead (intro, document checklist, EMI estimate, reminder) with progress per lead."
+"Incentive on disbursement / EMI collected",Story,Won't Do,Medium,bo-app incentive,"Dropped for this round."
+"Accelerated incentive above target (100–120%)",Story,Won't Do,Medium,bo-app incentive,"Dropped for this round. Open point if picked up: higher rate between 100–120% of target, or extra only above 120%."
+"Earnings-goal plugin (set target income, see what it takes)",Story,Won't Do,Medium,bo-app incentive gamification,"Dropped for this round. Idea: BO sets a target income; app breaks it into files/disbursal/visits needed and tracks progress; switchable add-on."
+"Gamify the incentive section",Story,To Do,Medium,bo-app incentive gamification,"Decide scope from the ideas list. Suggested first cut:
+- Pick-your-goal target with live steps
+- Daily quests with XP and a visit streak
+- Quality multiplier (no NPA / no overdue OTC-PDD) so volume is never rewarded over quality
+Delivered as an add-on section on the Incentive screen with an on/off toggle in Profile."
+"Clarify: OTC/PDD position in the file lifecycle",Task,To Do,Medium,bo-app lifecycle question,"Lead's flow puts OTC/PDD before fund transfer; PDD normally means documents collected after disbursal. Confirm the order (one-line change in the stage config)."
+"Clarify: distance threshold for geo-tag check-ins",Task,To Do,Low,bo-app marketing question,"Marketing check-ins more than 3 km from the planned area are flagged. Confirm the right distance with the lead."

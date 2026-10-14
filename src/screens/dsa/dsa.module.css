@@ -55,8 +55,8 @@
 .actBtn svg { flex-shrink: 0; }
 .actRecord { color: #fff; background: var(--danger); border-color: var(--danger); }
 .actAi { color: #fff; background: linear-gradient(135deg, #7c3aed, #4c1d95); border-color: transparent; }
-.tabs { display: flex; gap: 4px; background: var(--card); padding: 4px; border-radius: 14px; border: var(--card-border); box-shadow: var(--card-shadow); margin-bottom: 16px; position: relative; }
-.tab { flex: 1; height: 40px; border-radius: 10px; font-weight: 600; font-size: 13px; color: var(--text-2); position: relative; z-index: 1; padding: 0 2px; white-space: nowrap; }
+.tabs { display: flex; gap: 4px; background: var(--card); padding: 4px; border-radius: 14px; border: var(--card-border); box-shadow: var(--card-shadow); margin-bottom: 16px; position: relative; overflow-x: auto; scrollbar-width: none; }
+.tab { flex: 1 0 auto; height: 40px; border-radius: 10px; font-weight: 600; font-size: 13px; color: var(--text-2); position: relative; z-index: 1; padding: 0 10px; white-space: nowrap; }
 .tabOn { color: var(--primary); }
 .tabPill { position: absolute; inset: 0; background: var(--primary-soft); border-radius: 10px; }
 .metricGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -128,3 +128,11 @@
 .seg button { flex: 1; height: 38px; border-radius: 10px; font-weight: 600; font-size: 14px; color: var(--text-2); transition: all 0.15s ease; }
 .seg .segOn { background: var(--primary); color: #fff; }
 .link { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--primary); }
+
+/* Vendor code (card and profile) */
+.code { font-size: 12px; font-weight: 700; letter-spacing: 0.02em; color: var(--text-2); padding: 2px 8px; border-radius: 6px; background: var(--bg); border: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+
+/* New / Existing / Lead — sits above the quality chips and combines with them */
+.stageRow { display: flex; gap: 4px; margin-top: 12px; padding: 3px; border-radius: 12px; background: var(--bg); border: 1px solid var(--border); }
+.stageRow button { flex: 1; min-height: 34px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.stageOn { background: var(--card); color: var(--primary) !important; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }

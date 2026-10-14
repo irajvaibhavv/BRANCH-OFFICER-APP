@@ -25,7 +25,7 @@ export default function CalendarView() {
   // Per-day rollup
   const days = useMemo(() => {
     const m = {};
-    visits.forEach((v) => { (m[v.date] ??= { done: 0, sched: 0, missed: 0 }); if (v.status === 'completed') m[v.date].done++; else if (v.status === 'missed') m[v.date].missed++; else m[v.date].sched++; });
+    visits.filter((v) => v.status !== 'skipped').forEach((v) => { (m[v.date] ??= { done: 0, sched: 0, missed: 0 }); if (v.status === 'completed') m[v.date].done++; else if (v.status === 'missed') m[v.date].missed++; else m[v.date].sched++; });
     return m;
   }, [visits]);
 

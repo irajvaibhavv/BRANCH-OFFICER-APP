@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
+  FiCreditCard,
   FiTrendingUp, FiFolder, FiAward, FiCalendar,
   FiBarChart2, FiClock, FiHelpCircle, FiUser, FiCheckSquare, FiMic,
 } from 'react-icons/fi';
@@ -13,16 +14,17 @@ import news from '../../data/mock/news.json';
 import styles from './MoreMenu.module.css';
 
 const ITEMS = [
-  { to: '/incentive', label: 'Incentives', sub: 'Slab progress & earnings', icon: FiTrendingUp, tone: '#16a34a' },
-  { to: '/files', label: 'Loan Files', sub: 'Track every file status', icon: FiFolder, tone: '#4c1d95' },
-  { to: '/documents', label: 'Documents', sub: 'Checklists & reminders', icon: FiCheckSquare, tone: '#7c3aed' },
-  { to: '/leaderboard', label: 'Leaderboard', sub: 'See where you rank', icon: FiAward, tone: '#f59e0b' },
-  { to: '/calendar', label: 'Calendar', sub: 'Daily targets at a glance', icon: FiCalendar, tone: '#db2777' },
-  { to: '/reports', label: 'Reports', sub: 'Daily / weekly summary', icon: FiBarChart2, tone: '#7c3aed' },
-  { to: '/scheduler', label: 'Meetings', sub: 'Schedule DSA meetings', icon: FiClock, tone: '#ea580c' },
-  { to: '/recordings', label: 'Recordings', sub: 'Transcripts & AI summaries', icon: FiMic, tone: '#dc2626' },
-  { to: '/help', label: 'Help & FAQ', sub: 'Answers & support', icon: FiHelpCircle, tone: '#0d9488' },
-  { to: '/profile', label: 'Profile & Settings', sub: 'Dark mode, PIN, logout', icon: FiUser, tone: '#6b7280' },
+  { to: '/incentive', label: 'Incentives', icon: FiTrendingUp, tone: '#16a34a' },
+  { to: '/payouts', label: 'Payouts', icon: FiCreditCard, tone: '#0891b2' },
+  { to: '/files', label: 'Loan Files', icon: FiFolder, tone: '#4c1d95' },
+  { to: '/documents', label: 'Documents', icon: FiCheckSquare, tone: '#7c3aed' },
+  { to: '/leaderboard', label: 'Leaderboard', icon: FiAward, tone: '#f59e0b' },
+  { to: '/calendar', label: 'Calendar', icon: FiCalendar, tone: '#db2777' },
+  { to: '/reports', label: 'Reports', icon: FiBarChart2, tone: '#7c3aed' },
+  { to: '/scheduler', label: 'Meetings', icon: FiClock, tone: '#ea580c' },
+  { to: '/recordings', label: 'Recordings', icon: FiMic, tone: '#dc2626' },
+  { to: '/help', label: 'Help & FAQ', icon: FiHelpCircle, tone: '#0d9488' },
+  { to: '/profile', label: 'Profile & Settings', icon: FiUser, tone: '#6b7280' },
 ];
 
 export default function MoreMenu() {
@@ -57,7 +59,6 @@ export default function MoreMenu() {
               </div>
               <div className={styles.text}>
                 <div className={styles.label}>{it.label}</div>
-                <div className="hint">{it.sub}</div>
               </div>
             </Card>
           </motion.div>

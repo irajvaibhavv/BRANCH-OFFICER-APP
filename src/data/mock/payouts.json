@@ -1,0 +1,9 @@
+[
+  { "id": "PO-3101", "dsaId": "dsa2", "fileId": "LF-1962", "borrower": "Hadapsar Steel Works", "product": "Business Loan", "amount": 1200000, "disbursedOn": "2026-07-22", "paidOn": "2026-08-06", "utr": "SMFGP0806114" },
+  { "id": "PO-3108", "dsaId": "dsa3", "fileId": "LF-1975", "borrower": "Baner Hardware", "product": "Loan Against Property", "amount": 4000000, "disbursedOn": "2026-08-05", "paidOn": "2026-08-20", "utr": "SMFGP0820307" },
+  { "id": "PO-3112", "dsaId": "dsa1", "fileId": "LF-1981", "borrower": "Shree Ganesh Traders", "product": "Business Loan", "amount": 1800000, "disbursedOn": "2026-08-12", "paidOn": "2026-08-28", "utr": "SMFGP0828412" },
+  { "id": "PO-3115", "dsaId": "con1", "fileId": "LF-1984", "borrower": "Aundh Medico", "product": "Business Loan", "amount": 700000, "disbursedOn": "2026-08-14", "paidOn": "2026-08-29", "utr": "SMFGP0829118" },
+  { "id": "PO-3120", "dsaId": "dsa6", "fileId": "LF-1990", "borrower": "Wakad Motors", "product": "MSME Working Capital", "amount": 2500000, "disbursedOn": "2026-08-18", "paidOn": "2026-09-02", "utr": "SMFGP0902225" },
+  { "id": "PO-3126", "dsaId": "dsa5", "fileId": "LF-1998", "borrower": "Deccan Caterers", "product": "Business Loan", "amount": 600000, "disbursedOn": "2026-08-25", "paidOn": "2026-09-09", "utr": "SMFGP0909331" },
+  { "id": "PO-3131", "dsaId": "dsa7", "fileId": "LF-2003", "borrower": "Camp Auto Works", "product": "Business Loan", "amount": 900000, "disbursedOn": "2026-09-01", "paidOn": "2026-09-16", "utr": "SMFGP0916207" }
+]

@@ -12,6 +12,7 @@ import { useAppState } from '../../context/AppStateContext';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../hooks/useToast';
 import { toISODate, formatDate, formatINR } from '../../utils/formatters';
+import { stageOf } from '../../utils/fileStages';
 import styles from './reports.module.css';
 
 export default function ReportGenerator() {
@@ -100,7 +101,7 @@ export default function ReportGenerator() {
             <Section title="Files submitted">
               {r.files.length === 0 ? <span className="hint">None in this period</span> : (
                 <div className={styles.breakdown}>
-                  {Object.entries(r.statusBreak).map(([s, n]) => <span key={s}><b>{n}</b> {s}</span>)}
+                  {Object.entries(r.statusBreak).map(([s, n]) => <span key={s}><b>{n}</b> {stageOf(s)?.short ?? s}</span>)}
                 </div>
               )}
             </Section>

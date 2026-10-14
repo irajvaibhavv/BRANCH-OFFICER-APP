@@ -466,6 +466,12 @@
   },
   {
     "id": "sarthi_mobile_1",
+    "stage": "disbursed",
+    "product": "Business Loan",
+    "sourceDsa": "dsa5",
+    "disbursedOn": "2026-09-24",
+    "payoutPaidOn": "2026-10-09",
+    "payoutUtr": "SMFGP1009412",
     "name": "Arjun Mehta",
     "age": 27,
     "area": "Sector 18, Noida",

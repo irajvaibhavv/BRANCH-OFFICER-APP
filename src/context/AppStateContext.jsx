@@ -3,6 +3,11 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useOffline } from './OfflineContext';
 import dsasSeed from '../data/mock/dsas.json';
 import visitsSeed from '../data/mock/visits.json';
+import marketingSeed from '../data/mock/marketing.json';
+import payoutsSeed from '../data/mock/payouts.json';
+import teamSeed from '../data/mock/team.json';
+import { AREA_COORDS } from '../utils/areas';
+import { START, km } from '../utils/route';
 import loanFilesSeed from '../data/mock/loanFiles.json';
 import notificationsSeed from '../data/mock/notifications.json';
 import engagementsSeed from '../data/mock/engagements.json';
@@ -30,8 +35,10 @@ const seedVisits = visitsSeed
     const y = new Date(SEED_TODAY); y.setDate(y.getDate() - 1);
     return { ...v, date: shiftDate(toISODate(y)) };
   });
-const seedDsas = dsasSeed.map((d) => ({ ...d, lastVisit: shiftDate(d.lastVisit) }));
-const seedFiles = loanFilesSeed.map((f) => ({ ...f, updatedAt: shiftDate(f.updatedAt), timeline: f.timeline.map(([d, s]) => [shiftDate(d), s]) }));
+const seedDsas = dsasSeed.map((d) => ({ ...d, lastVisit: shiftDate(d.lastVisit), empanelled: shiftDate(d.empanelled), npa: d.npa?.map((n) => ({ ...n, npaSince: shiftDate(n.npaSince) })) }));
+const seedFiles = loanFilesSeed.map((f) => ({ ...f, updatedAt: shiftDate(f.updatedAt), timeline: f.timeline.map(([d, s]) => [shiftDate(d), s]), opsReceived: f.opsReceived && Object.fromEntries(Object.entries(f.opsReceived).map(([k, d]) => [k, shiftDate(d)])), payoutPaid: f.payoutPaid && { ...f.payoutPaid, on: shiftDate(f.payoutPaid.on) } }));
+const seedPayouts = payoutsSeed.map((p) => ({ ...p, disbursedOn: shiftDate(p.disbursedOn), paidOn: shiftDate(p.paidOn) })); // paid history, read-only
+const seedMarketing = marketingSeed.map((m) => ({ ...m, date: shiftDate(m.date) }));
 const seedNotifs = notificationsSeed.map((n) => ({ ...n, at: shiftDate(n.at) }));
 // Meetings anyone from the company (BO, Branch Head, Regional Head, CEO…) has had with each DSA — read-only reference data
 const engagements = engagementsSeed.map((m) => ({ ...m, date: shiftDate(m.date) }));
@@ -58,6 +65,7 @@ const seedRecordings = (() => {
 const AppStateContext = createContext(null);
 
 const DAILY_TARGET = 5; // fallback for days without a plan (calendar history, before planning)
+const VISIT_MINS = 45; // a stop's slot when the day is re-timed around a stop added mid-route
 
 export function AppStateProvider({ children }) {
   const { isOnline, enqueue } = useOffline();
@@ -69,6 +77,7 @@ export function AppStateProvider({ children }) {
   const [meetings, setMeetings] = useLocalStorage('bo_meetings', seedMeetings);
   const [recordings, setRecordings] = useLocalStorage('bo_recordings', seedRecordings);
   const [seedDay, setSeedDay] = useLocalStorage('bo_seed_day', null);
+  const [marketing, setMarketing] = useLocalStorage('bo_marketing', seedMarketing);
   const [dayPlan, setDayPlan] = useLocalStorage('bo_day_plan', null); // { date, mode:'dsa'|'customer'|'branch', criteria, stops:[id] }
 
   const resetDemo = useCallback(() => {
@@ -78,12 +87,13 @@ export function AppStateProvider({ children }) {
     setNotifications(seedNotifs);
     setMeetings(seedMeetings);
     setRecordings(seedRecordings);
+    setMarketing(seedMarketing);
     setDayPlan(null);
-  }, [setDayPlan, setDsas, setVisits, setLoanFiles, setNotifications, setMeetings, setRecordings]);
+  }, [setMarketing, setDayPlan, setDsas, setVisits, setLoanFiles, setNotifications, setMeetings, setRecordings]);
 
   // Re-seed when the calendar day changes so "today" always has demo data.
   useEffect(() => {
-    const stamp = `${toISODate()}:2`; // bump the suffix whenever the seed shape changes
+    const stamp = `${toISODate()}:14`; // bump the suffix whenever the seed shape changes
     if (seedDay !== stamp) {
       resetDemo(); // also migrates any stale, hard-dated data from before this change
       setSeedDay(stamp);
@@ -106,11 +116,18 @@ export function AppStateProvider({ children }) {
   const getDsa = useCallback(
     (id) => {
       const d = dsas.find((x) => x.id === id);
+      if (!d && String(id ?? '').startsWith('mk')) {
+        // A marketing activity planned as a stop: shaped like a DSA, pinned to its area's centre.
+        const m = marketing.find((x) => x.id === id);
+        if (!m) return undefined;
+        const [lat, lng] = AREA_COORDS[m.area] ?? [START.lat, START.lng];
+        return { ...m, name: m.title, firm: 'Marketing activity', location: [m.spot, m.area].filter(Boolean).join(', '), lat, lng, distanceKm: +km(START, { lat, lng }).toFixed(1), quality: 'average', rating: 3, isMarketing: true };
+      }
       if (d || !String(id ?? '').startsWith('cust')) return d;
       const c = getCustomer(id);
       return c ? { ...c, firm: c.kind === 'existing' ? 'Existing customer' : c.kind === 'lead' ? 'Lead' : 'New customer', quality: 'average', isCustomer: true } : undefined;
     },
-    [dsas, getCustomer],
+    [dsas, marketing, getCustomer],
   );
 
   const addDsa = useCallback(
@@ -125,6 +142,7 @@ export function AppStateProvider({ children }) {
         distanceKm: 5,
         monthly: [0, 0, 0, 0, 0, 0],
         lastVisit: null,
+        stage: 'lead', // added by the BO, not yet empanelled — see partnerStage()
         ...dsa,
       };
       setDsas((d) => [rec, ...d]);
@@ -136,16 +154,70 @@ export function AppStateProvider({ children }) {
 
   const rateDsa = useCallback((id, rating) => setDsas((d) => d.map((x) => (x.id === id ? { ...x, rating } : x))), [setDsas]);
 
+  /** Marketing activities: add a new one, or patch an existing one by id. */
+  const saveMarketing = useCallback((m) => {
+    const rec = m.id ? m : { ...m, id: `mk${Date.now()}`, status: 'planned' };
+    setMarketing((all) => (m.id ? all.map((x) => (x.id === m.id ? { ...x, ...m } : x)) : [...all, rec]));
+    track(m.id ? 'UPDATE_MARKETING' : 'ADD_MARKETING', rec);
+    return rec;
+  }, [setMarketing, track]);
+  const removeMarketing = useCallback((id) => setMarketing((all) => all.filter((x) => x.id !== id)), [setMarketing]);
+
+  // Logging a visit closes that stop if it was lined up today; otherwise it is a new visit "on the go".
   const addVisit = useCallback(
     (visit) => {
-      const rec = { id: `v${Date.now()}`, date: toISODate(), status: 'completed', ...visit };
-      setVisits((v) => [rec, ...v]);
+      const date = toISODate();
+      const stop = visits.find((x) => x.date === date && x.dsaId === visit.dsaId && x.status === 'upcoming');
+      const rec = stop
+        ? { ...stop, ...visit, status: 'completed', plannedTime: stop.time }
+        : { id: `v${Date.now()}`, date, status: 'completed', onTheGo: true, ...visit };
+      setVisits((v) => (stop ? v.map((x) => (x.id === stop.id ? rec : x)) : [rec, ...v]));
       setDsas((d) => d.map((x) => (x.id === visit.dsaId ? { ...x, lastVisit: rec.date } : x)));
       track('LOG_VISIT', rec);
       return rec;
     },
-    [setVisits, setDsas, track],
+    [visits, setVisits, setDsas, track],
   );
+
+  /** Plan on the go: line up one more stop today — right after the current one (`next`) or at the end of the day. */
+  // `location` is passed for a record created this instant (a new DSA added mid-route), which getDsa cannot see yet.
+  const addStopNow = useCallback((dsaId, { next = false, urgent = false, location } = {}) => {
+    const date = toISODate();
+    const now = new Date();
+    const upcoming = visits.filter((v) => v.date === date && v.status === 'upcoming').sort((a, b) => a.time.localeCompare(b.time));
+    const slot = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const mins = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+    const at = (n) => { const d = new Date(now); d.setHours(0, n, 0, 0); return slot(d); };
+    let time;
+    if (next || !upcoming.length) { const d = new Date(now.getTime() + 20 * 60000); d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5); time = slot(d); }
+    else { const [h, m] = upcoming.at(-1).time.split(':').map(Number); const d = new Date(now); d.setHours(h, m + 45, 0, 0); time = slot(d); }
+    const d = getDsa(dsaId);
+    const type = String(dsaId).startsWith('mk') ? 'Marketing Activity' : String(dsaId).startsWith('cust') ? 'Customer Meeting' : 'Scheduled Visit';
+    const rec = { id: `og${now.getTime()}`, dsaId, date, time: String(dsaId).startsWith('mk') ? d?.start ?? time : time, status: 'upcoming', type, location: location ?? d?.location, planned: true, onTheGo: true, ...(urgent && { urgent: true }) };
+    // A stop slipped in first pushes the rest of the day back, a visit's length at a time, until a gap absorbs it —
+    // otherwise it overlaps the next appointment. Marketing activities keep their fixed hours.
+    const shifted = {};
+    if (next) {
+      let cursor = mins(rec.time) + VISIT_MINS;
+      for (const v of upcoming) {
+        if (String(v.dsaId).startsWith('mk')) continue;
+        if (mins(v.time) >= cursor) break;
+        shifted[v.id] = at(cursor);
+        cursor += VISIT_MINS;
+      }
+    }
+    setVisits((v) => [...v.map((x) => (shifted[x.id] ? { ...x, time: shifted[x.id], shiftedFrom: x.time } : x)), rec]);
+    setDayPlan((p) => (p?.date === date ? { ...p, stops: [...p.stops, dsaId] } : { date, mode: 'dsa', criteria: [], stops: [dsaId] }));
+    track('ADD_STOP', { dsaId, next, urgent });
+    return { ...rec, shifted: Object.keys(shifted).length };
+  }, [visits, getDsa, setVisits, setDayPlan, track]);
+
+  /** Drop a stop from today (with a reason), or push it to tomorrow at the same time. */
+  const skipStop = useCallback((id, reason) => setVisits((v) => v.map((x) => (x.id === id ? { ...x, status: 'skipped', skipReason: reason } : x))), [setVisits]);
+  const moveStopToTomorrow = useCallback((id) => {
+    const t = new Date(); t.setDate(t.getDate() + 1);
+    setVisits((v) => v.map((x) => (x.id === id ? { ...x, date: toISODate(t), movedFrom: x.date } : x)));
+  }, [setVisits]);
 
   /** Meeting recording → transcript + AI summary (generated locally for the POC). */
   const addRecording = useCallback(
@@ -169,7 +241,7 @@ export function AppStateProvider({ children }) {
       const today = toISODate();
       setVisits((v) => [
         ...v.filter((x) => !(x.date === today && x.status === 'upcoming')),
-        ...stops.map((s, i) => ({ id: `plan${Date.now()}${i}`, dsaId: s.dsaId, date: today, time: s.time, status: 'upcoming', type: mode === 'customer' || String(s.dsaId).startsWith('cust') ? 'Customer Meeting' : 'Scheduled Visit', location: s.location, planned: true })),
+        ...stops.map((s, i) => ({ id: `plan${Date.now()}${i}`, dsaId: s.dsaId, date: today, time: s.time, status: 'upcoming', type: String(s.dsaId).startsWith('mk') ? 'Marketing Activity' : mode === 'customer' || String(s.dsaId).startsWith('cust') ? 'Customer Meeting' : 'Scheduled Visit', location: s.location, planned: true })),
       ]);
       setDayPlan({ date: today, mode, criteria, stops: stops.map((s) => s.dsaId) });
       track('PLAN_DAY', { mode, criteria, stops: stops.length });
@@ -226,14 +298,14 @@ export function AppStateProvider({ children }) {
   }, [loanFiles, dsas]);
 
   // Today's target = what the officer planned (plus any visits added since), not a fixed number.
-  const dailyTarget = dayPlan?.date === today && todayVisits.length > 0 ? todayVisits.length : DAILY_TARGET;
+  const lined = todayVisits.filter((v) => v.status !== 'skipped').length; // a skipped stop no longer counts
+  const dailyTarget = dayPlan?.date === today && lined > 0 ? lined : DAILY_TARGET;
 
   const stats = useMemo(() => {
     const disbursedTotal = loanFiles.filter((f) => f.status === 'disbursed').reduce((s, f) => s + f.amount, 0);
     return {
       filesSubmitted: loanFiles.length,
       disbursed: disbursedTotal,
-      incentiveEarned: 8500,
       quarterDisbursed: 15500000, // ₹1.55Cr — 45K short of Silver in incentive terms
       dailyTarget,
       todayDone,
@@ -242,7 +314,8 @@ export function AppStateProvider({ children }) {
 
   const value = {
     dsas, getDsa, addDsa, rateDsa,
-    visits, todayVisits, addVisit,
+    marketing, saveMarketing, removeMarketing, team: teamSeed, payoutHistory: seedPayouts,
+    visits, todayVisits, addVisit, addStopNow, skipStop, moveStopToTomorrow,
     loanFiles, setLoanFiles,
     meetings, addMeeting, updateMeeting, cancelMeeting,
     recordings, addRecording, getRecording, linkRecordingToVisit,

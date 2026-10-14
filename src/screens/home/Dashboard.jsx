@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { IoSparkles } from 'react-icons/io5';
-import { FiMic, FiMapPin, FiUserPlus, FiFileText, FiNavigation, FiChevronRight, FiClock, FiEdit2, FiXCircle, FiFlag, FiCheckSquare, FiCheck, FiLayout, FiZap, FiUser, FiHome } from 'react-icons/fi';
+import { FiMic, FiMapPin, FiUserPlus, FiFileText, FiNavigation, FiChevronRight, FiClock, FiEdit2, FiXCircle, FiFlag, FiCheckSquare, FiCheck, FiActivity, FiZap, FiUser, FiHome, FiPlus } from 'react-icons/fi';
 import Page, { listContainer, listItem } from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import Card from '../../components/ui/Card';
@@ -11,30 +11,30 @@ import Button from '../../components/ui/Button';
 import FAB from '../../components/ui/FAB';
 import BottomSheet from '../../components/ui/BottomSheet';
 import ProgressRing from '../../components/charts/ProgressRing';
-import { ProgressBar } from '../../components/charts/MiniMetric';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
+import { useRewards } from '../../hooks/useRewards';
 import { useToast } from '../../hooks/useToast';
-import DashboardDetailed from './DashboardDetailed';
 import PlanChooser from '../../components/planning/PlanChooser';
+import AddStopSheet from '../../components/planning/AddStopSheet';
 import { useAuth } from '../../context/AuthContext';
 import { useAppState } from '../../context/AppStateContext';
 import { getGreeting } from '../../utils/greetings';
 import { formatINR, formatDate, pct, toISODate, fmtTime } from '../../utils/formatters';
 import { weatherAt } from '../../services/weather';
 import { pendingItems } from '../../utils/pending';
-import news from '../../data/mock/news.json';
+import WhatsNew from '../../components/home/WhatsNew';
 import styles from './Dashboard.module.css';
 
 let loadedOnce = false;
 
 const QUICK_ACTIONS = [
-  { label: 'Plan My Day', desc: 'DSAs · customers · branch', icon: FiZap, to: 'plan', tone: '#f59e0b' },
-  { label: 'SAARTHI AI', desc: 'Hand over · AI interviews', icon: IoSparkles, to: '/ai', tone: '#7c3aed' },
-  { label: 'Record Meeting', desc: 'Transcript + AI summary', icon: FiMic, to: '/record', tone: '#dc2626' },
-  { label: 'Log Visit', desc: 'Geo-tag, photo & notes', icon: FiMapPin, to: '/visits/new', tone: '#4c1d95' },
-  { label: 'Add DSA', desc: 'Onboard a new partner', icon: FiUserPlus, to: '/dsas/new', tone: '#7c3aed' },
-  { label: 'Generate Report', desc: 'Daily / weekly summary', icon: FiFileText, to: '/reports', tone: '#16a34a' },
+  { label: 'SAARTHI AI', icon: IoSparkles, to: '/ai', tone: '#7c3aed' },
+  { label: 'Record Meeting', icon: FiMic, to: '/record', tone: '#dc2626' },
+  { label: 'Log Visit', icon: FiMapPin, to: '/visits/new', tone: '#4c1d95' },
+  { label: 'Add DSA', icon: FiUserPlus, to: '/dsas/new', tone: '#7c3aed' },
+  { label: 'Add Customer', icon: FiUserPlus, to: '/sarthi/new', tone: '#0f766e' },
+  { label: 'Generate Report', icon: FiFileText, to: '/reports', tone: '#16a34a' },
 ];
 
 // Home answers two things: what next (up-next visit) and how am I doing (target + incentive).
@@ -45,13 +45,14 @@ export default function Dashboard() {
   const [doneTodos, setDoneTodos] = useLocalStorage('bo_todo_done', {});
   const tickTodo = (recId, i) => { setDoneTodos((m) => ({ ...m, [recId]: [...(m[recId] ?? []), i] })); toast('Done', 'success', 1200); };
   const today = toISODate();
-  const planned = dayPlan?.date === today ? dayPlan : null; // today's plan, if the officer has made one
+  // The day has a plan once the officer made one OR simply started working — no plan is needed to log or add stops.
+  const planned = dayPlan?.date === today || todayVisits.length > 0;
+  const onTheGo = todayVisits.filter((v) => v.onTheGo && v.status !== 'skipped').length;
   const [chooser, setChooser] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [sheet, setSheet] = useState(false);
-  const [slabOpen, setSlabOpen] = useState(false); // slab progress hidden until the incentive widget is tapped
+  const rw = useRewards();
   const [loading, setLoading] = useState(!loadedOnce);
-  // 'focused' (default) | 'detailed' — both layouts kept for review; toggle from the top bar or Profile
-  const [layout, setLayout] = useLocalStorage('bo_home_layout', 'focused');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -80,16 +81,8 @@ export default function Dashboard() {
           </span>
         }
         right={
-          <button
-            className={styles.layoutBtn}
-            aria-label="Switch home layout"
-            onClick={() => {
-              const next = layout === 'focused' ? 'detailed' : 'focused';
-              setLayout(next);
-              toast(next === 'focused' ? 'Focused home' : 'Detailed home', 'info', 1200);
-            }}
-          >
-            <FiLayout size={18} />
+          <button className={styles.layoutBtn} aria-label="Activity" title="Activity" onClick={() => navigate('/activity')}>
+            <FiActivity size={18} />
           </button>
         }
       />
@@ -100,20 +93,12 @@ export default function Dashboard() {
           <Skeleton h={96} r={16} />
           <Skeleton h={96} r={16} />
         </div>
-      ) : layout === 'detailed' ? (
-        <DashboardDetailed />
       ) : (
         <motion.div className={`stack ${styles.homeStack}`} variants={listContainer} initial="initial" animate="animate">
-          {/* 1. What's new — marquee ticker */}
+          {/* 1. What's new — carousel: incentive standing, loan melas, product updates */}
           <motion.div variants={listItem}>
             <div className="section-head" style={{ marginTop: 0, marginBottom: 12 }}><h2 className="section-title" style={{ fontSize: 17 }}>What's new</h2></div>
-            <div className={styles.marquee} onClick={() => navigate('/notifications')}>
-              <div className={styles.marqueeTrack}>
-                {[...news, ...news].map((n, i) => (
-                  <span key={`${n.id}-${i}`} className={styles.marqueeItem}><span>{n.emoji}</span> {n.text}</span>
-                ))}
-              </div>
-            </div>
+            <WhatsNew />
           </motion.div>
           {/* 2. Plan your day — hero until the day is planned; after that, change it from the + button */}
           {!planned && (
@@ -123,7 +108,7 @@ export default function Dashboard() {
                 <span className="icon-tile" style={{ '--tile': '#f59e0b', width: 44, height: 44, borderRadius: 14, flexShrink: 0 }}><FiZap size={20} /></span>
                 <div className="grow" style={{ minWidth: 0 }}>
                   <div className={styles.nextName}>Plan your day</div>
-                  <div className="hint">Visit DSAs · Meet customers · Work from branch</div>
+                  <div className="hint">Visit DSAs & Connectors · Meet customers · Work from branch</div>
                 </div>
                 <FiChevronRight size={20} color="var(--primary)" />
               </div>
@@ -134,7 +119,7 @@ export default function Dashboard() {
           {/* 3. Up next — only once the day is planned. Weather is for this stop's area at visit time, so it moves with the officer. */}
           {planned && (
           <motion.div variants={listItem}>
-            {planned.mode === 'branch' && !nextVisit ? (
+            {dayPlan?.date === today && dayPlan.mode === 'branch' && !nextVisit ? (
               <Card className={styles.next} noChevron onClick={() => navigate('/plan/branch')}>
                 <div className={styles.nextLabel}><FiHome size={13} /> Branch day</div>
                 <div className={styles.nextName} style={{ marginTop: 6 }}>Your desk tasks for today</div>
@@ -160,15 +145,18 @@ export default function Dashboard() {
                   </button>
                   <div className="grow" style={{ minWidth: 0 }}>
                     <div className={styles.nextName}>{nextDsa?.name}</div>
-                    <div className="hint clamp2">{nextDsa?.firm} · {nextDsa?.location} · {nextDsa?.distanceKm} km</div>
+                    <div className="hint clamp2">{[nextDsa?.firm, nextDsa?.location, `${nextDsa?.distanceKm} km`].filter(Boolean).join(' · ')}</div>
                     <div className={styles.targetLine}>{left <= 0 ? 'Daily target met' : `${left} more to today's target`}</div>
+                    {onTheGo > 0 && <div className="hint">+{onTheGo} added on the go</div>}
                   </div>
                 </div>
                 {wx?.tip && <div className={styles.wxTip}><wx.icon size={13} color={wx.color} /> {wx.label} in {wx.area} around then · {wx.tip}</div>}
                 <div className={styles.nextActions}>
                   <Button size="sm" style={{ flex: 1, minWidth: 0, padding: '0 10px' }} icon={<FiMapPin size={16} />} onClick={() => navigate(`/visits/new?dsa=${nextVisit.dsaId}`)}>Log visit</Button>
                   <Button size="sm" style={{ flex: 1, minWidth: 0, padding: '0 10px' }} variant="secondary" icon={<FiNavigation size={16} />} onClick={() => navigate('/route')}>Navigate</Button>
-                  {nextDsa?.isCustomer
+                  {nextDsa?.isMarketing
+                    ? <Button size="sm" variant="secondary" style={{ width: 40, padding: 0, flexShrink: 0, gap: 0 }} icon={<FiFlag size={18} />} aria-label="Marketing activity" title="Run activity" onClick={() => navigate(`/marketing/${nextVisit.dsaId}`)} />
+                    : nextDsa?.isCustomer
                     ? <Button size="sm" variant="secondary" style={{ width: 40, padding: 0, flexShrink: 0, gap: 0 }} icon={<FiUser size={18} />} aria-label="Customer prep" title="Questions & loan calculator" onClick={() => navigate(`/customers/${nextVisit.dsaId}`)} />
                     : <Button size="sm" variant="secondary" style={{ width: 40, padding: 0, flexShrink: 0, color: 'var(--danger)', gap: 0 }} icon={<FiMic size={18} />} aria-label="Record meeting" title="Record meeting" onClick={() => navigate(`/prompter?dsa=${nextVisit.dsaId}&mode=record`)} />}
                 </div>
@@ -176,7 +164,10 @@ export default function Dashboard() {
                   <button className={styles.moreLink} onClick={() => navigate('/route')}>
                     {remaining > 1 ? `${remaining - 1} more after this` : 'Last stop of the day'} <FiChevronRight size={14} />
                   </button>
-                  <button className={styles.moreLink} style={{ color: 'var(--primary)', fontWeight: 600 }} onClick={() => navigate('/plan?edit=1')}><FiEdit2 size={13} /> Edit plan</button>
+                  <span className="row" style={{ gap: 14 }}>
+                    <button className={styles.moreLink} style={{ color: 'var(--primary)', fontWeight: 600 }} onClick={() => setAdding(true)}><FiPlus size={13} /> Add stop</button>
+                    <button className={styles.moreLink} style={{ color: 'var(--primary)', fontWeight: 600 }} onClick={() => navigate('/plan?edit=1')}><FiEdit2 size={13} /> Edit plan</button>
+                  </span>
                 </div>
               </Card>
             ) : (
@@ -188,50 +179,38 @@ export default function Dashboard() {
                     </ProgressRing>
                   </button>
                   <div className="grow" style={{ minWidth: 0 }}>
-                    <div className={styles.nextName}>{left <= 0 ? 'Target done — nice work' : 'No visits left on your plan'}</div>
+                    <div className={styles.nextName}>{left <= 0 ? 'Target done — nice work' : 'Nothing else lined up'}</div>
+                    {onTheGo > 0 && <div className="hint">+{onTheGo} added on the go</div>}
                   </div>
                 </div>
-                <div className="label">{left <= 0 ? 'Every extra visit still counts on the leaderboard.' : 'Add a walk-in visit or schedule one for later.'}</div>
+                <div className="label">{left <= 0 ? 'Every extra visit still counts on the leaderboard.' : 'Log a visit you just made, or add the next stop.'}</div>
                 <div className={styles.nextActions}>
                   <Button style={{ flex: 1 }} icon={<FiMapPin size={18} />} onClick={() => navigate('/visits/new')}>Log a visit</Button>
-                  <Button style={{ flex: 1 }} variant="secondary" icon={<FiEdit2 size={16} />} onClick={() => navigate('/plan?edit=1')}>Add stops</Button>
+                  <Button style={{ flex: 1 }} variant="secondary" icon={<FiPlus size={16} />} onClick={() => setAdding(true)}>Add a stop</Button>
                 </div>
               </Card>
             )}
           </motion.div>
           )}
 
-          {/* 3b. Incentive widget — ring + this month's numbers. Tap to reveal the slab progress; "Open" goes to the tracker. */}
+          {/* 3b. Incentive — the journey (target, disbursements to go, rewards). Tap opens it; first time, it asks for a target. */}
           <motion.div variants={listItem}>
-            <Card padding={16} noChevron onClick={() => setSlabOpen((o) => !o)} aria-expanded={slabOpen}>
+            <Card padding={16} noChevron onClick={() => navigate('/rewards')}>
               <div className="row" style={{ gap: 16 }}>
-                <ProgressRing value={78} size={84} stroke={7}>
-                  <span style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.1 }}>{formatINR(stats.incentiveEarned)}</span>
-                  <span className="hint" style={{ fontSize: 10 }}>78%</span>
+                <ProgressRing value={rw.target ? Math.min(100, (rw.earned / rw.target) * 100) : 0} size={84} stroke={7}>
+                  <span style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.1 }}>{formatINR(rw.earned)}</span>
+                  <span className="hint" style={{ fontSize: 10 }}>{rw.target ? `of ${formatINR(rw.target)}` : 'earned'}</span>
                 </ProgressRing>
                 <div className="grow" style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600 }}>Incentive this month</div>
-                  <div className="hint">{formatINR(stats.incentiveEarned, { compact: false })} earned · Bronze slab</div>
+                  <div style={{ fontWeight: 600 }}>Incentive</div>
+                  <div className="hint">{rw.target ? `Level ${rw.level.n} · ${rw.level.name}` : 'Set your target for this month'}</div>
                   <div className={styles.miniStats}>
-                    <span><b>{stats.filesSubmitted}</b> files</span>
-                    <span><b style={{ color: 'var(--success)' }}>{formatINR(stats.disbursed)}</b> disbursed</span>
+                    <span>🔥 <b>{rw.streak}</b>-day streak</span>
+                    {rw.target && rw.roadmap.gap > 0 && <span><b style={{ color: 'var(--success)' }}>{formatINR(rw.roadmap.gap)}</b> disbursal to go</span>}
                   </div>
                 </div>
-                <FiChevronRight size={20} color="var(--text-3)" style={{ transform: slabOpen ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }} />
+                <FiChevronRight size={20} color="var(--text-3)" />
               </div>
-              {slabOpen && (
-                <div className={styles.slab} onClick={(e) => e.stopPropagation()}>
-                  <div className="row-between" style={{ marginBottom: 8 }}>
-                    <div style={{ fontWeight: 600 }}>{formatINR(45000, { compact: false })} more to Silver slab</div>
-                    <span className="hint" style={{ fontWeight: 600, color: 'var(--primary)' }}>78%</span>
-                  </div>
-                  <ProgressBar value={78} height={6} />
-                  <div className="row-between" style={{ marginTop: 8 }}>
-                    <span className="hint">≈ 3 more loan files</span>
-                    <button className="link" onClick={() => navigate('/incentive')}>Open tracker</button>
-                  </div>
-                </div>
-              )}
             </Card>
           </motion.div>
 
@@ -269,16 +248,14 @@ export default function Dashboard() {
 
       <FAB onClick={() => setSheet(true)} />
       <PlanChooser open={chooser} onClose={() => setChooser(false)} />
+      <AddStopSheet open={adding} onClose={() => setAdding(false)} />
       <BottomSheet open={sheet} onClose={() => setSheet(false)} title="Quick actions">
         <div className="stack">
           {QUICK_ACTIONS.map((a) => (
-            <Card key={a.label} padding={16} onClick={() => { setSheet(false); if (a.to === 'plan') setChooser(true); else navigate(a.to); }}>
+            <Card key={a.label} padding={16} onClick={() => { setSheet(false); navigate(a.to); }}>
               <div className="row" style={{ gap: 14 }}>
                 <div className={`icon-tile ${styles.qaIcon}`} style={{ '--tile': a.tone }}><a.icon size={22} /></div>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{a.label}</div>
-                  <div className="hint">{a.desc}</div>
-                </div>
+                <div style={{ fontWeight: 600 }}>{a.label}</div>
               </div>
             </Card>
           ))}

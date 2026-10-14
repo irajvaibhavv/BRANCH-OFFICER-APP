@@ -50,7 +50,8 @@ export function AuthProvider({ children }) {
     try {
       Object.keys(window.localStorage).filter((k) => k.startsWith('bo_')).forEach((k) => window.localStorage.removeItem(k));
     } catch { /* ignore */ }
-    window.location.replace('/login');
+    if (window.location.protocol === 'file:') { window.location.hash = '/login'; window.location.reload(); }
+    else window.location.replace('/login');
   }, [setSession, setPin]);
 
   const value = {

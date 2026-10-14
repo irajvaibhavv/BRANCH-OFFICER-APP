@@ -225,6 +225,7 @@ function browserSpeak(text, { rate = 1, onEnd, onStart, profile } = {}) {
  */
 export function speak(text, { rate = 1, onEnd, onStart, voice, src } = {}) {
   const profile = voice ? voiceProfile(voice) : DEFAULT_PROFILE;
+  if (src?.startsWith('/')) src = import.meta.env.BASE_URL + src.slice(1); // './' in the file build
   if (src) { queue.push({ text, rate, onEnd, onStart, profile, src }); drain(); return; }
   if (profile.engine !== 'browser' && !brokenEngines.has(profile.engine)) {
     queue.push({ text, rate, onEnd, onStart, profile });

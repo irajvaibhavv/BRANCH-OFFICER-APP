@@ -13,16 +13,18 @@ import EmptyState from '../../components/ui/EmptyState';
 import { Select, Input } from '../../components/ui/Input';
 import { useAppState } from '../../context/AppStateContext';
 import { formatINR, formatDate } from '../../utils/formatters';
+import { STAGES, isOpen, stageColor } from '../../utils/fileStages';
+import FileLifecycle from '../../components/files/FileLifecycle';
 import styles from './documents.module.css';
 
-const STAGES = ['submitted', 'under review', 'approved', 'disbursed'];
-const TABS = ['All', 'Submitted', 'Under Review', 'Approved', 'Rejected', 'Disbursed'];
-const COLORS = { submitted: 'var(--primary)', 'under review': 'var(--warning)', approved: 'var(--success)', rejected: 'var(--danger)', disbursed: '#7c3aed' };
+const TABS = ['All', 'In progress', 'Disbursed', 'Rejected'];
+const inTab = (f, tab) => tab === 'All' || (tab === 'In progress' ? isOpen(f.status) : f.status === tab.toLowerCase());
 
 export default function LoanFileTracker() {
   const [params] = useSearchParams();
   const { loanFiles, getDsa, dsas } = useAppState();
   const [tab, setTab] = useState('All');
+  const [stage, setStage] = useState(null); // pipeline tap narrows to one stage
   const [openId, setOpenId] = useState(params.get('open'));
   const [filterOpen, setFilterOpen] = useState(false);
   const [fDsa, setFDsa] = useState('');
@@ -31,17 +33,17 @@ export default function LoanFileTracker() {
 
   useEffect(() => { if (params.get('open')) setOpenId(params.get('open')); }, [params]);
 
-  const counts = useMemo(() => TABS.reduce((a, t) => ({ ...a, [t]: t === 'All' ? loanFiles.length : loanFiles.filter((f) => f.status === t.toLowerCase()).length }), {}), [loanFiles]);
+  const counts = useMemo(() => TABS.reduce((a, t) => ({ ...a, [t]: loanFiles.filter((f) => inTab(f, t)).length }), {}), [loanFiles]);
   const list = useMemo(() => loanFiles
-    .filter((f) => tab === 'All' || f.status === tab.toLowerCase())
+    .filter((f) => (stage ? f.status === stage : inTab(f, tab)))
     .filter((f) => !fDsa || f.dsaId === fDsa)
     .filter((f) => !fFrom || f.updatedAt >= fFrom)
     .filter((f) => !fTo || f.updatedAt <= fTo)
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)), [loanFiles, tab, fDsa, fFrom, fTo]);
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)), [loanFiles, tab, stage, fDsa, fFrom, fTo]);
 
   const open = loanFiles.find((f) => f.id === openId);
   const active = fDsa || fFrom || fTo;
-  const maxStage = Math.max(...STAGES.map((s) => loanFiles.filter((f) => f.status === s).length), 1);
+  const maxStage = Math.max(...STAGES.map((s) => loanFiles.filter((f) => f.status === s.id).length), 1);
 
   return (
     <Page mode="slide">
@@ -53,12 +55,12 @@ export default function LoanFileTracker() {
       {/* Pipeline funnel */}
       <div className={styles.pipeline}>
         {STAGES.map((s) => {
-          const n = loanFiles.filter((f) => f.status === s).length;
+          const n = loanFiles.filter((f) => f.status === s.id).length;
           return (
-            <button key={s} className={styles.stage} onClick={() => setTab(s.replace(/\b\w/g, (c) => c.toUpperCase()))}>
-              <b style={{ color: COLORS[s] }}>{n}</b>
-              <span>{s === 'under review' ? 'Review' : s.replace(/\b\w/g, (c) => c.toUpperCase())}</span>
-              <motion.div className={styles.stageBar} style={{ background: COLORS[s] }} initial={{ width: 0 }} animate={{ width: `${(n / maxStage) * 100}%` }} transition={{ duration: 0.8 }} />
+            <button key={s.id} className={`${styles.stage} ${stage === s.id ? styles.stageOn : ''}`} onClick={() => setStage(stage === s.id ? null : s.id)}>
+              <b style={{ color: stageColor(s.id) }}>{n}</b>
+              <span>{s.short}</span>
+              <motion.div className={styles.stageBar} style={{ background: stageColor(s.id) }} initial={{ width: 0 }} animate={{ width: `${(n / maxStage) * 100}%` }} transition={{ duration: 0.8 }} />
             </button>
           );
         })}
@@ -66,14 +68,14 @@ export default function LoanFileTracker() {
 
       <div className={styles.tabs} style={{ marginTop: 12 }}>
         {TABS.map((t) => (
-          <button key={t} className={`${styles.tab} ${tab === t ? styles.tabOn : ''}`} onClick={() => setTab(t)}>
+          <button key={t} className={`${styles.tab} ${!stage && tab === t ? styles.tabOn : ''}`} onClick={() => { setTab(t); setStage(null); }}>
             {t} <span className={styles.count}>{counts[t]}</span>
           </button>
         ))}
       </div>
 
       {list.length === 0 ? <EmptyState emoji="📁" title="No files here" subtitle="Try another status or clear filters." actionLabel={active ? 'Clear filters' : undefined} onAction={() => { setFDsa(''); setFFrom(''); setFTo(''); }} /> : (
-        <motion.div className="stack" variants={listContainer} initial="initial" animate="animate" key={tab}>
+        <motion.div className="stack" variants={listContainer} initial="initial" animate="animate" key={stage ?? tab}>
           {list.map((f) => (
             <motion.div key={f.id} variants={listItem}>
               <Card padding={16} onClick={() => setOpenId(f.id)}>
@@ -110,25 +112,8 @@ export default function LoanFileTracker() {
               <div><div className="big-number">{formatINR(open.amount)}</div><div className="hint">loan amount</div></div>
               <div style={{ textAlign: 'right' }}><div className="big-number">{open.docs.filter(([, s]) => s === 'done').length}/{open.docs.length}</div><div className="hint">documents</div></div>
             </div>
-            <div className="label" style={{ marginBottom: 8 }}>Timeline</div>
-            <div className={styles.timeline}>
-              {open.timeline.map(([d, s], i) => (
-                <div key={i} className={styles.tlRow}>
-                  {i < open.timeline.length - 1 && <div className={styles.tlLine} />}
-                  <div className={styles.tlDot} style={{ background: COLORS[s] }} />
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{s.replace(/\b\w/g, (c) => c.toUpperCase())}</div>
-                    <div className="hint">{formatDate(d, { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-                  </div>
-                </div>
-              ))}
-              {open.status !== 'disbursed' && open.status !== 'rejected' && (
-                <div className={styles.tlRow} style={{ opacity: 0.5 }}>
-                  <div className={styles.tlDot} style={{ background: 'var(--border)' }} />
-                  <div><div style={{ fontWeight: 600 }}>Next: {STAGES[STAGES.indexOf(open.status) + 1]?.replace(/\b\w/g, (c) => c.toUpperCase())}</div><div className="hint">Expected in 3–5 days</div></div>
-                </div>
-              )}
-            </div>
+            <div className="label" style={{ marginBottom: 8 }}>File lifecycle</div>
+            <FileLifecycle status={open.status} timeline={open.timeline} expanded />
           </>
         )}
       </BottomSheet>

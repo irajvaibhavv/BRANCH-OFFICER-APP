@@ -1,0 +1,16 @@
+{
+  "_note": "The BO's monthly incentive grid. Paid on total disbursement only (lead, 2026-10-14). Rates and the minimum are DEMO values — replace with the lender's payout grid. The whole month's disbursement is paid at the slab it reaches (retrospective slabs). Minimum anchored on an NBFC business-loan RM productivity bar of Rs 25-40 lakh a month.",
+  "minDisbursement": 2500000,
+  "slabs": [
+    { "from": 2500000, "rate": 0.3 },
+    { "from": 5000000, "rate": 0.4 },
+    { "from": 10000000, "rate": 0.5 },
+    { "from": 20000000, "rate": 0.6 }
+  ],
+  "closeToDisbursal": ["pending_docs", "ops_query", "ops_disbursal", "otc_pdd"],
+  "rules": [
+    "Paid only on the amount disbursed in the month — logins, sanctions and visits do not pay.",
+    "Payout is held while any OTC/PDD document on your disbursed files is overdue.",
+    "A file whose EMI bounces in its first 3 months is clawed back from the next payout."
+  ]
+}

@@ -1,0 +1,9 @@
+[
+  { "empCode": "EMP10234", "name": "Rajesh Kumar", "role": "Branch Officer" },
+  { "empCode": "EMP10311", "name": "Amit Joshi", "role": "Sales Officer" },
+  { "empCode": "EMP10342", "name": "Kavita Shinde", "role": "Sales Officer" },
+  { "empCode": "EMP10378", "name": "Rohan Pawar", "role": "Relationship Executive" },
+  { "empCode": "EMP10405", "name": "Neha Kulkarni", "role": "Relationship Executive" },
+  { "empCode": "EMP10419", "name": "Sagar Mhatre", "role": "Field Executive" },
+  { "empCode": "EMP10433", "name": "Pallavi Gokhale", "role": "Credit Officer" }
+]

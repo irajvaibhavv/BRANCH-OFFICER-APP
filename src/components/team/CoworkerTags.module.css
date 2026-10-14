@@ -1,0 +1,9 @@
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; padding: 3px 6px 3px 3px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); }
+.chip small { font-weight: 500; opacity: 0.8; }
+.chip button { display: inline-flex; color: inherit; padding: 2px; }
+.box { position: relative; }
+.list { margin-top: 6px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card); overflow: hidden; }
+.opt { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.opt:last-child { border-bottom: 0; }
+.opt:active { background: var(--accent); }

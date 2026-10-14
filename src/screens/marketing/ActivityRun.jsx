@@ -19,7 +19,8 @@ import { currentPosition } from '../../hooks/useGeolocation';
 import { downscale } from '../../services/sarthi/photo';
 import { typeOf, clock } from '../../components/marketing/activityTypes';
 import { AREA_COORDS } from '../../utils/areas';
-import { km } from '../../utils/route';
+import { START, km } from '../../utils/route';
+import { buildNewCase, CUSTOM_CASES_KEY } from '../../services/sarthi/knowledge';
 import { PRODUCTS } from '../../utils/loanCalc';
 import { formatINR, toISODate } from '../../utils/formatters';
 import styles from './marketing.module.css';
@@ -36,13 +37,17 @@ const templateOf = (text, l) => {
   const link = `https://smfg.example/v/${l.id}`;
   return text.split(link).join('{link}').split(l.name.split(' ')[0]).join('{name}').split(l.product).join('{product}');
 };
-const blankLead = (area) => ({ name: '', phone: '', business: '', product: PRODUCTS[0], amount: '', area, note: '', tagged: [] });
+const blankLead = (area) => ({ kind: 'customer', name: '', phone: '', business: '', product: PRODUCTS[0], amount: '', area, note: '', tagged: [] });
+// A lead met at an activity is also a client, saved as a Lead in Clients: a customer (walk-in case, ready for a PD) or a DSA / connector.
+const LEAD_KINDS = [['customer', 'Customer'], ['dsa', 'DSA'], ['connector', 'Connector']];
+const KIND_LABEL = { customer: 'Customer lead', dsa: 'DSA lead', connector: 'Connector lead' };
 
 /** Running a marketing activity: start/end with a geo check-in, timestamped photos, and leads captured on the spot. */
 export default function ActivityRun() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { marketing, saveMarketing, team } = useAppState();
+  const { marketing, saveMarketing, team, addDsa } = useAppState();
+  const [, setCases] = useLocalStorage(CUSTOM_CASES_KEY, []);
   const { officer } = useAuth();
   const { toast } = useToast();
   // Photos live apart from the activity record so their weight cannot break its write.
@@ -110,14 +115,30 @@ export default function ActivityRun() {
   };
   const saveLead = () => {
     const e = {};
-    if (lead.name.trim().length < 3) e.name = 'Enter the customer’s name';
+    if (lead.name.trim().length < 3) e.name = 'Enter the name';
     if (!/^[6-9]\d{9}$/.test(lead.phone)) e.phone = 'Enter a 10-digit mobile number';
     setErrors(e);
     if (Object.keys(e).length) return;
-    const rec = { ...lead, id: `ld${crypto.randomUUID().slice(0, 8)}`, name: lead.name.trim(), amount: Number(lead.amount) || null, at: new Date().toISOString(), by: officer.id, activityId: a.id };
+    const name = lead.name.trim();
+    let clientId;
+    if (lead.kind === 'customer') {
+      const c = buildNewCase({
+        name, phone: lead.phone, age: '', area: lead.area, business: lead.business.trim() || 'Business not yet known', businessKey: '', // trade asked on the PD; '' not null — matchPattern lowercases it
+        businessName: lead.business.trim(), businessVintage: '', loanPurpose: lead.product, loanAmountRequested: lead.amount, declaredIncome: 0,
+      });
+      setCases((prev) => [{ ...c, fromActivity: a.id }, ...prev]);
+      clientId = c.id;
+    } else {
+      const [lat, lng] = AREA_COORDS[lead.area] ?? [START.lat, START.lng];
+      clientId = addDsa({
+        name, phone: `+91 ${lead.phone.slice(0, 5)} ${lead.phone.slice(5)}`, firm: lead.business.trim() || null, location: `${lead.area}, Pune`,
+        lat, lng, distanceKm: +km(START, { lat, lng }).toFixed(1), ...(lead.kind === 'connector' && { channel: 'connector' }), fromActivity: a.id,
+      }).id;
+    }
+    const rec = { ...lead, id: `ld${crypto.randomUUID().slice(0, 8)}`, name, amount: Number(lead.amount) || null, at: new Date().toISOString(), by: officer.id, activityId: a.id, clientId };
     saveMarketing({ id: a.id, leads: [...leads, rec] });
     const names = rec.tagged.map((c) => team.find((m) => m.empCode === c)?.name.split(' ')[0]).filter(Boolean);
-    toast(`Lead added · ${rec.name}${names.length ? ` · ${names.join(', ')} tagged` : ''}`, 'success');
+    toast(`${rec.name} saved as a ${KIND_LABEL[rec.kind].toLowerCase()} in Clients${names.length ? ` · ${names.join(', ')} tagged` : ''}`, 'success', 2600);
     setLead(null);
   };
 
@@ -216,7 +237,8 @@ export default function ActivityRun() {
               <Avatar name={l.name} size={36} />
               <div className="grow" style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{l.name}</div>
-                <div className="hint truncate">{[l.business, l.product, l.amount && formatINR(l.amount)].filter(Boolean).join(' · ')}</div>
+                <div className="hint truncate">{[l.business, (l.kind ?? 'customer') === 'customer' && l.product, l.amount && formatINR(l.amount)].filter(Boolean).join(' · ')}</div>
+                {l.clientId && <button type="button" className={styles.clientChip} onClick={() => navigate(l.kind === 'customer' ? `/sarthi/brief/${l.clientId}` : `/dsas/${l.clientId}`)}>{KIND_LABEL[l.kind]} · open in Clients</button>}
                 {l.tagged?.length > 0 && <div className="hint truncate" style={{ color: 'var(--primary)', fontWeight: 600 }}>@ {l.tagged.map((c) => `${team.find((m) => m.empCode === c)?.name.split(' ')[0] ?? c} (${c})`).join(', ')}</div>}
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -248,11 +270,16 @@ export default function ActivityRun() {
       <BottomSheet open={!!lead} onClose={() => setLead(null)} title="Add lead">
         {lead && (
           <div className="stack" style={{ gap: 14 }}>
-            <Input label="Customer name" placeholder="e.g. Ramesh Pawar" value={lead.name} onChange={setL('name')} error={errors.name} />
+            <div className={styles.kindSeg} role="group" aria-label="This is a">
+              {LEAD_KINDS.map(([k, l]) => <button key={k} type="button" className={lead.kind === k ? styles.kindOn : ''} onClick={() => setLead((x) => ({ ...x, kind: k }))}>{l}</button>)}
+            </div>
+            <Input label="Name" placeholder="e.g. Ramesh Pawar" value={lead.name} onChange={setL('name')} error={errors.name} />
             <Input label="Mobile number" inputMode="numeric" maxLength={10} prefix="+91" placeholder="98XXXXXXXX" value={lead.phone} onChange={(e) => setLead((l) => ({ ...l, phone: e.target.value.replace(/\D/g, '') }))} error={errors.phone} />
-            <Input label="Business (optional)" placeholder="e.g. Pawar Hardware" value={lead.business} onChange={setL('business')} />
-            <Select label="Interested in" value={lead.product} onChange={setL('product')} options={PRODUCTS.map((p) => ({ value: p, label: p }))} />
-            <Input label="Amount needed (optional)" inputMode="numeric" prefix="₹" placeholder="500000" value={lead.amount} onChange={(e) => setLead((l) => ({ ...l, amount: e.target.value.replace(/\D/g, '') }))} />
+            <Input label={lead.kind === 'customer' ? 'Business (optional)' : 'Firm (optional)'} placeholder={lead.kind === 'customer' ? 'e.g. Pawar Hardware' : 'e.g. Pawar Finserv'} value={lead.business} onChange={setL('business')} />
+            {lead.kind === 'customer' && <>
+              <Select label="Interested in" value={lead.product} onChange={setL('product')} options={PRODUCTS.map((p) => ({ value: p, label: p }))} />
+              <Input label="Amount needed (optional)" inputMode="numeric" prefix="₹" placeholder="500000" value={lead.amount} onChange={(e) => setLead((l) => ({ ...l, amount: e.target.value.replace(/\D/g, '') }))} />
+            </>}
             <Input label="Note (optional)" textarea placeholder="What they need, best time to call…" value={lead.note} onChange={setL('note')} />
             <CoworkerTags label="Tag a co-worker to follow up (optional)" value={lead.tagged} onChange={(tagged) => setLead((l) => ({ ...l, tagged }))} />
             <Button full onClick={saveLead}>Save lead</Button>

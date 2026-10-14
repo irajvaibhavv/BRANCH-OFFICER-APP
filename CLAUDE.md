@@ -95,6 +95,10 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   (with none or several, the parser cannot know which field is meant, so it abstains). Measured
   saves: "pandrah hazaar" read as 12,000, "bais hazaar" as 20,000, "saath customer" as 6. `saath`
   is read as 60 only before a scale word or countable noun, so "mere saath partner hai" stays text.
+  Qwen3 thinks by default — the `<think>` text spent the 300-token budget, no JSON came back, and the extraction's
+  backoff retries (plus its bad-JSON retry) held the question for 5-10s. Both proxies now send `reasoning_effort: 'none'`
+  and strip `<think>`; `extractFacts` has no backoff retries and a 2.5s budget (`VITE_SARTHI_EXTRACT_MS`), after which
+  the question call goes ahead and the facts fence backfills.
   Checked against the 978-example extraction set (2026-09-26): spellings are folded ("baarah" = "barah"), sawa/
   saade/paune shift the next number (+¼, +½, −¼), "sau" is a scale, "no" is never 9, and a model value that is a
   conversion of the spoken one (implied thousands, daily/yearly → monthly) or a zero ("koi nahi") is kept. Summed
@@ -343,6 +347,11 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
 - One folder per feature under `src/screens/`, each with its own `*.module.css`. Screens never import another screen's CSS — shared styles go in `src/styles/` (`variables.css` holds design tokens incl. dark theme) or become a `src/components/ui/` primitive.
 - Several related screens can live in one file and be exported as named exports (e.g. `MeetingRecorder.jsx` exports `RecordingDetail`, `RecordingsList`, `EngagementDetail`).
 - New screen: add folder under `screens/` → register route in `app/router.jsx` → map its path in `BottomTabBar.jsx` `activeTab()`.
+  (6) Every topic carries a Devanagari `speech`; a reply with no Devanagari speech fence gets one `toDevanagari` call, else the
+  topic's own line — Roman Hinglish fed to the Hindi voice was the "English accent after the first line". (7) The name is
+  checked in code like the PD (`nameVerdict` on `nameOnly`, firm words stripped): partial → "aap X ji hi hain?", someone
+  else → "aap unke kya lagte hain, X ji kahan hain?" → call them → handover, or a goodbye with no report. Firm and office
+  are rechecked against the record (`rechecksFor` name / office).
 - Screens never import from other screens. A hook several screens share goes in `src/hooks/` (e.g. `useSarthiReports`); a shared component goes in `src/components/<area>/`.
 - Files inside a feature folder drop the feature prefix (`services/sarthi/model.js`, not `sarthiModel.js`).
 - Page transitions use framer-motion via `components/layout/Page.jsx` with `AnimatePresence` in the router.

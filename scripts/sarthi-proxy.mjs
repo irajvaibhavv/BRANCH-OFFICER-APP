@@ -33,12 +33,14 @@ const groq = ({ systemPrompt, messages, temperature, maxTokens }) =>
       ],
       temperature,
       max_tokens: maxTokens,
+      // Qwen3 thinks by default; the <think> text ate the 300-token budget and no JSON ever arrived.
+      ...(/qwen3/i.test(SLM_MODEL) ? { reasoning_effort: 'none' } : {}),
     }),
   }).then(async (r) => {
     const data = await r.json();
     // Keep the status: a Groq 429 sent on as a 500 was never recognised as rate limiting by the client.
     if (!r.ok) throw Object.assign(new Error(data?.error?.message || `Groq ${r.status}`), { status: r.status });
-    return data.choices?.[0]?.message?.content || '';
+    return (data.choices?.[0]?.message?.content || '').replace(/<think>[\s\S]*?(<\/think>|$)/g, '').trim();
   });
 
 const gemini = (body) =>

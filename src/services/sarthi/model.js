@@ -150,29 +150,39 @@ export async function extractFacts(answerText, { section = '', recent = [] } = {
     : '';
   const user = `Interview section: ${section || 'unknown'}${context}\n\nBorrower's answer: "${answerText}"`;
   const provider = routeFor('extract_facts');
+  const started = Date.now();
 
-  const first = await askAgent({
+  // No backoff retries: the question waits on this call, and the facts fence backfills whatever it misses.
+  const first = await withBudget(askAgent({
     systemPrompt: EXTRACTOR_SYSTEM,
     messages: [{ role: 'user', content: user }],
     temperature: 0.2,
     maxTokens: 300,
     provider,
-  });
+    retries: 0,
+  }), EXTRACT_BUDGET_MS);
 
   const parsed = readJson(first);
   if (parsed) return reconcileNumbers(clean(parsed), answerText);
 
-  // Retry the same provider — escalating would add the LLM's latency on top.
-  const retry = await askAgent({
+  // Bad JSON: retry the same provider once if the budget has room — escalating would add the LLM's latency on top.
+  const left = EXTRACT_BUDGET_MS - (Date.now() - started);
+  if (left < 600) throw new Error('bad JSON, no time left to retry');
+  const retry = await withBudget(askAgent({
     systemPrompt: `${EXTRACTOR_SYSTEM}\n\nYour last reply was not valid JSON. Return a raw JSON object and nothing else. If no facts were stated, return exactly: {}`,
     messages: [{ role: 'user', content: user }],
     temperature: 0.1,
     maxTokens: 300,
     provider,
-  });
+    retries: 0,
+  }), left);
 
   return reconcileNumbers(clean(readJson(retry) || {}), answerText);
 }
+
+// Knob: the longest the borrower waits on extraction before the question call goes ahead without it.
+const EXTRACT_BUDGET_MS = Number(import.meta.env.VITE_SARTHI_EXTRACT_MS) || 2500;
+const withBudget = (p, ms) => Promise.race([p, new Promise((_, fail) => { setTimeout(() => fail(new Error(`over ${ms}ms`)), ms); })]);
 
 // ---- interview turns ----
 

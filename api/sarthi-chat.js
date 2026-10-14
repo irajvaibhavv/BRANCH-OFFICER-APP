@@ -55,6 +55,8 @@ async function callGroq({ systemPrompt, messages, temperature, maxTokens }) {
       ],
       temperature,
       max_tokens: maxTokens,
+      // Qwen3 thinks by default; the <think> text ate the 300-token budget and no JSON ever arrived.
+      ...(/qwen3/i.test(SLM_MODEL) ? { reasoning_effort: 'none' } : {}),
     }),
   });
 
@@ -64,7 +66,7 @@ async function callGroq({ systemPrompt, messages, temperature, maxTokens }) {
     err.status = response.status;
     throw err;
   }
-  return data.choices?.[0]?.message?.content || '';
+  return (data.choices?.[0]?.message?.content || '').replace(/<think>[\s\S]*?(<\/think>|$)/g, '').trim();
 }
 
 // Plain-text streaming. Errors before the first chunk return JSON with a status, like the buffered path.

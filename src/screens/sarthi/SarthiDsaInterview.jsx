@@ -7,7 +7,8 @@ import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
 import CallSetup from '../../components/sarthi/CallSetup';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { askAgent, parseClaims } from '../../services/sarthi/agent';
-import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, openingLine, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport } from '../../services/sarthi/dsa';
+import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, openingLine, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport, toDevanagari, presenceLines, nameOnly, DEVANAGARI } from '../../services/sarthi/dsa';
+import { nameVerdict, confirmReply, speakerIsSomeoneElse, applicantComing, relationOf } from '../../services/sarthi/idChecks';
 import { stopSpeaking, listen, canListen, canSpeak, setSilent } from '../../services/voice';
 import { speakStreamed } from '../../services/sarthi/stream';
 import { stopCamera } from '../../services/sarthi/video';
@@ -140,17 +141,76 @@ export default function SarthiDsaInterview() {
       const directive = directiveFor(action, file);
       const raw = await askAgent({ systemPrompt: interviewerPrompt(file, directive), messages: turnMessages(history.current, directive), maxTokens: 400 });
       ({ display: text, speech } = parseClaims(raw, 0));
+      // No Devanagari speech fence: the Hindi voice would read the Hinglish caption in an English accent.
+      if (!DEVANAGARI.test(speech)) {
+        speech = await toDevanagari(text);
+        if (!speech && action.kind === 'topic') ({ ask: text, speech } = action.topic);
+      }
       history.current.push({ role: 'assistant', content: raw });
     } catch (e) {
       console.warn(`[sarthi] DSA turn failed (${e?.message}) — plain question`);
-      text = action.kind === 'topic' ? action.topic.ask : 'Thoda aur bataiye?';
-      speech = undefined;
+      if (action.kind === 'topic') ({ ask: text, speech } = action.topic);
+      else { text = 'Thoda aur bataiye?'; speech = 'थोड़ा और बताइए?'; }
       history.current.push({ role: 'assistant', content: text });
     }
     if (doneRef.current) return;
     transcript.current.push({ from: 'ai', text });
     say(text, speech);
   }, [file, say, finish]);
+
+  // Who is on the call is decided in code, like the PD: a review with "Raj" is not a review of Priya's work.
+  const lines = useMemo(() => (dsa ? presenceLines(dsa) : null), [dsa?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const idCheck = useRef({ verified: false, handedOver: false, unclear: 0 });
+  const sayFixed = (step, line) => {
+    current.current = { kind: 'id', step };
+    transcript.current.push({ from: 'ai', text: line.text });
+    history.current.push({ role: 'assistant', content: `\`\`\`speech\n${line.speech}\n\`\`\`\n${line.text}` });
+    say(line.text, line.speech);
+  };
+  // No review with someone else: say goodbye and go back to the DSA's profile, with no report.
+  const endNoReview = (line) => {
+    doneRef.current = true;
+    stopListen.current?.();
+    transcript.current.push({ from: 'ai', text: line.text });
+    say(line.text, line.speech, () => { stopCamera(); navigate(`/dsas/${dsa.id}`, { replace: true }); });
+  };
+  const askName = () => { current.current = { kind: 'topic', topic: DSA_TOPICS[0] }; };
+  const verifiedNow = () => { idCheck.current.verified = true; ask(nextAction()); };
+  /** The name answer against the file. true = handled here (a presence step was asked), false = carry on with the review. */
+  const checkName = (text) => {
+    const other = speakerIsSomeoneElse(text, dsa.name);
+    if (other?.away) { endNoReview(lines.later); return true; }
+    const v = nameVerdict(nameOnly(text, dsa), dsa.name);
+    if (other || v === 'different') {
+      if (idCheck.current.handedOver) { endNoReview(lines.later); return true; }
+      sayFixed('relation', lines.relation);
+      return true;
+    }
+    if (v === 'partial' || v === 'conflict') { sayFixed('confirm', lines.confirm); return true; }
+    idCheck.current.verified = true;
+    return false;
+  };
+  const handleId = (step, text) => {
+    if (step === 'confirm') {
+      const reply = confirmReply(text, dsa.name);
+      if (reply === 'yes') { verifiedNow(); return; }
+      if (reply === 'no') { if (idCheck.current.handedOver) endNoReview(lines.later); else sayFixed('relation', lines.relation); return; }
+      idCheck.current.unclear += 1;
+      if (idCheck.current.unclear >= 2) endNoReview(lines.later); else sayFixed('confirm', lines.confirmAgain);
+      return;
+    }
+    if (step === 'relation' || step === 'call') {
+      if (step === 'relation') qa.current.push({ id: 'presence', section: 'Identity', q: `Someone other than ${dsa.name} answered first — who are they, and where is ${dsa.name.split(' ')[0]}?`, a: `${text} (${relationOf(text)})` });
+      if (applicantComing(text)) {
+        idCheck.current.handedOver = true;
+        rechecks.current.push({ detail: `The call was answered by someone else first; ${dsa.name} was called to the phone.`, answer: text });
+        sayFixed('handover', lines.handover);
+        askName();
+        return;
+      }
+      if (step === 'relation') sayFixed('call', lines.call); else endNoReview(lines.later);
+    }
+  };
 
   const nextAction = () => {
     if (queue.current.length) return queue.current.shift();
@@ -170,6 +230,8 @@ export default function SarthiDsaInterview() {
 
     const cur = current.current;
     const topic = cur.topic;
+    if (cur.kind === 'id') { handleId(cur.step, text); return; }
+    if (topic?.id === 'name' && !idCheck.current.verified && checkName(text)) return;
     if (cur.kind === 'recheck') {
       rechecks.current.push({ detail: cur.detail, answer: text });
     } else if (topic) {

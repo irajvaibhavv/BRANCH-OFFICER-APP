@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FiX, FiChevronLeft, FiChevronRight, FiCheck, FiHelpCircle, FiUser, FiCpu, FiFlag, FiAlertTriangle, FiArrowRight, FiEdit2, FiFileText } from 'react-icons/fi';
@@ -11,6 +11,8 @@ import Button from '../../components/ui/Button';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { getCase } from '../../services/sarthi/knowledge';
 import { loadHot, prepareHotQuestions, officerQa, summariseOfficerPd } from '../../services/sarthi/prep';
+import { dsaFile, dsaOfficerQuestions, writeDsaReport, fallbackDsaReport } from '../../services/sarthi/dsa';
+import { useAppState } from '../../context/AppStateContext';
 import styles from './SarthiOfficer.module.css';
 
 // The officer takes the PD themselves, one of Sarthi's file questions per slide (the DSA prompter's layout),
@@ -30,16 +32,8 @@ export default function SarthiOfficer() {
   const c = getCase(id);
   const [hot, setHot] = useState(() => loadHot(id));
   const [notes, setNotes] = useLocalStorage(`bo_sarthi_officer_${id}`, {});
-  const [i, setI] = useState(0);
-  const [dir, setDir] = useState(1);
-  const [secs, setSecs] = useState(0);
   const [params] = useSearchParams();
   const [, setSummary] = useLocalStorage(`bo_sarthi_officer_sum_${id}`, null);
-
-  useEffect(() => {
-    const t = setInterval(() => setSecs((s) => s + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
 
   useEffect(() => {
     if (hot?.questions?.length) return undefined;
@@ -54,9 +48,85 @@ export default function SarthiOfficer() {
   if (!c) return null;
   const questions = hot?.questions ?? [];
   if (params.get('done') === '1') return <OfficerResult c={c} qa={officerQa(questions, notes)} />;
+  return (
+    <Deck
+      name={c.name} kind="PD" questions={questions} notes={notes} setNotes={setNotes}
+      sectionOf={(q) => SECTION[q?.section] ?? SECTION.loan_purpose}
+      waitText={`Sarthi is reading ${c.name.split(' ')[0]}'s file…`}
+      finishLabel="Save & finish PD"
+      // Finishing shows what was said and a summary, like a recorded meeting; a fresh finish re-summarises the notes.
+      onFinish={() => { setSummary(null); navigate(`/sarthi/officer/${id}?done=1`, { replace: true }); }}
+      onSwitch={() => navigate(`/sarthi/interview/${c.id}`, { replace: true })}
+    />
+  );
+}
+
+// DSA review sections, in the order Sarthi walks them.
+const DSA_SECTION = {
+  Identity: '#2563eb', 'Where customers come from': '#0e7490', 'File quality': '#d97706', Numbers: '#16a34a',
+  'Working with us': '#7c3aed', 'Plan ahead': '#db2777', Compliance: '#dc2626',
+};
+
+/**
+ * /sarthi/officer/dsa/:id — the officer takes the DSA review themselves: Sarthi's topics as cards, each with what the
+ * branch's record says, so a wrong answer can be challenged on the spot. Finishing writes the same DSA report.
+ */
+export function SarthiDsaOfficer() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { getDsa, loanFiles, engagements } = useAppState();
+  const dsa = getDsa(id);
+  const file = useMemo(() => (dsa ? dsaFile(dsa, { loanFiles, engagements }) : null), [dsa?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const questions = useMemo(() => (file ? dsaOfficerQuestions(file) : []), [file]);
+  const [notes, setNotes] = useLocalStorage(`bo_dsa_officer_${id}`, {});
+  const [, setReports] = useLocalStorage('bo_ai_reports', []);
+  const [writing, setWriting] = useState(false);
+  if (!dsa) return null;
+
+  const finish = async () => {
+    setWriting(true);
+    const qa = questions.filter((q) => notes[q.id]?.note?.trim()).map((q) => ({ id: q.id, section: q.section, q: q.q, a: notes[q.id].note.trim() }));
+    const input = { file, qa, rechecks: [] };
+    let report;
+    try { report = await writeDsaReport(input); } catch (e) {
+      console.warn(`[sarthi] DSA report failed (${e?.message}) — built from the notes`);
+      report = fallbackDsaReport(input);
+    }
+    const rid = `odsa_${Date.now()}`;
+    setReports((prev) => [{
+      ...report, id: rid, kind: 'dsa', partyId: dsa.id, partyName: dsa.name, scoreLabel: 'Partner score', recommendation: null,
+      createdAt: new Date().toISOString(), takenBy: 'officer', transcript: qa.flatMap((x) => [{ from: 'ai', text: x.q }, { from: 'user', text: x.a }]),
+    }, ...prev]);
+    navigate(`/ai/reports/${rid}`, { replace: true });
+  };
+
+  if (writing) return <div className={styles.screen}><p className={styles.wait}>Writing the review report from your notes…</p></div>;
+  return (
+    <Deck
+      name={dsa.name} kind="Review" questions={questions} notes={notes} setNotes={setNotes}
+      sectionOf={(q) => [q?.section ?? '', DSA_SECTION[q?.section] ?? '#4c1d95']}
+      finishLabel="Save & finish review"
+      onFinish={finish}
+      onSwitch={() => navigate(`/sarthi/dsa/${dsa.id}`, { replace: true })}
+    />
+  );
+}
+
+/** One question per slide (the DSA prompter's layout), each ticked with a note of what was said. */
+function Deck({ name, kind, questions, notes, setNotes, sectionOf, waitText, finishLabel, onFinish, onSwitch }) {
+  const navigate = useNavigate();
+  const [i, setI] = useState(0);
+  const [dir, setDir] = useState(1);
+  const [secs, setSecs] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setSecs((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+
   const q = questions[i];
   const n = (q && notes[q.id]) ?? {};
-  const [label, color] = SECTION[q?.section] ?? SECTION.loan_purpose;
+  const [label, color] = sectionOf(q);
   const covered = questions.filter((h) => notes[h.id]?.done).length;
   const set = (qid, patch) => setNotes((prev) => ({ ...prev, [qid]: { ...prev[qid], ...patch, at: new Date().toISOString() } }));
   const go = (k) => { if (k < 0 || k >= questions.length) return; setDir(k > i ? 1 : -1); setI(k); };
@@ -67,10 +137,10 @@ export default function SarthiOfficer() {
       <div className={styles.top}>
         <button className={styles.iconBtn} onClick={() => navigate(-1)} aria-label="Close"><FiX size={22} /></button>
         <div className={styles.who}>
-          <Avatar name={c.name} size={34} />
+          <Avatar name={name} size={34} />
           <div style={{ minWidth: 0 }}>
-            <div className={styles.name}>{c.name}</div>
-            <div className={styles.status}><span className={styles.dot} /><FiUser size={11} /> PD by you · {fmtClock(secs)}</div>
+            <div className={styles.name}>{name}</div>
+            <div className={styles.status}><span className={styles.dot} /><FiUser size={11} /> {kind} by you · {fmtClock(secs)}</div>
           </div>
         </div>
         <span className={styles.count}>{questions.length ? `${i + 1}/${questions.length}` : ''}</span>
@@ -81,7 +151,7 @@ export default function SarthiOfficer() {
       </div>
 
       <div className={styles.stage}>
-        {!q && <p className={styles.wait}>Sarthi is reading {c.name.split(' ')[0]}&apos;s file…</p>}
+        {!q && <p className={styles.wait}>{waitText}</p>}
         <AnimatePresence mode="wait" custom={dir}>
           {q && (
             <motion.div
@@ -103,6 +173,7 @@ export default function SarthiOfficer() {
               </div>
               <h1 className={styles.headline}>{q.q}</h1>
               {q.why && <div className={styles.why}><FiHelpCircle size={13} /> <span><b>Why:</b> {q.why}</span></div>}
+              {q.record && <div className={styles.record}><FiFileText size={13} /> <span><b>Branch record:</b> {q.record} — if they say otherwise, ask them about it.</span></div>}
               <textarea
                 className={styles.note}
                 rows={3}
@@ -122,12 +193,11 @@ export default function SarthiOfficer() {
         <button className={`${styles.tickBtn} ${n.done ? styles.tickOn : ''}`} onClick={tick} disabled={!q}><FiCheck size={20} /> {n.done ? 'Covered' : 'Asked it'}</button>
         <button className={styles.navBtn} disabled={i >= questions.length - 1} onClick={() => go(i + 1)} aria-label="Next"><FiChevronRight size={24} /></button>
       </div>
-      {/* Finishing shows what was said and a summary, like a recorded meeting; a fresh finish re-summarises the notes. */}
-      <button className={styles.endBtn} onClick={() => { setSummary(null); navigate(`/sarthi/officer/${id}?done=1`, { replace: true }); }}>
-        <FiCheck size={16} /> Save &amp; finish PD
+      <button className={styles.endBtn} onClick={onFinish}>
+        <FiCheck size={16} /> {finishLabel}
         <span className={styles.endHint}>{covered}/{questions.length} covered</span>
       </button>
-      <button className={styles.switch} onClick={() => navigate(`/sarthi/interview/${c.id}`, { replace: true })}>
+      <button className={styles.switch} onClick={onSwitch}>
         <FiCpu size={14} /> Let Sarthi AI take it instead
       </button>
     </div>

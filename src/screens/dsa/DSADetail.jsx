@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { IoSparkles } from 'react-icons/io5';
-import { FiCheckCircle, FiClock, FiAlertTriangle, FiPhone, FiCalendar, FiMapPin, FiMic, FiUsers, FiFileText, FiChevronRight, FiPercent, FiMessageSquare } from 'react-icons/fi';
+import { FiCheckCircle, FiClock, FiAlertTriangle, FiPhone, FiCalendar, FiMapPin, FiMic, FiUsers, FiFileText, FiChevronRight, FiPercent, FiMessageSquare, FiUser } from 'react-icons/fi';
 import { IoLogoWhatsapp } from 'react-icons/io5';
 import Page from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
@@ -88,7 +88,8 @@ export default function DSADetail() {
         </div>
         <div className={styles.actions} style={{ marginTop: 8 }}>
           <button className={`${styles.actBtn} ${styles.actAi}`} onClick={() => navigate(`/sarthi/dsa/${dsa.id}`)}><IoSparkles size={16} /> Sarthi AI</button>
-          <button className={styles.actBtn} style={{ color: 'var(--primary)' }} onClick={() => navigate(`/scheduler?dsa=${dsa.id}`)}><FiCalendar size={16} /> Schedule meeting</button>
+          <button className={styles.actBtn} style={{ color: 'var(--primary)' }} onClick={() => navigate(`/sarthi/officer/dsa/${dsa.id}`)}><FiUser size={16} /> Review yourself</button>
+          <button className={styles.actBtn} style={{ color: 'var(--primary)' }} onClick={() => navigate(`/scheduler?dsa=${dsa.id}`)}><FiCalendar size={16} /> Schedule</button>
         </div>
       </div>
 

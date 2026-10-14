@@ -23,7 +23,7 @@ import PhotoCapture from '../../components/sarthi/PhotoCapture';
 import { startFrameCapture, stopCamera, pauseCamera, resumeCamera, getObservations, resetObservations } from '../../services/sarthi/video';
 import { downscale, analysePhoto, PHOTO_ASKS } from '../../services/sarthi/photo';
 import { checkUpload, liveProvenance } from '../../services/sarthi/photoCheck';
-import { stopSpeaking, listen, canListen, canSpeak, setSilent } from '../../services/voice';
+import { stopSpeaking, listen, canListen, canSpeak, setSilent, ANSWER_PAUSE_MS } from '../../services/voice';
 import { speakStreamed } from '../../services/sarthi/stream';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { sarthiVoice, prerendered, gendered, aboutSarthi } from '../../services/sarthi/voice';
@@ -172,7 +172,7 @@ export default function SarthiInterview() {
           if (cancelled || answered || doneRef.current || mutedRef.current) { if (!answered) stopListen.current = null; return; }
           setTimeout(() => { if (!cancelled && !doneRef.current) session(); }, 250);
         },
-        endAfterMs: 1200,
+        endAfterMs: ANSWER_PAUSE_MS,
       });
       stopListen.current = () => { cancelled = true; stop(); };
     };

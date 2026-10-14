@@ -245,51 +245,82 @@ export function stopSpeaking() {
 }
 
 /**
- * Listen once. onInterim(text) streams partial words, onFinal(text) fires with the sentence.
+ * Listen once. onInterim(text) streams partial words, onFinal(text) fires with the whole answer.
  * Returns a stop() function.
+ *
+ * With `endAfterMs`, the turn ends only after that much silence — never when the browser decides. Chrome ends a
+ * recognition session on its own at a short pause (and on network blips); submitting there cut people off mid-answer,
+ * dropping it lost their words. So a session the browser ends is restarted at once, with what was said kept as a prefix.
  */
 export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN', endAfterMs = 0 }) {
   if (!SR) { onError?.('unsupported'); return () => {}; }
-  const r = new SR();
-  r.lang = lang; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
-  let final = '';
-  let heard = '';
+  let r = null;
+  let prefix = '';   // said in earlier sessions of this same answer
+  let heard = '';    // said in the current session
   let quiet = null;
   let watchdog = null;
   let settled = false;
-  // Chrome sometimes never fires onend after stop() (the speech service stalls), which left an answer on screen
-  // with the app still "listening" forever. Whichever comes first — onend or the watchdog — settles the turn, once.
+  let stopping = false; // we ended it (silence or the caller), so onend settles instead of restarting
+  let restarts = 0;
+  const all = () => `${prefix} ${heard}`.replace(/\s+/g, ' ').trim();
+  // Chrome sometimes never fires onend after stop() (the speech service stalls). Whichever comes first — onend or the
+  // watchdog — settles the turn, once.
   const settle = () => {
     if (settled) return;
     settled = true;
     clearTimeout(quiet); clearTimeout(watchdog);
-    // Chrome also ends a session on its own at a short pause, before the words are marked final. Dropping them there
-    // restarted listening with an empty line, so the next words "replaced" the first. Callers that stop on purpose
-    // guard onFinal themselves.
-    const text = final.trim() || heard;
+    const text = all();
     if (text) onFinal?.(text);
     onEnd?.();
   };
-  r.onresult = (e) => {
-    let interim = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const t = e.results[i][0].transcript;
-      if (e.results[i].isFinal) final += t; else interim += t;
-    }
-    heard = (final + interim).trim();
-    onInterim?.(heard);
-    // The browser's own end-of-speech wait is ~2s on phones; endAfterMs closes the turn sooner.
-    if (endAfterMs && heard) {
-      clearTimeout(quiet);
-      quiet = setTimeout(() => {
-        try { r.stop(); } catch { /* ignore */ }
-        watchdog = setTimeout(() => { try { r.abort(); } catch { /* ignore */ } settle(); }, 1500);
-      }, endAfterMs);
-    }
+  const stopNow = () => {
+    stopping = true;
+    try { r?.stop(); } catch { /* ignore */ }
+    watchdog = setTimeout(() => { try { r?.abort(); } catch { /* ignore */ } settle(); }, 1500);
   };
-  r.onerror = (e) => { if (!settled) onError?.(e.error); };
-  // The silence stop can land before the last words are marked final; keep what was on screen.
-  r.onend = settle;
-  try { r.start(); } catch (e) { onError?.(String(e)); }
-  return () => { clearTimeout(quiet); try { r.stop(); } catch { /* ignore */ } };
+  const begin = () => {
+    r = new SR();
+    r.lang = lang; r.interimResults = true; r.continuous = !!endAfterMs; r.maxAlternatives = 1;
+    heard = '';
+    r.onresult = (e) => {
+      // Rebuilt from every result each time, and a result that only extends the one before replaces it: Android Chrome
+      // in continuous mode repeats the phrase so far as a new result ("main", "main Raj", "main Raj hoon").
+      const parts = [];
+      for (let i = 0; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript.trim();
+        if (!t) continue;
+        if (parts.length && t.toLowerCase().startsWith(parts.at(-1).toLowerCase())) parts[parts.length - 1] = t;
+        else parts.push(t);
+      }
+      heard = parts.join(' ');
+      onInterim?.(all());
+      if (endAfterMs && all()) {
+        clearTimeout(quiet);
+        quiet = setTimeout(stopNow, endAfterMs);
+      }
+    };
+    r.onerror = (e) => {
+      if (settled) return;
+      if (e.error === 'no-speech' || e.error === 'aborted' || e.error === 'network') return; // onend restarts
+      stopping = true; // permission, no mic — restarting cannot help
+      onError?.(e.error);
+    };
+    r.onend = () => {
+      if (settled) return;
+      if (stopping || !endAfterMs) { settle(); return; }
+      // The browser ended it, not the silence timer: keep their words and listen on.
+      prefix = all();
+      heard = '';
+      restarts += 1;
+      if (restarts > 30) { settle(); return; } // runaway guard; the caller starts a fresh turn
+      try { begin(); } catch { settle(); }
+    };
+    try { r.start(); } catch (err) { onError?.(String(err)); }
+  };
+  begin();
+  return () => { clearTimeout(quiet); stopping = true; try { r?.stop(); } catch { /* ignore */ } };
 }
+
+// How long a pause ends a spoken answer in a Sarthi interview. 1.2s cut people off while they thought — Hindi speakers
+// pause mid-sentence ("haan… woh… pandrah hazaar"). Knob: VITE_SARTHI_PAUSE_MS.
+export const ANSWER_PAUSE_MS = Number(import.meta.env.VITE_SARTHI_PAUSE_MS) || 2000;

@@ -7,9 +7,9 @@ import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
 import CallSetup from '../../components/sarthi/CallSetup';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { askAgentStream, parseClaims, peekSpeech } from '../../services/sarthi/agent';
-import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, openingLine, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport, deepFor, deepRechecks, toDevanagari, presenceLines, nameOnly, dsaAway, DEVANAGARI } from '../../services/sarthi/dsa';
+import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, openingLine, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport, deepFor, deepRechecks, declined, fallbackLine, toDevanagari, presenceLines, nameOnly, dsaAway, DEVANAGARI } from '../../services/sarthi/dsa';
 import { nameVerdict, confirmReply, speakerIsSomeoneElse, applicantComing, relationOf } from '../../services/sarthi/idChecks';
-import { stopSpeaking, listen, canListen, canSpeak, setSilent } from '../../services/voice';
+import { stopSpeaking, listen, canListen, canSpeak, setSilent, ANSWER_PAUSE_MS } from '../../services/voice';
 import { speakStreamed } from '../../services/sarthi/stream';
 import { stopCamera } from '../../services/sarthi/video';
 import { sarthiVoice, gendered, aboutSarthi } from '../../services/sarthi/voice';
@@ -50,6 +50,8 @@ export default function SarthiDsaInterview() {
   const rechecks = useRef([]);   // [{ detail, answer }]
   const flags = useRef([]);      // admissions in their own words: [{ tone, text }]
   const deepDone = useRef(new Set());
+  const refused = useRef(new Set()); // topics they declined once
+  const [aiDown, setAiDown] = useState(null); // why the last turn fell back to a fixed line
   const nums = useRef({});
   const idx = useRef(0);
   const queue = useRef([]);
@@ -84,7 +86,7 @@ export default function SarthiDsaInterview() {
           if (cancelled || answered || doneRef.current || mutedRef.current) return;
           setTimeout(() => { if (!cancelled && !doneRef.current) session(); }, 250);
         },
-        endAfterMs: 1800, // a DSA explains; 1.2s cut them off mid-thought
+        endAfterMs: ANSWER_PAUSE_MS,
       });
       stopListen.current = () => { cancelled = true; stop(); };
     };
@@ -163,6 +165,7 @@ export default function SarthiDsaInterview() {
         },
       });
       ({ display: text, speech } = parseClaims(raw, 0));
+      setAiDown(null);
       if (early) {
         if (doneRef.current) return;
         history.current.push({ role: 'assistant', content: raw });
@@ -184,8 +187,8 @@ export default function SarthiDsaInterview() {
       // Failed mid-stream after the voice started: what was said stands as the question.
       if (early) { caption = early; transcript.current.push({ from: 'ai', text: early }); history.current.push({ role: 'assistant', content: early }); showCaption(); streamDone = true; advance(); return; }
       console.warn(`[sarthi] DSA turn failed (${e?.message}) — plain question`);
-      if (action.kind === 'topic' || action.deep) ({ ask: text, speech } = action.deep ?? action.topic);
-      else { text = 'Thoda aur bataiye?'; speech = 'थोड़ा और बताइए?'; }
+      setAiDown(e?.message || 'no reply');
+      ({ text, speech } = fallbackLine(action));
       history.current.push({ role: 'assistant', content: text });
     }
     if (doneRef.current) return;
@@ -267,6 +270,16 @@ export default function SarthiDsaInterview() {
     const topic = cur.topic;
     if (cur.kind === 'id') { handleId(cur.step, text); return; }
     if (topic?.id === 'name' && !idCheck.current.verified && checkName(text)) return;
+    // A refusal gets a person's answer once ("koi baat nahi, bas andaaza?"); a second one is accepted and noted.
+    if (topic && cur.kind !== 'recheck' && declined(text)) {
+      const prev = qa.current.find((x) => x.id === topic.id);
+      if (prev) prev.a += ` / ${text}`; else qa.current.push({ id: topic.id, section: topic.section, q: topic.ask, a: text });
+      if (!refused.current.has(topic.id)) { refused.current.add(topic.id); ask({ kind: 'refusal', topic, text }); return; }
+      flags.current.push({ tone: 'warning', text: `Declined to answer: ${topic.goal} — "${text.slice(0, 60)}"` });
+      const next = nextAction();
+      ask(next.kind === 'topic' ? { ...next, ack: true } : next);
+      return;
+    }
     if (cur.kind === 'recheck') {
       rechecks.current.push({ detail: cur.detail, answer: text });
     } else if (cur.kind === 'deep') {
@@ -355,6 +368,7 @@ export default function SarthiDsaInterview() {
         <div className={styles.bandTop}>
           <LiveBadge on={cameraOn} />
           <span className={styles.who}>{dsa.name} · DSA review</span>
+          {aiDown && <span className={styles.aiDown} title={aiDown}>AI not reachable · fixed questions</span>}
         </div>
         {cameraOn
           ? <div className={styles.pip}><AiAvatar state={avatar} size={58} label={false} /></div>

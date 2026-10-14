@@ -294,9 +294,12 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
 - **Questions for this file** (`prep.js`): the brief screen drafts 12-15 file-specific questions with the LLM (cached in
   `bo_sarthi_hotq_<case>`), each with a `why` for the officer and a `section`; with no model, `ruleHotQuestions` builds
   them from the file's own figures (cash share, running loans, enquiries, ITR, GST threshold, deposits, purpose).
-  Start asks who takes the PD: **Sarthi AI** asks them at the end of their section (`nextHot`, `memory.hotAnswers`,
-  reported as "Questions prepared from the file"); **Branch Officer** opens `/sarthi/officer/:id`, a tick-and-note sheet
-  (`bo_sarthi_officer_<case>`), one question per slide; finishing opens `?done=1` — Summary | Transcript like a recorded meeting, the summary written by the LLM from the notes only (`summariseOfficerPd`, cached in `bo_sarthi_officer_sum_<case>`, else built from the notes). Walk-ins have no file, so no questions and no chooser. **No duplicates**: every file
+  Two buttons on the brief, no chooser: **Sarthi AI** asks them at the end of their section (`nextHot`, `memory.hotAnswers`,
+  reported as "Questions prepared from the file"); **Take PD yourself** opens `/sarthi/officer/:id`, a tick-and-note sheet
+  (`bo_sarthi_officer_<case>`), one question per slide; finishing opens `?done=1` — Summary | Transcript like a recorded meeting, the summary written by the LLM from the notes only (`summariseOfficerPd`, cached in `bo_sarthi_officer_sum_<case>`, else built from the notes). Walk-ins have no file, so no questions and no Take-yourself button. The same deck (`Deck` in
+  SarthiOfficer.jsx) runs a DSA review by the officer (`/sarthi/officer/dsa/:id`, "Review yourself" on the DSA profile):
+  `dsaOfficerQuestions` puts the branch's record under each topic so a wrong answer is challenged on the spot, and finishing
+  writes the same DSA report (`writeDsaReport`) into `bo_ai_reports`. **No duplicates**: every file
   question is asked, and one that also gets a standard fact lists it in `covers` — that standard question (and its
   cross-question) is skipped, and the file question is asked where it would have been. Skipped only while the file
   question is pending: if its answer did not give the fact, the standard one is asked after all. Mahesh: 75 → ~56 turns.
@@ -362,6 +365,12 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   checked in code like the PD (`nameVerdict` on `nameOnly`, firm words stripped): partial → "aap X ji hi hain?", someone
   else → "aap unke kya lagte hain, X ji kahan hain?" → call them → handover, or a goodbye with no report. Firm and office
   are rechecked against the record (`rechecksFor` name / office).
+  (9) A refusal ("nahi bataunga", "kyun bataun", "private hai" — `declined()`) is not a vague answer: it gets one warm
+  `refusal` turn (why the branch asks, an easier way — a range, haan/nahi); a second refusal is accepted with "koi baat
+  nahi", noted as a report flag, and the review moves on. A turn the model cannot answer says `fallbackLine(action)` —
+  specific to the turn, never a bare "thoda aur bataiye" — and the call shows "AI not reachable" (`aiDown`, the reason
+  in its title) so the cause is visible on a phone. The usual cause on Vercel is a missing `ANTHROPIC_API_KEY`
+  (with `GEMINI_API_KEY` removed there is no LLM at all).
   (8) **What the branch knows** beyond its files is `src/data/sarthi/dsaIntel.json` (years in trade, sub-agents seen on
   their code, other lenders, customer fee complaints, a code another lender closed, financials prepared on their side) —
   `file.intel`, kept out of `dsas.json` so the AppState seed is untouched. `intelRechecks` challenges every denial against

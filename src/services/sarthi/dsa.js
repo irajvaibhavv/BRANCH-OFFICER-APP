@@ -275,6 +275,10 @@ ${genderRule()} You sound like a warm relationship manager who knows their numbe
   do not add a second question, do not jump ahead. If they already answered THIS TURN's topic in passing, confirm it briefly in the question.
 - You know nothing about their files or numbers beyond what THIS TURN gives you. Never invent a figure.
 - "Pata nahi" is a valid answer — thank them and move on.
+- Talk like a person on a phone call, not a form. React to what they actually said before you ask — if they ask you something
+  ("aap kaun?", "kyun pooch rahe ho?"), answer it in one line first; if they sound busy or annoyed, acknowledge it
+  ("samajh sakta hoon, bas thodi der aur"). Never open two turns the same way, and never say a bare "thoda aur bataiye" —
+  always say exactly what you want to know.
 - Never say "aakhri" (sawal, baat, cheez) or "last question" — you do not know how many are left.
 - If they push ("officer ko bulao", "status batao", "jaldi karo"), say in a few words that the officer will call them, then ask THIS TURN's
   question anyway. Never ask for their phone number (the branch has it), never say goodbye — the program ends the call.
@@ -360,16 +364,62 @@ export function openingLine() {
 }
 
 /** THIS TURN for an action: { kind: topic | probe | recheck, topic, detail, text }. */
+// "Nahi bataunga", "kyun bataun", "private hai" — a refusal, which needs a person's answer, not a vague-answer probe.
+const REFUSE = /nahi\s+(bataunga|bataungi|batayenge|batana|bata\s*(sakta|sakti|sakte|paunga|paungi))|nahi\s+batana|kyu[nm]?\s+bata(u|un|oon|en|yen)|aapko\s+kya|aap\s+kyu[nm]?\s+pooch|private|personal\s+(hai|baat)|not\s+(telling|going\s+to\s+tell)|won'?t\s+tell|no\s+comment|skip|chhod\s*(o|do|iye|dijiye)|next\s+(question|sawal|pucho)|नहीं\s*बता|क्यों\s*बता|प्राइवेट/i;
+export const declined = (text) => REFUSE.test(String(text));
+
+/** Said as-is when the model cannot be reached — specific to the turn, never a bare "thoda aur bataiye". */
+export function fallbackLine(action) {
+  if (action.kind === 'topic') return { text: action.topic.ask, speech: action.topic.speech };
+  if (action.kind === 'deep') return { text: action.deep.ask, speech: action.deep.speech };
+  if (action.kind === 'probe') return { text: `Achha… thoda detail mein bataiye — ${action.topic.ask}`, speech: `अच्छा… थोड़ा डिटेल में बताइए। ${action.topic.speech}` };
+  if (action.kind === 'refusal') return { text: 'Koi baat nahi, bilkul exact nahi chahiye — bas ek andaaza bata dijiye, chalega.', speech: 'कोई बात नहीं, बिल्कुल एक्ज़ैक्ट नहीं चाहिए। बस एक अंदाज़ा बता दीजिए, चलेगा।' };
+  return { text: 'Humare record mein yeh thoda alag dikh raha hai… ek baar confirm kar dijiye?', speech: 'हमारे रिकॉर्ड में यह थोड़ा अलग दिख रहा है… एक बार कन्फ़र्म कर दीजिए?' };
+}
+
 export function directiveFor(action, file) {
   if (action.kind === 'recheck') return `FRIENDLY RECHECK. ${action.detail}\nSay both figures kindly, like doing the hisaab together, and ask them to explain. One question. These two figures are the only numbers you may say.`;
-  if (action.kind === 'deep') return `FOLLOW UP on their last answer — the officer's next question: ${action.deep.goal}\nPlain example: "${action.deep.ask}"\nAsk it open and curious, never suspicious, and never say why you ask. One question.`;
-  if (action.kind === 'probe') return `FOLLOW UP on "${action.topic.goal}". Their answer was: "${action.text}". It gave nothing concrete — ask ONE specific follow-up on this same topic to get a name, a number or an example.${action.topic.num ? ' They must give a number; ask for a rough one.' : ''}`;
+  if (action.kind === 'deep') return `FOLLOW UP on their last answer — the officer's next question: ${action.deep.goal}\nPlain example: "${action.deep.ask}"\nFirst react in a few words to what they just said, then ask it — open and curious, never suspicious. One question.`;
+  if (action.kind === 'probe') return `FOLLOW UP on "${action.topic.goal}". Their answer was: "${action.text}".\nIt gave nothing concrete. React to what they actually said first, in their own terms (a few words), then ask ONE specific follow-up on this same topic — name exactly what you want (a name, a number, an example). Never a bare "thoda aur bataiye".${action.topic.num ? ' A rough number or a range is fine — say so.' : ''}`;
+  if (action.kind === 'refusal') {
+    return `They did not want to answer "${action.topic.goal}". Their words: "${action.text}".\nRespond like a warm, experienced relationship manager on a phone call — never a script: if they asked why, answer that first. Acknowledge it without pressure, say in ONE short line why the branch asks this (so their files and payouts are handled right — never a threat), and offer an easier way to answer: a rough figure, a range, or just haan/nahi. One question. If they still decline, the program moves on.`;
+  }
   const t = action.topic;
+  const ack = action.ack ? 'They declined the last question and that is fine — start with a short, warm acceptance (vary it: "Koi baat nahi", "Theek hai, chhodiye"), then move on. ' : '';
   const stuck = t.stuck && file.stuck.length
     ? `\nOur record: ${file.stuck.map((f) => `${f.borrower} (${f.stage}, pending: ${f.pendingDocs.join(', ')})`).join('; ')}${file.rejected.length ? `; rejected: ${file.rejected.join(', ')}` : ''}. Name one of these files and ask what is holding it.`
     : '';
-  return `Ask about exactly this, and nothing else: ${t.goal}\nPlain example: "${t.ask}"${stuck}`;
+  return `${ack}Ask about exactly this, and nothing else: ${t.goal}\nPlain example: "${t.ask}"${stuck}`;
 }
+
+// ---- the officer takes the review themselves ----
+
+const rs = (n) => (n >= 100000 ? `Rs ${+(n / 100000).toFixed(1)} lakh` : `Rs ${Math.round(n).toLocaleString('en-IN')}`);
+
+/** What the branch's record says against each topic — shown under the question so the officer can cross-question. */
+function recordFor(id, file) {
+  const k = file.intel;
+  const avg = file.avgFilesPerMonth;
+  return {
+    name: file.firm ? `Firm on record: ${file.firm}` : 'No firm on record',
+    office: [`Office: ${file.location}`, k?.yearsInTrade && `about ${k.yearsInTrade} years in loan work`].filter(Boolean).join(' · '),
+    team: k ? (k.subAgents.length ? `Sub-agents seen on their code: ${k.subAgents.join(', ')}` : 'No sub-agents seen on their code') : null,
+    lenders: k?.otherLenders.length ? `Also logs files with: ${k.otherLenders.join(', ')}` : null,
+    recent: file.files.length ? `Their files with us: ${file.files.slice(0, 4).map((f) => f.borrower).join(', ')}` : null,
+    charges: k?.feeComplaints ? `${k.feeComplaints} customer${k.feeComplaints > 1 ? 's' : ''} told the branch they paid this DSA a fee` : null,
+    docs: k?.preparesFinancials ? 'Statements / ITRs on their files look prepared in one place' : null,
+    files_us: avg ? `Record: about ${Math.round(avg)} files a month (best month ${file.bestMonth})` : null,
+    approval: `Record: ${file.approvalRate}% approved`,
+    rejections: file.stuck.length ? `Stuck: ${file.stuck.map((f) => `${f.borrower} (${f.pendingDocs.join(', ')})`).join('; ')}` : null,
+    product: file.topProduct ? `Record: mostly ${file.topProduct} (${file.productMix.join(', ')})` : null,
+    commission: file.commission.pending ? `Record: ${rs(file.commission.pending)} pending` : null,
+    forecast: avg ? `Record pace: about ${Math.round(avg * 3)} files in 3 months` : null,
+    conduct: k?.codeBlocked ? `Branch knows: ${k.codeBlocked.lender} closed their code in ${k.codeBlocked.year} (${k.codeBlocked.reason})` : null,
+  }[id] ?? null;
+}
+
+/** The DSA review as the officer's checklist: the same topics Sarthi walks, each with the branch's record beside it. */
+export const dsaOfficerQuestions = (file) => DSA_TOPICS.map((t) => ({ id: t.id, section: t.section, q: t.ask, why: t.goal, record: recordFor(t.id, file) }));
 
 // ---- report ----
 

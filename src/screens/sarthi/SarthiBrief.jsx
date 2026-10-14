@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  FiAlertTriangle, FiArrowRight, FiBriefcase, FiCalendar, FiCheck, FiClock, FiCpu, FiCreditCard, FiFileText,
+  FiAlertTriangle, FiBriefcase, FiCalendar, FiCheck, FiClock, FiCpu, FiCreditCard, FiFileText,
   FiHelpCircle, FiMapPin, FiRefreshCw, FiRepeat, FiSearch, FiShield, FiTrendingDown, FiUser, FiX, FiZap,
   FiPhone, FiMessageSquare, FiChevronRight,
 } from 'react-icons/fi';
 import { IoLogoWhatsapp, IoSparkles } from 'react-icons/io5';
-import BottomSheet from '../../components/ui/BottomSheet';
 import Page, { listContainer, listItem } from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import EmptyState from '../../components/ui/EmptyState';
@@ -45,7 +44,6 @@ export default function SarthiBrief() {
   const c = getCase(id);
   const [hot, setHot] = useState(() => loadHot(id));
   const [preparing, setPreparing] = useState(false);
-  const [choose, setChoose] = useState(false);
   const [filter, setFilter] = useState('all');
   const [openWhy, setOpenWhy] = useState(null);
   const [tab, setTab] = useState('Overview');
@@ -108,7 +106,8 @@ export default function SarthiBrief() {
   ];
 
   const report = reports.find((r) => r.caseId === c.id);
-  const start = () => (isNew ? navigate(`/sarthi/interview/${c.id}`) : setChoose(true));
+  // Sarthi AI starts at once; "Take PD yourself" is its own button beside it.
+  const start = () => navigate(`/sarthi/interview/${c.id}`);
   const tabs = isNew ? TABS.filter((t) => t !== 'Questions') : TABS;
 
   return (
@@ -373,32 +372,6 @@ export default function SarthiBrief() {
         </motion.div>
       </AnimatePresence>
 
-      <BottomSheet open={choose} onClose={() => setChoose(false)} title="Who will take this PD?">
-        <div className={styles.choices}>
-          <button className={styles.choice} onClick={() => navigate(`/sarthi/interview/${c.id}`)}>
-            <span className={styles.choiceIcon}><FiCpu size={20} /></span>
-            <span>
-              <b>Sarthi AI</b>
-              <small>
-                {c.quickPd
-                  ? <>Hand the phone to {c.name.split(' ')[0]}. Sarthi runs a short {c.quickPd.length + 1}-question PD — identity, location, business and income — and checks every figure live.</>
-                  : <>Hand the phone to {c.name.split(' ')[0]}. Sarthi runs the full PD and also asks the
-                    {questions.length ? ` ${questions.length}` : ''} questions it suggested.</>}
-                {' '}Nothing else in the app is reachable until it ends.
-              </small>
-            </span>
-            <FiArrowRight className={styles.choiceGo} size={16} />
-          </button>
-          <button className={styles.choice} onClick={() => navigate(`/sarthi/officer/${c.id}`)}>
-            <span className={`${styles.choiceIcon} ${styles.choiceIconBo}`}><FiUser size={20} /></span>
-            <span>
-              <b>Branch Officer (you)</b>
-              <small>Take it yourself, with Sarthi&apos;s suggested questions on screen to tick off and note answers against.</small>
-            </span>
-            <FiArrowRight className={styles.choiceGo} size={16} />
-          </button>
-        </div>
-      </BottomSheet>
     </Page>
   );
 }

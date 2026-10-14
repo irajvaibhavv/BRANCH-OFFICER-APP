@@ -296,35 +296,6 @@
   color: var(--s-ink-2);
 }
 
-/* ---------------------------------------------------------------- who takes the PD */
-.choices { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
-.choice {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 14px;
-  text-align: left;
-  font-family: inherit;
-  color: var(--text-1);
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-}
-.choiceIcon {
-  flex: none;
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #7c3aed, #4c1d95);
-  color: #fff;
-}
-.choiceIconBo { background: linear-gradient(135deg, #0ea5e9, #0369a1); }
-.choice b { display: block; font-size: 15px; margin-bottom: 3px; }
-.choice small { display: block; font-size: 12.5px; line-height: 1.45; color: var(--text-2); }
-.choiceGo { flex: none; color: var(--text-2); }
 
 /* ---------------------------------------------------------------- header + tabs, as on a DSA */
 .detailHead { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 8px 0 20px; }

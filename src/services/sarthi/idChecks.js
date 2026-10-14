@@ -288,6 +288,11 @@ export function presenceLines(c) {
       text: `Achha, dhanyawaad. Loan ke liye ${first} ji ka khud yahan hona zaroori hai. Kya aap unhe abhi bula sakte hain?`,
       speech: `अच्छा, धन्यवाद। लोन के लिए ${hi} जी का ख़ुद यहाँ होना ज़रूरी है। क्या आप उन्हें अभी बुला सकते हैं?`,
     },
+    // They do not want the call ("baat nahi karni", "busy hoon"): leave kindly, no pressure.
+    unwilling: {
+      text: 'Bilkul, koi baat nahi — aapka time lene ke liye maafi. Jab aapko theek lage, hum dobara baat kar lenge. Dhanyavaad!',
+      speech: 'बिल्कुल, कोई बात नहीं। आपका टाइम लेने के लिए माफ़ी। जब आपको ठीक लगे, हम दोबारा बात कर लेंगे। धन्यवाद!',
+    },
     later: {
       text: `Arre, koi baat nahi, bilkul chinta mat kijiye! Jab ${first} ji aa jaayein aur unhe fursat mile, tab hum aaram se baat kar lenge. Aapne itna time diya, bahut shukriya — unko hamari taraf se namaste kahiyega!`,
       speech: `अरे, कोई बात नहीं, बिल्कुल चिंता मत कीजिए! जब ${hi} जी आ जाएँ, और उन्हें फ़ुरसत मिले, तब हम आराम से बात कर लेंगे। आपने इतना टाइम दिया, बहुत शुक्रिया। उनको हमारी तरफ़ से नमस्ते कहिएगा!`,

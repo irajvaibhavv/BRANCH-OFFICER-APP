@@ -351,6 +351,7 @@ export function presenceLines(file) {
     relation: { text: `Yeh review ${full} ji ke kaam ka hai. Aap unke kya lagte hain, aur ${first} ji abhi kahan hain?`, speech: `यह रिव्यू ${full} जी के काम का है। आप उनके क्या लगते हैं, और ${first} जी अभी कहाँ हैं?` },
     call: { text: `Achha, dhanyawaad. Review ${first} ji se hi karna hai. Kya aap unhe abhi bula sakte hain?`, speech: `अच्छा, धन्यवाद। रिव्यू ${first} जी से ही करना है। क्या आप उन्हें अभी बुला सकते हैं?` },
     handover: { text: `Bahut achha. Phone ${first} ji ko de dijiye. ${first} ji, namaste! Apna poora naam aur firm ka naam bataiye?`, speech: `बहुत अच्छा। फ़ोन ${first} जी को दे दीजिए। ${first} जी, नमस्ते! अपना पूरा नाम और फ़र्म का नाम बताइए?` },
+    unwilling: { text: `Bilkul, koi baat nahi — aapka time lene ke liye maafi. Hum ${first} ji se seedhe baat kar lenge. Dhanyavaad!`, speech: `बिल्कुल, कोई बात नहीं। आपका टाइम लेने के लिए माफ़ी। हम ${first} जी से सीधे बात कर लेंगे। धन्यवाद!` },
     later: { text: `Koi baat nahi! Jab ${first} ji free hon, tab hum unse aaram se baat kar lenge. Aapka bahut shukriya — unhe hamari taraf se namaste kahiyega!`, speech: `कोई बात नहीं! जब ${first} जी फ़्री हों, तब हम उनसे आराम से बात कर लेंगे। आपका बहुत शुक्रिया। उन्हें हमारी तरफ़ से नमस्ते कहिएगा!` },
   };
 }
@@ -364,12 +365,14 @@ export function openingLine() {
 }
 
 /** THIS TURN for an action: { kind: topic | probe | recheck, topic, detail, text }. */
-// "Nahi bataunga", "kyun bataun", "private hai" — a refusal, which needs a person's answer, not a vague-answer probe.
-const REFUSE = /nahi\s+(bataunga|bataungi|batayenge|batana|bata\s*(sakta|sakti|sakte|paunga|paungi))|nahi\s+batana|kyu[nm]?\s+bata(u|un|oon|en|yen)|aapko\s+kya|aap\s+kyu[nm]?\s+pooch|private|personal\s+(hai|baat)|not\s+(telling|going\s+to\s+tell)|won'?t\s+tell|no\s+comment|skip|chhod\s*(o|do|iye|dijiye)|next\s+(question|sawal|pucho)|नहीं\s*बता|क्यों\s*बता|प्राइवेट/i;
-export const declined = (text) => REFUSE.test(String(text));
 
 /** Said as-is when the model cannot be reached — specific to the turn, never a bare "thoda aur bataiye". */
 export function fallbackLine(action) {
+  if (action.kind === 'reply') {
+    const again = fallbackLine(action.of);
+    return { text: `Main branch se Sarthi hoon — bas aapke kaam ka chhota sa review hai. ${again.text}`, speech: `मैं ब्रांच से सारथी हूँ। बस आपके काम का छोटा सा रिव्यू है। ${again.speech ?? ''}` };
+  }
+  if (action.kind === 'id') return action.line;
   if (action.kind === 'topic') return { text: action.topic.ask, speech: action.topic.speech };
   if (action.kind === 'deep') return { text: action.deep.ask, speech: action.deep.speech };
   if (action.kind === 'probe') return { text: `Achha… thoda detail mein bataiye — ${action.topic.ask}`, speech: `अच्छा… थोड़ा डिटेल में बताइए। ${action.topic.speech}` };
@@ -381,6 +384,18 @@ export function directiveFor(action, file) {
   if (action.kind === 'recheck') return `FRIENDLY RECHECK. ${action.detail}\nSay both figures kindly, like doing the hisaab together, and ask them to explain. One question. These two figures are the only numbers you may say.`;
   if (action.kind === 'deep') return `FOLLOW UP on their last answer — the officer's next question: ${action.deep.goal}\nPlain example: "${action.deep.ask}"\nFirst react in a few words to what they just said, then ask it — open and curious, never suspicious. One question.`;
   if (action.kind === 'probe') return `FOLLOW UP on "${action.topic.goal}". Their answer was: "${action.text}".\nIt gave nothing concrete. React to what they actually said first, in their own terms (a few words), then ask ONE specific follow-up on this same topic — name exactly what you want (a name, a number, an example). Never a bare "thoda aur bataiye".${action.topic.num ? ' A rough number or a range is fine — say so.' : ''}`;
+  if (action.kind === 'reply') {
+    const of = action.of;
+    const goal = of.kind === 'recheck' ? of.detail : of.kind === 'deep' ? of.deep.goal : of.kind === 'id' ? of.line.text : of.topic?.goal;
+    return `They did not answer — they ${action.intent === 'question' ? 'asked you something' : 'pushed back'}: "${action.text}" (${action.gist}).\n`
+      + 'Respond to that first, like a person on a phone call, in one or two short lines — using only what you know: you are Sarthi from the branch,'
+      + ' doing a short review of their work with the branch (10-15 minutes), and the officer follows up on anything they raise. Never invent a fact,'
+      + ` a policy, a payout or a date. Then ask again, in fresh words: ${goal}`;
+  }
+  if (action.kind === 'id') {
+    return `You are checking who is on the call — the program decides this step; you only say it. Their last words: "${action.text}".
+React to what they said first, in a few warm words, then say this in your own words (same meaning, same one question): "${action.line.text}"`;
+  }
   if (action.kind === 'refusal') {
     return `They did not want to answer "${action.topic.goal}". Their words: "${action.text}".\nRespond like a warm, experienced relationship manager on a phone call — never a script: if they asked why, answer that first. Acknowledge it without pressure, say in ONE short line why the branch asks this (so their files and payouts are handled right — never a threat), and offer an easier way to answer: a rough figure, a range, or just haan/nahi. One question. If they still decline, the program moves on.`;
   }

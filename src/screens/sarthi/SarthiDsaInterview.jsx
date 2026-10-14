@@ -7,8 +7,9 @@ import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
 import CallSetup from '../../components/sarthi/CallSetup';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { askAgentStream, parseClaims, peekSpeech } from '../../services/sarthi/agent';
-import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, openingLine, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport, deepFor, deepRechecks, declined, fallbackLine, toDevanagari, presenceLines, nameOnly, dsaAway, DEVANAGARI } from '../../services/sarthi/dsa';
+import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, openingLine, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport, deepFor, deepRechecks, fallbackLine, toDevanagari, presenceLines, nameOnly, dsaAway, DEVANAGARI } from '../../services/sarthi/dsa';
 import { nameVerdict, confirmReply, speakerIsSomeoneElse, applicantComing, relationOf } from '../../services/sarthi/idChecks';
+import { readIntent } from '../../services/sarthi/intent';
 import { stopSpeaking, listen, canListen, canSpeak, setSilent, ANSWER_PAUSE_MS } from '../../services/voice';
 import { speakStreamed } from '../../services/sarthi/stream';
 import { stopCamera } from '../../services/sarthi/video';
@@ -51,6 +52,7 @@ export default function SarthiDsaInterview() {
   const flags = useRef([]);      // admissions in their own words: [{ tone, text }]
   const deepDone = useRef(new Set());
   const refused = useRef(new Set()); // topics they declined once
+  const replies = useRef({}); // times we answered their question / push-back, per question
   const [aiDown, setAiDown] = useState(null); // why the last turn fell back to a fixed line
   const nums = useRef({});
   const idx = useRef(0);
@@ -199,12 +201,8 @@ export default function SarthiDsaInterview() {
   // Who is on the call is decided in code, like the PD: a review with "Raj" is not a review of Priya's work.
   const lines = useMemo(() => (dsa ? presenceLines(dsa) : null), [dsa?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const idCheck = useRef({ verified: false, handedOver: false, unclear: 0 });
-  const sayFixed = (step, line) => {
-    current.current = { kind: 'id', step };
-    transcript.current.push({ from: 'ai', text: line.text });
-    history.current.push({ role: 'assistant', content: `\`\`\`speech\n${line.speech}\n\`\`\`\n${line.text}` });
-    say(line.text, line.speech);
-  };
+  // The code picks the step; Claude says it, reacting to their words. The fixed line is the fallback (fallbackLine).
+  const sayFixed = (step, line, text = '') => ask({ kind: 'id', step, line, text });
   // No review with someone else: say goodbye and go back to the DSA's profile, with no report.
   const endNoReview = (line) => {
     doneRef.current = true;
@@ -221,10 +219,10 @@ export default function SarthiDsaInterview() {
     const v = nameVerdict(nameOnly(text, dsa), dsa.name);
     if (other || v === 'different') {
       if (idCheck.current.handedOver) { endNoReview(lines.later); return true; }
-      sayFixed('relation', lines.relation);
+      sayFixed('relation', lines.relation, text);
       return true;
     }
-    if (v === 'partial' || v === 'conflict') { sayFixed('confirm', lines.confirm); return true; }
+    if (v === 'partial' || v === 'conflict') { sayFixed('confirm', lines.confirm, text); return true; }
     idCheck.current.verified = true;
     return false;
   };
@@ -232,9 +230,9 @@ export default function SarthiDsaInterview() {
     if (step === 'confirm') {
       const reply = confirmReply(text, dsa.name);
       if (reply === 'yes') { verifiedNow(); return; }
-      if (reply === 'no') { if (idCheck.current.handedOver) endNoReview(lines.later); else sayFixed('relation', lines.relation); return; }
+      if (reply === 'no') { if (idCheck.current.handedOver) endNoReview(lines.later); else sayFixed('relation', lines.relation, text); return; }
       idCheck.current.unclear += 1;
-      if (idCheck.current.unclear >= 2) endNoReview(lines.later); else sayFixed('confirm', lines.confirmAgain);
+      if (idCheck.current.unclear >= 2) endNoReview(lines.later); else sayFixed('confirm', lines.confirmAgain, text);
       return;
     }
     if (step === 'relation' || step === 'call') {
@@ -242,11 +240,11 @@ export default function SarthiDsaInterview() {
       if (applicantComing(text)) {
         idCheck.current.handedOver = true;
         rechecks.current.push({ detail: `The call was answered by someone else first; ${dsa.name} was called to the phone.`, answer: text });
-        sayFixed('handover', lines.handover);
+        sayFixed('handover', lines.handover, text);
         askName();
         return;
       }
-      if (step === 'relation') sayFixed('call', lines.call); else endNoReview(lines.later);
+      if (step === 'relation') sayFixed('call', lines.call, text); else endNoReview(lines.later);
     }
   };
 
@@ -266,12 +264,34 @@ export default function SarthiDsaInterview() {
     history.current.push({ role: 'user', content: text });
     if (LEAVING.test(text)) { finish(); return; }
 
-    const cur = current.current;
+    // An answer after our reply to their question belongs to the question asked before it.
+    const cur = current.current.kind === 'reply' ? current.current.of : current.current;
     const topic = cur.topic;
+    // What the answer means is read by the model (any wording); the code decides what to do with it. The figure is read
+    // at the same time, so the reading costs no extra wait on number topics.
+    setAvatar('thinking');
+    const wantsFigure = topic?.num && ['topic', 'probe', 'refusal'].includes(cur.kind);
+    const [{ intent, gist }, n] = await Promise.all([
+      readIntent({ question: lastLine.current.text, answer: text, name: dsa.name }),
+      wantsFigure ? figureFrom(topic, text) : Promise.resolve(null),
+    ]);
+    if (doneRef.current) return;
+    // They do not want the call: before we know it is the DSA, end it with no report; after, close kindly and report.
+    if (intent === 'stop') {
+      if (idCheck.current.verified) ask({ kind: 'closing' }); else endNoReview(lines.unwilling);
+      return;
+    }
+    // A question or a push-back is answered before the review goes on — twice at most per question, then it moves on.
+    const key = `${cur.kind}:${topic?.id ?? cur.step ?? ''}`;
+    if ((intent === 'question' || intent === 'upset') && (replies.current[key] ?? 0) < 2) {
+      replies.current[key] = (replies.current[key] ?? 0) + 1;
+      ask({ kind: 'reply', of: cur, text, gist, intent });
+      return;
+    }
     if (cur.kind === 'id') { handleId(cur.step, text); return; }
     if (topic?.id === 'name' && !idCheck.current.verified && checkName(text)) return;
     // A refusal gets a person's answer once ("koi baat nahi, bas andaaza?"); a second one is accepted and noted.
-    if (topic && cur.kind !== 'recheck' && declined(text)) {
+    if (topic && cur.kind !== 'recheck' && intent === 'refused') {
       const prev = qa.current.find((x) => x.id === topic.id);
       if (prev) prev.a += ` / ${text}`; else qa.current.push({ id: topic.id, section: topic.section, q: topic.ask, a: text });
       if (!refused.current.has(topic.id)) { refused.current.add(topic.id); ask({ kind: 'refusal', topic, text }); return; }
@@ -289,10 +309,8 @@ export default function SarthiDsaInterview() {
     } else if (topic) {
       const prev = qa.current.find((x) => x.id === topic.id);
       if (prev) prev.a += ` / ${text}`; else qa.current.push({ id: topic.id, section: topic.section, q: topic.ask, a: text });
-      let n = null;
-      if (topic.num) { setAvatar('thinking'); n = await figureFrom(topic, text); if (n != null) nums.current[topic.id] = n; }
-      if (doneRef.current) return;
-      if (cur.kind === 'topic' && needsProbe(topic, text, n) && !probed.current.has(topic.id)) {
+      if (topic.num && n != null) nums.current[topic.id] = n;
+      if (cur.kind === 'topic' && !topic.noProbe && (needsProbe(topic, text, n) || intent === 'vague') && !probed.current.has(topic.id)) {
         probed.current.add(topic.id);
         ask({ kind: 'probe', topic, text });
         return;

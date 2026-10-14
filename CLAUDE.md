@@ -365,12 +365,15 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   checked in code like the PD (`nameVerdict` on `nameOnly`, firm words stripped): partial → "aap X ji hi hain?", someone
   else → "aap unke kya lagte hain, X ji kahan hain?" → call them → handover, or a goodbye with no report. Firm and office
   are rechecked against the record (`rechecksFor` name / office).
-  (9) A refusal ("nahi bataunga", "kyun bataun", "private hai" — `declined()`) is not a vague answer: it gets one warm
-  `refusal` turn (why the branch asks, an easier way — a range, haan/nahi); a second refusal is accepted with "koi baat
-  nahi", noted as a report flag, and the review moves on. A turn the model cannot answer says `fallbackLine(action)` —
-  specific to the turn, never a bare "thoda aur bataiye" — and the call shows "AI not reachable" (`aiDown`, the reason
-  in its title) so the cause is visible on a phone. The usual cause on Vercel is a missing `ANTHROPIC_API_KEY`
-  (with `GEMINI_API_KEY` removed there is no LLM at all).
+  (9) **What a reply means is read by the model, not by patterns** (`services/sarthi/intent.js`, both interviews): each
+  answer gets a tiny Claude call (`readIntent`, 60 tokens, 2.5s budget `VITE_SARTHI_INTENT_MS`, run alongside the figure
+  read / residence check) → answered | vague | refused | stop | question | upset | someone_else. The CODE decides what to
+  do: stop → leave kindly (no report before identity is confirmed, report after); question / upset → the next turn first
+  answers it (DSA: a `reply` turn, then the same question again; PD: `replyPrefix` in front of THIS TURN), twice at most
+  per question; refused → asked softer once, then accepted, noted as a flag and (PD) the field given up; vague → one
+  follow-up; someone_else → the presence flow. The regexes in intent.js are only `guessIntent`, the fallback when the model
+  is late or down — do not grow them per phrase; that is the design this replaced. A turn the model cannot phrase says
+  `fallbackLine(action)` and the DSA call shows "AI not reachable" (`aiDown`, reason in its title).
   (8) **What the branch knows** beyond its files is `src/data/sarthi/dsaIntel.json` (years in trade, sub-agents seen on
   their code, other lenders, customer fee complaints, a code another lender closed, financials prepared on their side) —
   `file.intel`, kept out of `dsas.json` so the AppState seed is untouched. `intelRechecks` challenges every denial against

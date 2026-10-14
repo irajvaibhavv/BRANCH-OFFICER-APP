@@ -11,7 +11,8 @@ import { parseClaims, peekSpeech, peekDisplay, writeReport, VISION_URL, COMPLETE
 import { extractFacts, askTurn } from '../../services/sarthi/model';
 import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../services/sarthi/script';
 import { verifyClaims, computeEligibility, toNumber } from '../../services/sarthi/verifier';
-import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor, recordTradeAnswer, recordCrossAnswer, recordHotAnswer, acceptedFacts } from '../../services/sarthi/memory';
+import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor, recordTradeAnswer, recordCrossAnswer, recordHotAnswer, acceptedFacts, MAX_ASKS } from '../../services/sarthi/memory';
+import { readIntent, replyPrefix } from '../../services/sarthi/intent';
 import { queueRechecks, recordRecheckAnswer, driftRechecks } from '../../services/sarthi/recheck';
 import { loadHot, ruleHotQuestions } from '../../services/sarthi/prep';
 import { readNumbers } from '../../services/sarthi/hindiNumbers';
@@ -115,6 +116,10 @@ export default function SarthiInterview() {
   const demoRef = useRef(false);
   const mutedRef = useRef(false);
   const lastAction = useRef(null); // what the borrower is answering right now
+  const replyTo = useRef(null); // their last reply was not an answer — the next turn responds to it first
+  const replies = useRef({}); // questions / push-backs answered, per field (at most 2)
+  const refusals = useRef({}); // refusals, per field
+  const takeReplyPrefix = () => { const r = replyTo.current; replyTo.current = null; return r ? replyPrefix(r) : ''; };
   // The counter counts topics, not questions: a re-ask of the same field is not a new sawaal.
   const topics = useRef(new Set());
   const countTopic = (key) => {
@@ -455,7 +460,46 @@ export default function SarthiInterview() {
     }
 
     memory.current = recordTurn(memory.current, 'user', text);
+    // What the reply MEANS is read by the model (any wording); the code decides what to do. Started now, so it runs
+    // alongside the residence check and is usually back before extraction would have started.
+    const reading = readIntent({ question: lastLine.current.text, answer: text, name: caseData.name });
     if (stopForForeignResidence(text, borrowerTurn)) return;
+    const { intent, gist } = await reading;
+    if (doneRef.current) return;
+    const exitLine = presenceLines(caseData).unwilling;
+    // They do not want the call. Before we know it is the applicant: leave, no report. After: close kindly and report.
+    if (intent === 'stop') {
+      if (presence.current === 'done' || isIntake || caseData.isNew) sayFixed(exitLine, { then: finish });
+      else { presence.current = 'done'; sayFixed(exitLine, { then: leaveForLater }); }
+      return;
+    }
+    // Someone else on the phone, however they put it: the code's presence flow takes over.
+    if (intent === 'someone_else' && !isIntake && !caseData.isNew && presence.current !== 'done' && presence.current !== 'relation' && presence.current !== 'call') {
+      if (!stopForRelative(text, borrowerTurn)) startPresence(nameFromWords(text) ?? text, borrowerTurn);
+      return;
+    }
+    // A question, a push-back or a refusal: the next turn first responds to it (see replyPrefix). A refusal is asked
+    // softer once; the second time the field is left for the officer and noted.
+    const field = lastAction.current?.missingFields?.[0] ?? lastAction.current?.section ?? 'turn';
+    // Only on turns the model speaks: the fixed identity lines ("aap X ji hi hain?") are answered by the presence flow.
+    const fixedStep = ['confirm', 'relation', 'call', 'handover'].includes(presence.current);
+    if (!fixedStep && (intent === 'question' || intent === 'upset')) {
+      const k = `${intent}:${field}`;
+      replies.current[k] = (replies.current[k] ?? 0) + 1;
+      if (replies.current[k] <= 2) replyTo.current = { intent, text, gist };
+    }
+    if (intent === 'refused' && !fixedStep) {
+      const n = (refusals.current[field] ?? 0) + 1;
+      refusals.current[field] = n;
+      replyTo.current = { intent, text, gist, n };
+      if (n > 1 && lastAction.current?.missingFields?.[0]) {
+        memory.current = {
+          ...memory.current,
+          askCount: { ...memory.current.askCount, [field]: MAX_ASKS },
+          flags: [...memory.current.flags, { type: 'declined', field, severity: 'low', turn: borrowerTurn, followedUp: true, detail: `Declined to answer (${field.replace(/_/g, ' ')}): "${text.slice(0, 60)}"` }],
+        };
+      }
+    }
     // A yes carries on as the answer to the name question (stated_name is now the file's name, so the controller moves on).
     if (presence.current === 'confirm' && handleConfirm(text, borrowerTurn)) return;
     if (presence.current === 'relation' || presence.current === 'call') { handlePresence(text); return; }
@@ -572,7 +616,7 @@ export default function SarthiInterview() {
       const raw = await askTurn({
         caseData: subject,
         action,
-        directive: directiveText(action),
+        directive: takeReplyPrefix() + directiveText(action),
         messages: history.current,
         turn: borrowerTurn,
         onChunk: (full) => {

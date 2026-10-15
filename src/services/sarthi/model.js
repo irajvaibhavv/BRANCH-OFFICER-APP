@@ -4,6 +4,7 @@ import { EXTRACTABLE_KEYS, FIELD_DEFS } from './memory';
 import { reconcile } from './hindiNumbers';
 import { toNumber } from './verifier';
 import { MOCKS_ON, mockExtractFacts, mockTurn } from './mocks';
+import { turnMessages } from './dsa';
 
 // Measured routing rationale lives in CLAUDE.md (Sarthi → routing). Override per task via env.
 const TASK_ROUTES = {
@@ -194,6 +195,8 @@ export async function askTurn({ caseData, action, directive, messages, turn, onC
   if (MOCKS_ON) return mockTurn(action?.section ?? 'business', turn, provider);
 
   const systemPrompt = buildInterviewerPrompt(caseData, directive);
+  // THIS TURN is repeated after their last answer: from the system prompt alone, a long call drifted to topics of its own.
+  messages = turnMessages(messages, directive.split('\n\n')[0]);
 
   if (onChunk && provider === 'llm') {
     return askAgentStream({ systemPrompt, messages, temperature: INTERVIEWER_TEMP, onChunk });

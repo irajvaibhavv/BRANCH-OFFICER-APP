@@ -371,6 +371,8 @@ export function peekDisplay(partial) {
     .trim();
 }
 
+const CYRILLIC = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya' };
+
 export function parseClaims(raw, fallbackTurn) {
   const claims = [];
   let speech = '';
@@ -395,6 +397,8 @@ export function parseClaims(raw, fallbackTurn) {
     })
     .replace(/\[INTERVIEW_COMPLETE\]/g, '')
     .replace(/\n{3,}/g, '\n\n')
+    // Haiku now and then spells a Roman word with Cyrillic letters ("grahakон").
+    .replace(/[а-яё]/gi, (ch) => CYRILLIC[ch.toLowerCase()] ?? '')
     .trim();
   return { display, speech: speech || display, claims, facts, photo, complete: raw.includes(COMPLETE_TAG) };
 }

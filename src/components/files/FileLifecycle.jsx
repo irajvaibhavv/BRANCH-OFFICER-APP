@@ -52,6 +52,8 @@ export default function FileLifecycle({ status, timeline, expanded = false }) {
           })}
         </div>
       )}
+      {/* The list is long, so it can be closed from its end too. */}
+      {open && !expanded && <button className={styles.toggle} onClick={() => setOpen(false)}>Hide stages</button>}
     </div>
   );
 }

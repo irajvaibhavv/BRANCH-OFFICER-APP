@@ -203,8 +203,8 @@ function conditionMet(field, memory) {
     if (field.condition === 'purpose_needs_probe') return p.newVenture || p.personal;
     if (field.condition === 'amount_stretch') return p.stretch;
   }
-  // Salaried: only the home is photographed, so someone already at home has no other place to go to.
-  if (field.condition === 'place_known') return memory.collected.current_place != null && !(isSalaried(memory.caseData) && memory.collected.current_place === 'home');
+  // Asked by the controller with the photos (getNextAction), never in the personal walk — see "photoTime".
+  if (field.condition === 'place_known') return false;
   if (field.condition === 'name_mismatch') return !memory.caseData?.isNew && namesMatch(memory.collected.stated_name, memory.caseData?.name) === false;
   return true;
 }

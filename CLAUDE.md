@@ -283,7 +283,8 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   A corrected income resets `income_mentions` and skips the coaching check — a correction is not a coached answer.
   This is the one place the interviewer may point out a mismatch; the prompt still bans it everywhere else.
 - **Photos follow where they are** (2026-09-29): `current_place` (shop / home / other) is asked right after the name;
-  the controller asks that place's photo at once, then `other_place_possible` in the other place's words (`OTHER_PLACE_ASK`).
+  the photos wait (2026-10-22, `photoTime`): not until 2-6 business / job answers are in — a per-PD number from `memory.seed` —
+  so the call opens as a conversation, not an inspection, and the moment cannot be briefed. Then the controller asks that place's photo, then `other_place_possible` in the other place's words (`OTHER_PLACE_ASK`).
   Yes → that photo too ("pahunch kar kholiye, main intezaar karunga"); no → the next turn opens with "Koi baat nahi"
   (`placeNoAck`) and the PD carries on. Both photos are the controller's (`memory.photosAsked`); a photo fence the model adds
   on its own is ignored. Replaced `at_business_place` / `reached_business_place`, whose "pahunch kar bataiye" held
@@ -433,7 +434,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   are rechecked against the record (`rechecksFor` name / office).
   (9) **What a reply means is read by the model, not by patterns** (`services/sarthi/intent.js`, both interviews): each
   answer gets a tiny Claude call (`readIntent`, 60 tokens, 2.5s budget `VITE_SARTHI_INTENT_MS`, run alongside the figure
-  read / residence check) → answered | vague | refused | stop | question | upset | someone_else. The CODE decides what to
+  read / residence check — and, in the PD, alongside `extractFacts`: awaited one after the other they cost ~5s a turn) → answered | vague | refused | stop | question | upset | someone_else. The CODE decides what to
   do: stop → leave kindly (no report before identity is confirmed, report after); question / upset → the next turn first
   answers it (DSA: a `reply` turn, then the same question again; PD: `replyPrefix` in front of THIS TURN), twice at most
   per question; refused → asked softer once, then accepted, noted as a flag and (PD) the field given up; vague → one

@@ -471,9 +471,14 @@ export default function SarthiInterview() {
     }
 
     memory.current = recordTurn(memory.current, 'user', text);
-    // What the reply MEANS is read by the model (any wording); the code decides what to do. Started now, so it runs
-    // alongside the residence check and is usually back before extraction would have started.
+    // What the reply MEANS is read by the model (any wording); the code decides what to do. Fact extraction starts at the
+    // same moment: awaited one after the other they added up to ~5s before the question call even began. On a turn that
+    // turns out to be a stop or a handover the extraction is simply not used.
     const reading = readIntent({ question: lastLine.current.text, answer: text, name: caseData.name });
+    const extracting = extractFacts(text, {
+      section: memory.current.currentSection,
+      recent: transcript.current.filter((t) => t.role === 'assistant').slice(-1).map((t) => t.content),
+    }).then((f) => ({ f }), (e) => ({ e }));
     if (stopForForeignResidence(text, borrowerTurn)) return;
     const { intent, gist } = await reading;
     if (doneRef.current) return;
@@ -574,16 +579,11 @@ export default function SarthiInterview() {
         }
       }
 
-      let facts = {};
-      try {
-        facts = await extractFacts(text, {
-          section: memory.current.currentSection,
-          recent: transcript.current.filter((t) => t.role === 'assistant').slice(-1).map((t) => t.content),
-        });
-      } catch (e) {
-        // Not fatal: the question call's facts fence is the backstop. Never abandon the turn.
-        console.warn(`[sarthi] fact extraction failed (${e?.message}) — relying on the facts fence`);
-      }
+      // Already in flight since the answer came in (see `extracting`).
+      const extracted = await extracting;
+      // Not fatal: the question call's facts fence is the backstop. Never abandon the turn.
+      if (extracted.e) console.warn(`[sarthi] fact extraction failed (${extracted.e?.message}) — relying on the facts fence`);
+      let facts = extracted.f ?? {};
       // A filled figure said differently in this answer is dropped by acceptedFacts — but asked about first.
       const drift = driftRechecks(memory.current, facts, text);
       facts = acceptedFacts(memory.current, facts, answered);

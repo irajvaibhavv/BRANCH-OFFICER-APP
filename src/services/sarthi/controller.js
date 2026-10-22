@@ -239,38 +239,60 @@ export function getNextAction(memory, caseData) {
     known: knownFacts(memory),
     memory: { ...memory, photosAsked: [...asked, kind] },
   });
-  if (hereKind && !asked.includes(hereKind)) return photoTurn(hereKind, '');
-  // At home (now, or once they have gone there for its photo): the main room too, for the living conditions.
-  if (asked.includes('home') && !asked.includes('home_inside') && (hereKind === 'home' || c.other_place_possible === 'yes')) {
-    return photoTurn('home_inside', 'Ask gently and say it is fine to skip — it is their home. ');
-  }
-  // At the shop and they keep bills: the book itself, opened at today's page, while the counter is in front of them.
-  if (hereKind === 'shop' && c.billing_method && c.billing_method !== 'none' && !asked.includes('records')) {
-    return photoTurn('records', `They said they keep bills (${c.billing_method}). `);
-  }
-  // Random live challenges, planned once where they are and after its photos (at the shop, once billing is known).
-  if (hereKind && asked.includes(hereKind) && !memory.challengePlanned
-    && (hereKind !== 'shop' || c.billing_method != null || gaveUp(memory, 'billing_method'))) {
-    memory = { ...memory, challengePlanned: true, challengeQueue: planChallenges(hereKind, c, Math.random, memory.strict ? CHALLENGES_PER_PD + 1 : CHALLENGES_PER_PD) };
-  }
-  if (memory.challengeQueue?.length) {
-    const [step, ...rest] = memory.challengeQueue;
-    return {
-      action: 'ask_question',
-      section: memory.currentSection,
-      sectionLabel: here()?.label ?? '',
-      challenge: step,
-      ...(step.photo ? { photo: step.photo } : {}),
-      directive: `LIVE CHECK — ask exactly this, in your own simple words, keeping every detail (which rack, which date): "${step.ask}"`
-        + (step.photo ? ` Say the camera will open on their phone. Output the \`\`\`photo ${step.photo}\`\`\` fence.` : '')
-        + ' Ask it as a natural, friendly request. Never say it is a check or why you ask. No other question this turn.',
-      known: knownFacts(memory),
-      memory: { ...memory, challengeQueue: rest },
-    };
-  }
-  if (c.other_place_possible === 'yes' && !asked.includes(otherKind)) {
-    return photoTurn(otherKind, `They said they can go to their ${otherKind === 'shop' ? 'shop' : 'home'} now. Tell them to take their time`
-      + ' and open the camera once they reach — you will wait. ');
+  // Not at the start: a PD that opens with "photo bhejiye" feels like an inspection, and a fixed moment can be briefed.
+  // Photos begin after they have talked about themselves AND a few answers into the business or job — 2 to 6, a
+  // different number in every PD.
+  const coreAnswered = Object.keys(FIELD_DEFS_BY_KEY).filter((k) => CORE.has(FIELD_DEFS_BY_KEY[k].section) && c[k] != null).length;
+  const photoTime = coreAnswered >= 2 + Math.floor((memory.seed ?? 0) * 5);
+  if (photoTime) {
+    if (hereKind && !asked.includes(hereKind)) return photoTurn(hereKind, '');
+    // "Can you go to the other place now?" belongs with the photos, not with "where are you talking from".
+    if (c.current_place != null && c.other_place_possible == null && !gaveUp(memory, 'other_place_possible')
+      && !(salaried && hereKind === 'home')) {
+      const def = FIELD_DEFS_BY_KEY.other_place_possible;
+      return {
+        action: 'ask_question',
+        section: memory.currentSection,
+        sectionLabel: here()?.label ?? '',
+        missingFields: ['other_place_possible'],
+        directive: `Ask about: ${def.label}. Plain-words example: "${salaried ? OTHER_PLACE_ASK.shop : OTHER_PLACE_ASK[c.current_place] ?? def.ask}"`
+          + ' One question only, in your own simple words.',
+        known: knownFacts(memory),
+        memory: { ...memory, askCount: { ...memory.askCount, other_place_possible: (memory.askCount?.other_place_possible ?? 0) + 1 } },
+      };
+    }
+    // At home (now, or once they have gone there for its photo): the main room too, for the living conditions.
+    if (asked.includes('home') && !asked.includes('home_inside') && (hereKind === 'home' || c.other_place_possible === 'yes')) {
+      return photoTurn('home_inside', 'Ask gently and say it is fine to skip — it is their home. ');
+    }
+    // At the shop and they keep bills: the book itself, opened at today's page, while the counter is in front of them.
+    if (hereKind === 'shop' && c.billing_method && c.billing_method !== 'none' && !asked.includes('records')) {
+      return photoTurn('records', `They said they keep bills (${c.billing_method}). `);
+    }
+    // Random live challenges, planned once where they are and after its photos (at the shop, once billing is known).
+    if (hereKind && asked.includes(hereKind) && !memory.challengePlanned
+      && (hereKind !== 'shop' || c.billing_method != null || gaveUp(memory, 'billing_method'))) {
+      memory = { ...memory, challengePlanned: true, challengeQueue: planChallenges(hereKind, c, Math.random, memory.strict ? CHALLENGES_PER_PD + 1 : CHALLENGES_PER_PD) };
+    }
+    if (memory.challengeQueue?.length) {
+      const [step, ...rest] = memory.challengeQueue;
+      return {
+        action: 'ask_question',
+        section: memory.currentSection,
+        sectionLabel: here()?.label ?? '',
+        challenge: step,
+        ...(step.photo ? { photo: step.photo } : {}),
+        directive: `LIVE CHECK — ask exactly this, in your own simple words, keeping every detail (which rack, which date): "${step.ask}"`
+          + (step.photo ? ` Say the camera will open on their phone. Output the \`\`\`photo ${step.photo}\`\`\` fence.` : '')
+          + ' Ask it as a natural, friendly request. Never say it is a check or why you ask. No other question this turn.',
+        known: knownFacts(memory),
+        memory: { ...memory, challengeQueue: rest },
+      };
+    }
+    if (c.other_place_possible === 'yes' && !asked.includes(otherKind)) {
+      return photoTurn(otherKind, `They said they can go to their ${otherKind === 'shop' ? 'shop' : 'home'} now. Tell them to take their time`
+        + ' and open the camera once they reach — you will wait. ');
+    }
   }
   let ack = '';
   if (c.other_place_possible === 'no' && !memory.placeNoAck) {

@@ -1,10 +1,71 @@
 [
   {
+    "id": "sarthi_cafe_1",
+    "name": "Bhavishya",
+    "phone": "9958432973",
+    "age": 21,
+    "area": "Silver City, Gurgaon",
+    "areaKey": null,
+    "locations": {
+      "shop": null,
+      "home": null
+    },
+    "address": "Shop 21, Global Mart, Silver City, Gurgaon",
+    "business": "Coffee shop",
+    "businessKey": "restaurant",
+    "businessName": "CoffeeBuddy",
+    "businessVintage": "2 years",
+    "product": "Personal Loan",
+    "loanPurpose": "Not stated on the form",
+    "loanAmountRequested": 200000,
+    "declaredIncome": 50000,
+    "employment": "Self-employed",
+    "riskLevel": "medium",
+    "brief": {
+      "avgMonthlyCredit": null,
+      "bureauScore": null,
+      "existingEMIs": null,
+      "runningLoans": [],
+      "gstRegistered": false,
+      "gstVintage": null,
+      "itrFiled": false,
+      "itrIncome": null,
+      "bankStatementMonths": 0,
+      "largeDeposits": [],
+      "missingDocs": [
+        "Bank statement",
+        "ITR",
+        "Shop rent agreement or ownership proof"
+      ],
+      "areaDefaultRate": null,
+      "docsSubmitted": [
+        "Lead form — branch officer, handwritten"
+      ],
+      "digInto": [
+        "Aged 21 and running a coffee shop for 2 years — started at 19: who set it up and with whose money?",
+        "Personal loan asked for a business owner — what will the Rs 2 lakh actually be used for?",
+        "Declares Rs 50,000 a month with no bank statement or bureau record on file — rebuild it from cups a day, bill size and costs",
+        "Says no running EMIs — no bureau has been pulled to confirm it",
+        "Home is owned — in whose name? At 21 it is likely a parent's",
+        "Shop on the form: Shop 21, Global Mart, Silver City — check the shop location they name matches it"
+      ]
+    },
+    "riskPatternMatch": null,
+    "hi": {
+      "name": "भविष्य",
+      "firstName": "भविष्य",
+      "area": "सिल्वर सिटी, गुड़गाँव",
+      "businessName": "कॉफ़ी बडी",
+      "loanAmount": "दो लाख"
+    }
+  },
+  {
     "id": "sarthi_kirana_1",
     "name": "Mahesh Agarwal",
     "age": 44,
     "area": "Karol Bagh, Delhi",
     "areaKey": "Karol Bagh",
+    "locations": { "shop": { "lat": 28.651934, "lng": 77.190870 }, "home": null },
     "business": "Kirana store",
     "businessKey": "kirana_store",
     "businessName": "Agarwal General Store",
@@ -277,6 +338,7 @@
     "age": 41,
     "area": "Dwarka Sector 12, Delhi",
     "areaKey": "Dwarka",
+    "locations": { "shop": { "lat": 28.592140, "lng": 77.046020 }, "home": { "lat": 28.594870, "lng": 77.043150 } },
     "business": "Electrical shop, partnership with brother",
     "businessKey": "electrical_shop",
     "businessName": "Qureshi Electricals",

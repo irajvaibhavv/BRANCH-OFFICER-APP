@@ -23,7 +23,7 @@ export default async function handler(req, res) {
 
   try {
     if (claudeOn()) {
-      const text = await visionClaude({ image, prompt: prompt || VISION_PROMPT, maxTokens: prompt ? 200 : 100 });
+      const text = await visionClaude({ image, prompt: prompt || VISION_PROMPT, maxTokens: prompt ? 400 : 100 });
       return res.json({ observation: text.includes('nothing_notable') ? null : text });
     }
     const response = await fetch(
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
           }],
           generationConfig: {
             temperature: 0.3,
-            maxOutputTokens: prompt ? 200 : 100,
+            maxOutputTokens: prompt ? 400 : 100,
             // Required: with thinking on, a 100-token ceiling returns an empty string.
             thinkingConfig: { thinkingBudget: 0 },
           },

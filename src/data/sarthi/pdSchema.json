@@ -43,7 +43,8 @@
             "home",
             "other"
           ],
-          "ask": "Aap abhi kahan se baat kar rahe hain — dukaan se ya ghar se?"
+          "ask": "Aap abhi kahan se baat kar rahe hain — dukaan se ya ghar se?",
+          "askSalaried": "Aap abhi kahan se baat kar rahe hain — ghar se, office se ya kahin aur se?"
         },
         {
           "key": "other_place_possible",
@@ -117,17 +118,130 @@
       "minTurns": 2
     },
     {
+      "id": "employment",
+      "label": "Job",
+      "employment": "salaried",
+      "note": "Salaried applicants only. Every answer is crossed against the job they claim; profession_depth then tests it.",
+      "fields": [
+        {
+          "key": "employer_name",
+          "anchor": true,
+          "label": "Company or employer",
+          "type": "text",
+          "ask": "Aap kis company mein kaam karte hain?",
+          "cross": {"hint": "Ask what the company actually does or makes, and who its customers are — something an employee knows without thinking."}
+        },
+        {
+          "key": "designation",
+          "anchor": true,
+          "label": "Job title / role",
+          "type": "text",
+          "ask": "Wahan aapka kya role hai — designation kya hai?",
+          "cross": {"hint": "Ask what they did at work yesterday, step by step — a real day, not a job description."}
+        },
+        {
+          "key": "job_type",
+          "weight": 2,
+          "label": "Permanent, contract or probation",
+          "type": "enum",
+          "options": ["permanent", "contract", "probation", "temporary"],
+          "ask": "Naukri pakki hai, ya contract pe hain?"
+        },
+        {
+          "key": "job_years",
+          "weight": 3,
+          "label": "Years in the current job",
+          "type": "years",
+          "ask": "Is company mein kitne saal se hain?",
+          "cross": {"priority": "low", "hint": "Ask the month and year they joined, and how they got the job."}
+        },
+        {
+          "key": "total_experience",
+          "weight": 2,
+          "label": "Total years of work experience",
+          "type": "years",
+          "ask": "Kul milaa ke kitne saal ka kaam ka experience hai?"
+        },
+        {
+          "key": "previous_employer",
+          "label": "Previous employer and role",
+          "type": "text",
+          "ask": "Isse pehle kahan kaam karte the, aur wahan kya karte the?"
+        },
+        {
+          "key": "office_location",
+          "weight": 3,
+          "label": "Office location",
+          "type": "text",
+          "ask": "Aapka office kahan hai?",
+          "cross": {"knowledge": "location", "hint": "Ask something only a person who goes there every day knows: the building or tech park name, the nearest landmark or metro, how they commute."}
+        },
+        {
+          "key": "reporting_manager",
+          "label": "Who they report to",
+          "type": "text",
+          "ask": "Aap kisko report karte hain — unka designation kya hai?"
+        },
+        {
+          "key": "annual_ctc",
+          "weight": 4,
+          "label": "Annual CTC (salary package)",
+          "type": "number",
+          "ask": "Saal ka package, yaani CTC, kitna hai?"
+        },
+        {
+          "key": "salary_credit",
+          "weight": 3,
+          "label": "Bank the salary comes into, and on which date",
+          "type": "text",
+          "ask": "Salary kis bank mein aati hai, aur mahine ki kaunsi tareekh ko?"
+        },
+        {
+          "key": "last_bonus",
+          "weight": 2,
+          "label": "Last bonus or incentive — amount and when",
+          "type": "text",
+          "ask": "Pichhli baar bonus ya incentive kab mila tha, aur kitna?"
+        },
+        {
+          "key": "last_increment",
+          "weight": 2,
+          "label": "Last increment — when and how much",
+          "type": "text",
+          "ask": "Aakhri increment kab hua tha, aur kitna badha?"
+        },
+        {
+          "key": "salary_documents",
+          "label": "Salary slips / Form 16 available",
+          "type": "text",
+          "ask": "Pichhle teen mahine ki salary slip aur Form 16 aapke paas hai?"
+        }
+      ],
+      "minTurns": 3
+    },
+    {
+      "id": "profession_depth",
+      "label": "Profession check",
+      "type": "profession_probes",
+      "employment": "salaried",
+      "note": "Questions the model writes from its own knowledge of the job they claim (an SDE gets CS questions); answers kept verbatim.",
+      "minTurns": 1
+    },
+    {
       "id": "business",
       "label": "Business",
+      "employment": "self_employed",
       "fields": [
         {
           "key": "business_type",
+          "anchor": true,
           "label": "Type of business",
           "type": "text",
           "ask": "Aap kya kaam karte hain?"
         },
         {
           "key": "business_age",
+          "weight": 2,
           "label": "Years in business",
           "type": "years",
           "ask": "Yeh kaam kitne saal se kar rahe hain?",
@@ -135,6 +249,7 @@
         },
         {
           "key": "business_location",
+          "weight": 3,
           "label": "Shop or office location",
           "type": "text",
           "ask": "Aapki dukaan ya kaam ki jagah kahan hai?",
@@ -145,6 +260,7 @@
         },
         {
           "key": "shop_ownership",
+          "weight": 3,
           "label": "Business premises owned or rented",
           "type": "enum",
           "options": [
@@ -158,6 +274,7 @@
         },
         {
           "key": "shop_rent",
+          "weight": 3,
           "label": "Monthly rent of the business premises",
           "type": "number",
           "condition": "shop_ownership === 'rented'",
@@ -166,6 +283,7 @@
         },
         {
           "key": "ownership",
+          "weight": 1,
           "label": "Sole owner or partnership",
           "type": "enum",
           "options": [
@@ -177,6 +295,8 @@
         },
         {
           "key": "employees",
+          "weight": 2,
+          "links": ["absent_manager"],
           "label": "Number of helpers or employees",
           "type": "number",
           "ask": "Kaam mein kitne log madad karte hain?",
@@ -184,12 +304,25 @@
         },
         {
           "key": "products_services",
+          "weight": 2,
+          "links": ["top_sellers"],
           "label": "What they sell or do",
           "type": "text",
           "ask": "Aap kya-kya bechte ya banate hain?"
         },
         {
+          "key": "billing_method",
+          "weight": 2,
+          "label": "How they keep bills",
+          "type": "enum",
+          "options": ["bill_book", "register", "computer", "app", "none"],
+          "ask": "Bill kaise banate hain — bill book, register, computer ya mobile app se? Ya bill nahi banta?",
+          "cross": {"when": {"isNot": "none"}, "hint": "Ask who writes the bills, how many bills were made today, and what the last one was for and how much — a real figure from today, not an average."}
+        },
+        {
           "key": "customers_per_day",
+          "weight": 4,
+          "links": ["avg_bill_value"],
           "label": "Customers in a day",
           "type": "number",
           "ask": "Roz lagbhag kitne grahak aate hain?",
@@ -197,29 +330,69 @@
         },
         {
           "key": "monthly_sales",
+          "weight": 5,
+          "links": ["sales_yesterday", "sales_last_week", "monthly_purchase", "payment_mode"],
           "label": "Monthly sales or turnover",
           "type": "number",
           "ask": "Mahine mein kul bikri kitni ho jaati hai?",
-          "cross": {"hint": "Ask how much they sold yesterday (or today so far), so the monthly figure can be checked against a real day."}
+          "cross": {"hint": "Ask which day of the week is the busiest and what that day usually brings in — yesterday's sales are asked separately, so not that."}
+        },
+        {
+          "key": "monthly_purchase",
+          "weight": 4,
+          "links": ["last_purchase_amount", "purchase_frequency"],
+          "label": "Monthly stock or material purchase",
+          "type": "number",
+          "ask": "Mahine mein kitne ka maal kharidte hain?"
+        },
+        {
+          "key": "payment_mode",
+          "weight": 3,
+          "links": ["late_credit_handling"],
+          "label": "Cash, UPI, bank and credit split of sales",
+          "type": "text",
+          "ask": "Bikri mein kitna nakad aata hai, kitna UPI ya bank mein, aur kitna udhaar mein jaata hai?"
+        },
+        {
+          "key": "seasonal_variation",
+          "weight": 2,
+          "optional": true,
+          "label": "How income changes by season",
+          "type": "text",
+          "ask": "Saal mein kaunse mahine kaam zyada chalta hai, kaunse kam?"
         },
         {
           "key": "monthly_expenses",
+          "weight": 4,
           "label": "Monthly business expenses",
           "type": "number",
           "ask": "Dukaan ka mahine ka kharcha kitna hai — kiraya, bijli, madadgar ki tankhwah milakar?"
         },
         {
           "key": "worst_month_sales",
+          "weight": 3,
+          "links": ["seasonal_variation", "stress_plan"],
           "label": "Sales in the weakest month of the year",
           "type": "number",
           "ask": "Saal ke sabse halke mahine mein bikri kitni reh jaati hai?"
         },
         {
           "key": "supplier_credit",
+          "weight": 2,
+          "links": ["purchase_frequency"],
           "label": "Credit from suppliers",
           "type": "text",
           "ask": "Maal udhaar par milta hai ya nakad dena padta hai?"
-        }
+        },
+        {"key": "sales_yesterday", "label": "Sales yesterday", "type": "number", "weight": 4, "links": ["sales_last_week"], "ask": "Kal kitni bikri hui thi?"},
+        {"key": "sales_last_week", "label": "Sales over the last week", "type": "number", "optional": true, "weight": 3, "ask": "Pichhle poore hafte mein kitni bikri hui?"},
+        {"key": "operating_days_hours", "label": "Days open a week and usual hours", "type": "text", "weight": 2, "ask": "Hafte mein kitne din dukaan khulti hai, aur kitne baje se kitne baje tak?"},
+        {"key": "absent_manager", "label": "Who runs the shop when they are away", "type": "text", "optional": true, "weight": 3, "ask": "Jab aap dukaan pe nahi hote, tab kaun sambhalta hai?"},
+        {"key": "top_sellers", "label": "Biggest earners, and what is moving slowly", "type": "text", "optional": true, "weight": 3, "ask": "Sabse zyada kamai kis cheez se hoti hai? Aur aajkal kaunsa maal dheema chal raha hai?"},
+        {"key": "purchase_frequency", "label": "How often stock is bought, and from whom", "type": "text", "optional": true, "weight": 3, "links": ["supplier_backup"], "ask": "Maal kitne din mein mangaate hain, aur kisse?"},
+        {"key": "last_purchase_amount", "label": "Amount of the last stock purchase", "type": "number", "optional": true, "weight": 3, "ask": "Pichhli baar jo maal aaya, woh kitne ka tha?"},
+        {"key": "supplier_backup", "label": "What they would do if the supplier failed", "type": "text", "optional": true, "weight": 2, "ask": "Agar kal aapka supplier maal na de paaye, toh kya karenge?"},
+        {"key": "late_credit_handling", "label": "How a late-paying credit customer is handled", "type": "text", "optional": true, "weight": 2, "ask": "Koi grahak udhaar leke der se de, toh aap kya karte hain?"}
       ],
       "minTurns": 3
     },
@@ -227,6 +400,7 @@
       "id": "trade_depth",
       "label": "Trade depth",
       "type": "trade_probes",
+      "employment": "self_employed",
       "note": "Insider questions from businessKnowledge.json depth[]; only a real operator answers them without thinking.",
       "minTurns": 1
     },
@@ -234,25 +408,15 @@
       "id": "business_deep_dive",
       "label": "Business detail",
       "condition": "no_borrower_brief",
+      "employment": "self_employed",
       "note": "Extra questions for a walk-in. These numbers are what internal consistency is computed from, so without them a new applicant cannot be assessed at all.",
       "fields": [
         {
           "key": "avg_bill_value",
+          "weight": 4,
           "label": "Average bill per customer",
           "type": "number",
           "ask": "Ek grahak aam taur par kitne ka saamaan leta hai?"
-        },
-        {
-          "key": "monthly_purchase",
-          "label": "Monthly stock or material purchase",
-          "type": "number",
-          "ask": "Mahine mein kitne ka maal kharidte hain?"
-        },
-        {
-          "key": "payment_mode",
-          "label": "Cash, UPI or credit split",
-          "type": "text",
-          "ask": "Grahak zyada nakad dete hain ya UPI se?"
         },
         {
           "key": "peak_day_sales",
@@ -268,12 +432,16 @@
         },
         {
           "key": "supplier_names",
+          "weight": 2,
+          "links": ["supplier_backup"],
           "label": "Main suppliers or distributors",
           "type": "text",
           "ask": "Maal kahan se ya kis se lete hain?"
         },
         {
           "key": "credit_given",
+          "weight": 2,
+          "links": ["late_credit_handling"],
           "label": "Udhaar given to customers",
           "type": "number",
           "ask": "Grahakon ka kitna udhaar baaki hai abhi?"
@@ -283,12 +451,6 @@
           "label": "Value of stock in the shop now",
           "type": "number",
           "ask": "Abhi dukaan mein lagbhag kitne ka maal pada hai?"
-        },
-        {
-          "key": "seasonal_variation",
-          "label": "How income changes by season",
-          "type": "text",
-          "ask": "Saal mein kaunse mahine kaam zyada chalta hai, kaunse kam?"
         }
       ],
       "minTurns": 3
@@ -299,19 +461,25 @@
       "fields": [
         {
           "key": "monthly_income",
+          "weight": 5,
+          "links": ["monthly_expenses", "household_withdrawal", "third_party_money"],
           "label": "Monthly income taken home",
           "type": "number",
           "ask": "Sab kharcha nikaal kar mahine ki bachat ya kamai kitni hoti hai?",
+          "askSalaried": "Haath mein mahine ki salary kitni aati hai — PF aur tax kat ke?",
           "cross": {"hint": "Ask how much they actually took home last month — a real month, not an average."}
         },
         {
           "key": "household_expenses",
+          "weight": 3,
           "label": "Monthly household expenses",
           "type": "number",
           "ask": "Ghar ka mahine ka kharcha kitna ho jaata hai?"
         },
         {
           "key": "existing_loans",
+          "weight": 4,
+          "links": ["guarantor", "informal_loans"],
           "label": "Running loans",
           "type": "text",
           "ask": "Abhi koi loan chal raha hai — bank, finance company ya gold loan?",
@@ -319,42 +487,53 @@
         },
         {
           "key": "existing_emi",
+          "weight": 4,
+          "links": ["stress_plan"],
           "label": "Total monthly EMI",
           "type": "number",
           "ask": "Sab kishton ko milakar mahine mein kitna jaata hai?"
         },
+        {"key": "household_withdrawal", "label": "Taken from the business for the household each month", "type": "number", "condition": "self_employed", "weight": 3, "ask": "Ghar ke kharche ke liye dukaan se mahine mein kitna nikaalte hain?"},
+        {"key": "third_party_money", "label": "Money from relatives or other businesses, and what it is for", "type": "text", "weight": 3, "ask": "Kya kisi rishtedaar ya kisi aur dhande se bhi khaate mein paisa aata hai? Woh kis liye hota hai?"},
+        {"key": "guarantor", "label": "Guarantor or co-borrower on another person's loan", "type": "enum", "options": ["yes", "no"], "weight": 3, "ask": "Kya aap kisi aur ke loan mein guarantor ya saath-borrower bane hain?", "cross": {"when": {"is": "yes"}, "hint": "Ask whose loan it is, roughly how much, and whether its kishts are being paid on time."}},
         {
           "key": "recent_loan_applications",
+          "weight": 2,
           "label": "Loans applied for elsewhere recently",
           "type": "text",
           "ask": "Pichhle kuch mahino mein kahin aur bhi loan ke liye baat ki ya form bhara?"
         },
         {
           "key": "informal_loans",
+          "weight": 3,
           "label": "Informal borrowing (committee, chit fund, moneylender, relatives)",
           "type": "text",
           "ask": "Kisi committee, chit fund, sahukar ya rishtedaar se paisa liya hua hai?"
         },
         {
           "key": "repayment_history",
+          "weight": 2,
           "label": "Any missed or late instalment before",
           "type": "text",
           "ask": "Pehle kabhi koi kisht chhooti ya der se gayi?"
         },
         {
           "key": "bank_account",
+          "weight": 1,
           "label": "Which bank",
           "type": "text",
           "ask": "Aapka khaata kis bank mein hai?"
         },
         {
           "key": "savings",
+          "weight": 1,
           "label": "Savings or FD",
           "type": "text",
           "ask": "Kuch bachat hai — FD, RD ya committee mein?"
         },
         {
           "key": "assets",
+          "weight": 1,
           "label": "Other assets (land, house, vehicle, gold)",
           "type": "text",
           "ask": "Aapke naam par kuch aur hai — zameen, makaan, gaadi ya sona?"
@@ -427,6 +606,7 @@
           "key": "business_registration",
           "label": "GST, Udyam or trade licence",
           "type": "text",
+          "condition": "self_employed",
           "ask": "Dukaan ka koi registration hai — GST, Udyam ya trade licence?"
         }
       ],
@@ -438,6 +618,7 @@
       "fields": [
         {
           "key": "loan_purpose",
+          "weight": 4,
           "label": "Why they need the loan",
           "type": "text",
           "ask": "Yeh paisa kis kaam mein lagayenge?",
@@ -445,6 +626,7 @@
         },
         {
           "key": "loan_amount",
+          "weight": 4,
           "label": "How much they want",
           "type": "number",
           "ask": "Kitne paise ki zaroorat hai?"
@@ -518,16 +700,19 @@
         },
         {
           "key": "own_contribution",
+          "weight": 2,
           "label": "Own money going into the purpose",
           "type": "number",
           "ask": "Is kaam mein apni taraf se kitna paisa lagayenge?"
         },
         {
           "key": "repayment_plan",
+          "weight": 2,
           "label": "How they plan to repay",
           "type": "text",
-          "ask": "Kisht kis kamai se bharenge? Koi mahina halka gaya toh kaise karenge?"
-        }
+          "ask": "Kisht kis kamai se bharenge?"
+        },
+        {"key": "stress_plan", "label": "How repayments continue if sales fall 25% for two months", "type": "text", "weight": 3, "ask": "Agar do mahine bikri ek-chauthai kam ho jaaye, toh kisht kaise bharenge?", "askSalaried": "Agar do mahine salary ruk jaaye ya kam aaye, toh kisht kaise bharenge?"}
       ],
       "minTurns": 1
     },

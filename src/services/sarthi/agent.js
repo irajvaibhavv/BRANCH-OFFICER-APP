@@ -1,6 +1,6 @@
 // Agent 1 interviews, Agent 2 writes the report. Keys live server-side (api/, scripts/sarthi-proxy.mjs).
 import { lookupLocation, lookupBusiness, lookupRiskPattern, briefForCitation } from './knowledge';
-import { KEY_GUIDE } from './memory';
+import { KEY_GUIDE, isSalaried } from './memory';
 import { genderRule, SPOKEN_STYLE } from './voice';
 
 const BASE = import.meta.env.VITE_SARTHI_PROXY || '';
@@ -130,6 +130,7 @@ export function buildInterviewerPrompt(c, directive = '') {
   const biz = lookupBusiness(c.businessKey);
   const pattern = c.riskPatternMatch ? lookupRiskPattern(c.riskPatternMatch.patternId) : null;
   const brief = JSON.stringify(briefForCitation(c), null, 2);
+  const salaried = isSalaried(c);
 
   return `You are Sarthi, an AI field underwriter from the local loan branch. You are conducting a personal discussion (PD) interview with a loan applicant.
 
@@ -183,7 +184,14 @@ A controller walks a fixed PD schema in code and tells you, each turn, which top
 instruction arrives as a "THIS TURN" block at the end of this prompt. Follow it. Your job is HOW
 to say it — natural, warm, in their register — not WHAT to cover. If the block names a topic you
 think is odd, ask it anyway; the schema exists so nothing gets missed on a long call.
-
+${salaried ? `
+## This applicant is SALARIED
+They have a job, not a shop. Never ask about a dukaan, bikri, maal, stock, customers or suppliers, and never call their
+work a business — ask about their naukri, company, role, salary (tankhwah), bonus and increment. Every question tests
+the job they claim: an answer that does not fit the role (an "SDE" who cannot say which language they code in, an
+"accountant" who has never heard of TDS) is the finding. Use the words their job uses — an engineer can be asked
+"API" or "deploy"; a peon or driver should not be.
+` : ''}
 ## Interview structure
 1. Start with a short, warm greeting (two short sentences at most) and say you'd like to know a
    little about them and their kaam — e.g. "Namaste! Main Sarthi hoon. Aapke baare mein thoda
@@ -288,7 +296,7 @@ The applicant is holding the phone, so you can ask them to photograph something 
 block says so (the code decides from where they are: shop, home, or whether they can go to the other place).
 Never ask for a photo on your own. To ask, put the request in your message AND output a fence naming what you want:
 
-${FENCE}photo shop${FENCE}   (or)   ${FENCE}photo home${FENCE}
+${FENCE}photo shop${FENCE}   (or)   ${FENCE}photo home${FENCE}   (or)   ${FENCE}photo records${FENCE}
 
 The camera opens for them. Do not ask for a photograph twice for the same thing, and do not
 comment on the picture afterwards — you never see it; the officer does.
@@ -308,13 +316,16 @@ ${JSON.stringify({ avgShopRent: area.avgShopRent, avgHouseRent2BHK: area.avgHous
 There are no landmarks or markets on file, so do NOT ask "how far from X" about any named place. For the area check, ask something any real resident answers instantly — nearest thana, bijli company, nearest station, the local market's name — and judge their confidence, not the answer.`}
 
 ## BUSINESS KNOWLEDGE (for integrity questions):
-${biz ? JSON.stringify(biz, null, 2) : `No business data available for "${c.business}". Skip all trade-knowledge questions.`}
+${salaried ? 'Not a business owner — see "This applicant is SALARIED". There are no trade questions.'
+    : biz ? JSON.stringify(biz, null, 2) : `No business data available for "${c.business}". Skip all trade-knowledge questions.`}
 
 ## STRICT RULE (grounding)
 You must ONLY use facts from the AREA KNOWLEDGE and BUSINESS KNOWLEDGE sections provided above. Do NOT use your own knowledge about rents, markets, margins or any facts. If the data is not provided for this area or business type, do NOT guess. Simply skip that verification and move to the next topic.
 One exception: when the THIS TURN block asks you to cross-check a PLACE they named (their shop, or where a new shop
 will open), you may use your general knowledge of that city's markets, roads and sectors to ask sharper questions and
 to voice a doubt as a question. Never quote a rent, price or figure from your own knowledge — the code does the numbers.
+A second exception: a PROFESSION CHECK turn asks you to use your own knowledge of the job they claim, to write a
+question only someone doing that job answers easily. Never state a salary or pay scale for a job from your own knowledge.
 
 ## Important
 - Keep each message short (2-4 sentences max). This is a conversation, not a lecture.
@@ -364,7 +375,7 @@ export function peekSpeech(partial) {
 export function peekDisplay(partial) {
   return partial
     .replace(/```(?:facts|claim|speech)\s*[\s\S]*?```/g, '')
-    .replace(/```photo\s+(?:shop|home)\s*```/g, '')
+    .replace(/```photo\s+(?:shop|home|records)\s*```/g, '')
     .replace(/```[\s\S]*$/, '')
     .replace(/\[INTERVIEW_COMPLETE\]/g, '')
     .replace(/\n{3,}/g, '\n\n')
@@ -390,7 +401,7 @@ export function parseClaims(raw, fallbackTurn) {
       } catch { /* drop malformed claims */ }
       return '';
     })
-    .replace(/```photo\s+(shop|home)\s*```/g, (_, kind) => { photo = kind; return ''; })
+    .replace(/```photo\s+(shop|home|records)\s*```/g, (_, kind) => { photo = kind; return ''; })
     .replace(/```speech\s*([\s\S]*?)```/g, (_, body) => {
       speech = body.replace(/\[INTERVIEW_COMPLETE\]/g, '').trim();
       return '';
@@ -462,9 +473,9 @@ failed check or an identity_document flag as a high-severity finding — a forei
 
 ### 7. OFFICER RECOMMENDATION
 [Based on all findings, state exactly one of these three lines, starting with the word:]
-- GREEN: Profile looks clean. Recommend for further processing.
-- AMBER: Some concerns found. Officer should verify [specific items] before proceeding.
-- RED: Significant red flags. Recommend detailed field verification before proceeding.
+- GREEN: Satisfactory — profile looks clean. Recommend for further processing.
+- AMBER: Human intervention — some concerns found. Officer should verify [specific items] before proceeding.
+- RED: Red flags — significant concerns. Recommend detailed field verification before proceeding.
 
 [Then list the specific items the officer should personally verify]
 
@@ -481,11 +492,37 @@ failed check or an identity_document flag as a high-severity finding — a forei
 - Numbers must be in Indian format (1,50,000 not 150,000)
 - The ELIGIBILITY section numbers are calculated by the system using verified math. You MUST use these exact numbers in your report. Do NOT recalculate or adjust them. Report them exactly as given.
 - If ELIGIBILITY has "assessable": false, the file has no verified income. Write "not assessable until a bank statement or ITR is seen" and do NOT derive an eligible amount from the declared figure. Never print a null.
-- Cite a photograph as (Photo: shop) or (Photo: home), and an identity check by its name.
+- Cite a photograph as (Photo: shop), (Photo: home) or (Photo: records), and an identity check by its name.
+- A repeat_pd flag is the same person giving a different answer than in an earlier PD (the INTERVIEW MODE line says
+  which PD this is). Each is a finding: give both answers, the date of the earlier one, and what they said when shown
+  the change (RECHECKS, Turn X). A believable reason (a new shop, a season) weakens it; none, or a third answer,
+  strengthens it. Several changed answers is a strong sign the story is not their own.
+- If the INTERVIEW MODE line says ENDED EARLY, say so at the top and list the topics not covered for a follow-up PD.
+- A cross_pd flag means a photo was taken where another applicant's photo was taken, or shows the same name, GSTIN or
+  UPI ID. With the AI saying SAME, or a shared name, it is a high finding — the same place may have been shown for two
+  applicants, which points at whoever arranged the PDs. Name the other applicant, and ask the officer to check both files.
+- A BILL BOOK photo (kind "records") is judged like an officer at the counter: the latest date seen against the interview
+  date, bill numbers in sequence, signs of months of use vs a book written in one sitting, and the cross-question on
+  billing_method (today's bill count and last bill). A book whose latest entry is weeks old, or that looks written in one
+  go, is a finding. They were at the shop and said they keep bills but sent no photo: list it for the officer.
 - Give BUSINESS UNDERSTANDING its own short section after the interview summary. Open with the score exactly as
   given: "X of Y insider answers clear, V vague, R red flag". Then one line per question — what they said (Turn X),
   the follow-up if one was asked, and the status. Judge only against "expect", never your own idea of the trade.
   Two or more vague or red-flag answers is a finding: the applicant may not run this business day to day.
+- A SALARIED applicant has no business: skip BUSINESS UNDERSTANDING and HISAAB, and give a "Job and profession check"
+  section instead — employer, role, years, CTC vs in-hand salary, bonus and increment (Fact: key), then each PROFESSION
+  CHECK: the question, what they said (Turn X), and your judgement — fits the role, vague, or does not fit. Judge with your
+  knowledge of that job, and say it is your judgement, not a verification. Two or more vague or not-fitting answers is a
+  finding: they may not do the job they claim. Ask the officer to verify salary slips, Form 16 and the salary credits.
+- LIVING CONDITIONS get their own short section in plain sentences: the facts (Photo: home / Photo: home_inside), then
+  whether they fit the income. No scores, ratings or bands. A gap is a question for the officer — other income, family
+  money, or an income claim that is too high — never a conclusion: joint families, inherited homes and gifts explain many.
+  Never comment on caste, religion, people or taste; only on what is in the photos.
+- LIVE CHALLENGES get their own short section, "Surprise checks": each task, what they did or said (Turn X), the matching
+  photograph's description (Photo: kind), and whether it fits — e.g. a purchase rate and supplier given at once for a
+  random item, an old bill page that looks weeks old. A photo not sent, a purchase rate they could not give, a fresh-looking
+  "old" page, or a QR paying someone else is a finding: the shop or the books may have been set up for the PD. These were
+  random, so a weak answer cannot be blamed on a hard question everyone gets.
 - In the interview summary, use CROSS-QUESTIONS: an answer that stayed specific under its follow-up (a real landmark,
   a year, a name, a real day's figure) supports the original claim; one that turned vague or shifted weakens it. Cite
   both turns.
@@ -506,9 +543,18 @@ failed check or an identity_document flag as a high-severity finding — a forei
   summary: each question, their answer (Turn X), and whether it settles the "why".
 - Do NOT make a loan decision. Your job is to present findings. The officer decides.
 - Be objective. Report both positive and negative findings.
+- The purpose is to reconcile their story, not to assume they are lying. A memory lapse, "pata nahi", a pause or
+  nervousness is never evidence of fraud on its own; weigh specificity and consistency instead.
+- An obligation the bureau or bank shows that they did not mention, or a difference the call could not settle, is an
+  UNRESOLVED DIFFERENCE for the officer to verify — never call it concealed or hidden debt.
+- A hisaab_residual recheck (sales − purchases − running costs) is indicative only, never verified net profit: unsold
+  stock, udhaar, tax and household withdrawals change it. Report what they said when shown it.
+- Repayment capacity gets its own lines: running EMIs, informal loans and supplier credit, guarantor / co-borrower
+  (Fact: guarantor), money from relatives or other businesses (Fact: third_party_money), household withdrawals, the
+  weakest months, and their plan if sales fall 25% for two months (Fact: stress_plan).
 - Output plain markdown only. No preamble, no code fences around the report.`;
 
-export function buildReporterInput({ caseData, transcript, claims, evidence, flags = [], collected = null, verification = null, understanding = null, tradeMath = [], crossAnswers = [], rechecks = [], hotAnswers = [], eligibility, observations, photos = [], identity, mode = 'Handover' }) {
+export function buildReporterInput({ caseData, transcript, claims, evidence, flags = [], collected = null, verification = null, understanding = null, tradeMath = [], crossAnswers = [], rechecks = [], hotAnswers = [], professionAnswers = [], challengeAnswers = [], living = null, eligibility, observations, photos = [], identity, mode = 'Handover' }) {
   const turns = transcript
     .map((m, i) => `[${i + 1}] ${m.role === 'assistant' ? 'SARTHI' : 'BORROWER'}: ${m.content}`)
     .join('\n');
@@ -543,6 +589,15 @@ ${flags.length ? JSON.stringify(flags, null, 2) : 'None raised.'}
 
 ## TRADE DEPTH (insider questions only a real operator answers easily; "status" was decided in code)
 ${understanding?.total ? JSON.stringify(understanding, null, 2) : 'No trade depth questions on file for this business.'}
+
+## PROFESSION CHECKS (salaried: questions on the job they claim, answered verbatim)
+${professionAnswers?.length ? JSON.stringify(professionAnswers, null, 2) : 'Not a salaried applicant, or none asked.'}
+
+## LIVING CONDITIONS (facts from the home photos and the file, with the analysis already written from them)
+${living ? `${living.facts.join('\n')}${living.analysis ? `\nAnalysis: ${living.analysis}` : ''}` : 'No home photo was read.'}
+
+## LIVE CHALLENGES (picked at random during the call, with random details, so nobody could prepare for them)
+${challengeAnswers?.length ? JSON.stringify(challengeAnswers, null, 2) : 'None asked (they were not at the shop or home).'}
 
 ## CROSS-QUESTIONS (an answer tested with one follow-up before moving on)
 ${crossAnswers?.length ? JSON.stringify(crossAnswers, null, 2) : 'None asked.'}

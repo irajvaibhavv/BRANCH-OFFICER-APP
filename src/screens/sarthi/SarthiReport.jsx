@@ -1,7 +1,9 @@
-import { useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiCopy } from 'react-icons/fi';
+import { IoSparkles } from 'react-icons/io5';
+import NewPdSheet from '../../components/sarthi/NewPdSheet';
 import Page from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import EmptyState from '../../components/ui/EmptyState';
@@ -9,14 +11,13 @@ import { useToast } from '../../hooks/useToast';
 import { formatDate } from '../../utils/formatters';
 import { getCase } from '../../services/sarthi/knowledge';
 import { identitySummary } from '../../services/sarthi/idChecks';
+import { mapLink, inDistance } from '../../services/sarthi/geo';
+import { MODES, pdOutcome } from '../../services/sarthi/repeat';
 import { useSarthiReports } from '../../hooks/useSarthiReports';
 import styles from './SarthiReport.module.css';
 
-const VERDICT = {
-  green: { word: 'Cleared', line: 'Nothing in the interview contradicts the file. Move it forward.' },
-  amber: { word: 'Check', line: 'Parts of the story did not settle. Verify the items below before you proceed.' },
-  red: { word: 'Verify', line: 'The interview contradicted the file. Visit before this goes further.' },
-};
+// Colour classes per outcome (the stamp keeps its green / amber / red styles).
+const STAMP = { satisfactory: 'green', human: 'amber', red: 'red' };
 
 const MARK = { confirmed: 'holds up', contradicted: 'contradicted', unverified: 'unsettled' };
 const DEPTH_MARK = { clear: '✓', vague: '~', redFlag: '✕' };
@@ -27,13 +28,18 @@ export default function SarthiReport() {
   const { toast } = useToast();
   const [reports] = useSarthiReports();
   const caseData = getCase(id);
-  const r = reports.find((x) => x.caseId === id);
+  const [params] = useSearchParams();
+  const [sheet, setSheet] = useState(false);
+  // Every PD is kept; ?pd= opens one, otherwise the latest.
+  const all = reports.filter((x) => x.caseId === id);
+  const r = all.find((x) => x.id === params.get('pd')) ?? all[0];
 
   const blocks = useMemo(() => parseMarkdown(r?.report ?? ''), [r?.report]);
   // Images live outside the report record so their weight can never break its write.
   const photos = useMemo(() => {
-    try { return JSON.parse(window.localStorage.getItem(`bo_sarthi_photos_${id}`)) ?? []; } catch { return []; }
-  }, [id]);
+    const read = (key) => { try { return JSON.parse(window.localStorage.getItem(key)); } catch { return null; } };
+    return read(`bo_sarthi_photos_${r?.id}`) ?? read(`bo_sarthi_photos_${id}`) ?? []; // per PD; per case before repeat PDs
+  }, [id, r?.id]);
 
   if (!r) {
     return (
@@ -50,8 +56,8 @@ export default function SarthiReport() {
     );
   }
 
-  const key = r.recommendation ?? 'amber';
-  const verdict = VERDICT[key] ?? VERDICT.amber;
+  const verdict = pdOutcome(r);
+  const key = STAMP[verdict.key];
   const counts = r.evidence.reduce((a, e) => ({ ...a, [e.status]: (a[e.status] ?? 0) + 1 }), {});
 
   const copy = async () => {
@@ -65,7 +71,10 @@ export default function SarthiReport() {
 
   return (
     <Page mode="slide" className={`sarthi ${styles.page}`}>
-      <TopBar back title={r.name} subtitle={`Interviewed ${formatDate(r.createdAt)}`} hideBell />
+      <TopBar back title={r.name} subtitle={`${all.length > 1 ? `PD ${r.pdNo ?? 1} of ${all.length} · ${MODES[r.mode]?.label ?? 'Full PD'} · ` : ''}Interviewed ${formatDate(r.createdAt)}`} hideBell />
+      {r.complete === false && (
+        <p className={styles.incomplete}>Ended early — {r.coverage ?? 0}% of the topics covered. Start &quot;Finish last PD&quot; from the customer page to ask only what is left.</p>
+      )}
 
       {/* the one loud moment: the verdict lands like a stamp */}
       <motion.div
@@ -74,10 +83,13 @@ export default function SarthiReport() {
         animate={{ scale: 1, opacity: 1, rotate: -3 }}
         transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.15 }}
       >
-        <span className={styles.stampWord}>{verdict.word}</span>
+        <span className={`${styles.stampWord} ${verdict.label.length > 12 ? styles.stampLong : ''}`}>{verdict.label}</span>
         <span className={styles.stampSub}>Sarthi AI — advisory</span>
       </motion.div>
       <p className={styles.verdictLine}>{verdict.line}</p>
+      {/* a new PD that follows up THIS one — its flags, or the topics it did not reach */}
+      <button className={styles.newPd} onClick={() => setSheet(true)}><IoSparkles size={16} /> Sarthi AI — new PD after this one</button>
+      <NewPdSheet open={sheet} onClose={() => setSheet(false)} caseId={id} pd={r} />
 
       <div className={styles.tally}>
         {counts.confirmed > 0 && <span className={styles.tallyClear}>{counts.confirmed} held up</span>}
@@ -85,6 +97,16 @@ export default function SarthiReport() {
         {counts.unverified > 0 && <span className={styles.tallyWatch}>{counts.unverified} unsettled</span>}
         <span className={styles.tallyTurns}>{r.turns} exchanges</span>
       </div>
+
+      {/* the same person, an earlier PD: answers that changed */}
+      {r.flags?.some((f) => f.type === 'repeat_pd') && (
+        <>
+          <h2 className={styles.head}>Changed since the earlier PD</h2>
+          <ul className={styles.idChecks}>
+            {r.flags.filter((f) => f.type === 'repeat_pd').map((f) => <li key={f.detail} className={styles.fail}>✕ {f.detail}</li>)}
+          </ul>
+        </>
+      )}
 
       {/* the ledger */}
       <h2 className={styles.head}>What they said, against what we hold</h2>
@@ -170,6 +192,19 @@ export default function SarthiReport() {
         </>
       )}
 
+      {/* living conditions: the facts the home photos show, then Sarthi's few sentences on them — no scores */}
+      {r.living && (
+        <>
+          <h2 className={styles.head}>Living conditions</h2>
+          <div className={styles.living}>
+            <ul className={styles.livingFacts}>
+              {(r.living.facts ?? []).map((f) => <li key={f}>{f}</li>)}
+            </ul>
+            {r.living.analysis && <p className={styles.livingAnalysis}>{r.living.analysis}</p>}
+          </div>
+        </>
+      )}
+
       {/* photographs the applicant took during the interview */}
       {photos.length > 0 && (
         <>
@@ -184,6 +219,16 @@ export default function SarthiReport() {
                   <span className={styles.shotLabel}>Sent as {p.label}</span>
                   {p.skipped && <span className={styles.shotWarn}>Refused to photograph — worth asking why</span>}
                   {p.provenance?.source === 'live_camera' && <span className={styles.shotOk}>Taken with the live camera during the interview</span>}
+                  <PlaceLine p={p} onFile={caseData?.locations?.[p.kind]} />
+                  {p.links?.map((l) => (
+                    <span key={l.otherCase} className={l.vision?.verdict === 'different' && !l.names.length ? styles.shotObs : styles.shotWarn}>
+                      Same spot as {l.otherName}&apos;s {l.otherLabel}
+                      {l.distance != null && ` (${inDistance(l.distance)} apart)`}
+                      {l.names.length > 0 && ` · same name: ${l.names.join(', ')}`}
+                      {l.vision && ` · AI comparing both: ${l.vision.verdict}`}
+                      {' — '}<Link className={styles.shotLink} to={`/sarthi/report/${l.otherCase}${l.otherReport ? `?pd=${l.otherReport}` : ''}`}>open their report</Link>
+                    </span>
+                  ))}
                   {p.provenance?.flags?.map((f, j) => <span key={j} className={styles.shotWarn}>{f.detail}</span>)}
                   {p.observation && <span className={styles.shotObs}>{p.observation}</span>}
                   {!p.observation && !p.skipped && <span className={styles.shotWarn}>{p.note ?? 'Not machine-read. Look at it yourself.'}</span>}
@@ -220,7 +265,7 @@ export default function SarthiReport() {
             </ul>
           </>
         )}
-        <p className={styles.formula}>{r.eligibility.formula}</p>
+        {r.eligibility?.formula && <p className={styles.formula}>{r.eligibility.formula}</p>}
       </section>
 
       <div className={styles.actions}>
@@ -305,4 +350,19 @@ function parseMarkdown(md) {
   flushList();
   flushTable();
   return out;
+}
+
+// Where a shop / home photo was taken, against the file's pin; with no pin the officer gets the point to check.
+function PlaceLine({ p, onFile }) {
+  if (p.kind !== 'shop' && p.kind !== 'home') return null;
+  const fix = p.location;
+  if (!fix || fix.error) {
+    return !p.skipped && fix ? <span className={styles.shotWarn}>Location not shared when this was taken — place not verified</span> : null;
+  }
+  const check = p.placeCheck ?? {};
+  const pin = <a className={styles.shotLink} href={mapLink(fix)} target="_blank" rel="noreferrer">Taken at {fix.lat}, {fix.lng} (±{fix.accuracy} m)</a>;
+  const filed = onFile && <> · <a className={styles.shotLink} href={mapLink(onFile)} target="_blank" rel="noreferrer">{p.kind} on file</a></>;
+  if (check.status === 'far') return <span className={styles.shotWarn}>{inDistance(check.distance)} from the {p.kind} location on file — may not be their place. {pin}{filed}</span>;
+  if (check.status === 'near') return <span className={styles.shotOk}>Within {inDistance(check.distance)} of the {p.kind} location on file. {pin}{filed}</span>;
+  return <span className={styles.shotObs}>No {p.kind} location on file — open the pin and check it is their place. {pin}</span>;
 }

@@ -291,6 +291,72 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   for the voice): tips, "frame ke andar rakhiye", a live light/blur hint once it holds for two checks (≥4.5s apart), and the
   verdict. A shot that passes the code check gets `framingCheck` — the vision model picks ONE code (move_closer,
   move_back, tilted, obstructed, missing, wrong) and every word said is ours; no vision service → the code check stands.
+- **Photo location** (`geo.js`, 2026-10-22): a shop / home photo also takes a real GPS fix (never `useGeolocation`'s Pune
+  mock) and compares it with `caseData.locations[kind]` — seeded in `borrowers.json` (Mahesh shop, Imran both), or pasted
+  as "lat, lng" / a Maps link on the walk-in form. Beyond `NEAR_M` (200 m, after subtracting the fix's own accuracy) it is
+  a high `photo_location` flag and a FRIENDLY RECHECK on the call ("kya yeh aapki hi dukaan hai?"; live mode only — the
+  script has no queue). No pin on file → the report shows where it was taken, with a map link, for the officer to check.
+  `npm run check:geo` asserts the parser and distance maths.
+- **Salaried applicants** (2026-10-22): the walk-in form's Self-employed | Salaried toggle sets `employment`; `isSalaried`
+  (memory.js) gates schema sections by their `employment` key — `employment` (employer, role, years, CTC, bonus,
+  increment, slips) and `profession_depth` replace business / trade_depth / business_deep_dive; `askSalaried` rewords
+  shared fields; only the home is photographed. `profession_depth` is the one place the model writes the question:
+  `PROFESSION_CHECKS` (4) questions from its own knowledge of the claimed job (an SDE gets CS questions), answers kept
+  verbatim in `memory.professionAnswers` and judged by the report writer as its judgement, not a verification. Rechecks:
+  in-hand × 12 vs CTC outside 45-105%, years in job > total experience. Scripted mode asks fixed job questions instead.
+- **Bill book + live challenges** (2026-10-22): `billing_method` (business section) and, at the shop, a `records` photo of
+  today's page. Then `planChallenges` (challenges.js) picks `CHALLENGES_PER_PD` (2) random tasks for where they are —
+  old bill page at a random date, an item from a random rack + its purchase rate and supplier, the last supplier bill +
+  "when, how much", the payment QR, today's opening; at home a utility bill. The point is the lead's worry: after 200-300
+  PDs a BO knows every fixed question and can brief the applicant, stock the shop for the day or write up a bill book —
+  random tasks with random details cannot be briefed. Each challenge photo kind has a `vision` description in
+  `PHOTO_ASKS`; answers land in `memory.challengeAnswers` → "Surprise checks" in the report. Live mode only.
+  `npm run check:challenges`.
+- **Same place, different applicant** (`crossPd.js`, 2026-10-22): live photos are never byte-identical, so a BO staging
+  several PDs in one shop is found by place, not pixels. Every photo now stores its GPS fix, and the vision prompts end
+  with a `NAMES:` line (board, QR name, GSTIN, UPI — `splitNames` in photo.js; prompted vision calls get 300 tokens).
+  At finish, `checkAgainstEarlierPds` links this PD to earlier ones on the device (= this BO) by GPS within `SAME_PLACE_M`
+  (40 m, both fixes ≤60 m accurate) or a shared non-generic name, then shows the vision model both photos side by side
+  (one stitched image — the endpoint takes one) for at most 3 links: SAME / DIFFERENT / UNSURE. Shared name or SAME →
+  high `cross_pd` flag; GPS alone + DIFFERENT → low (neighbouring shops). A perceptual hash was rejected: a new angle
+  breaks it. On a laptop every PD shares one GPS point, so every PD links and the vision verdict decides.
+  `npm run check:crosspd`.
+- **Adaptive order** (`adaptivePick` in controller.js, 2026-10-22 — lead's anti-coaching note, Control 1: "randomise
+  the sequence, not the underwriting standard"). Between personal and documents (`CORE` sections) the next question is
+  not the next in the list: each open field scores its schema `weight` (default 2), +3 if the last field asked `links` to
+  it, +4 if an open flag sits on it or links to it, +1 for staying in the section, plus a per-PD `jitter` from
+  `memory.seed`. The `anchor` (business_type; employer + designation) always goes first. Required coverage is
+  unchanged; `optional` fields are asked only once an answer or flag unlocks them (`unlockLinks`, cap 6, strict 10).
+  A topic change gets a "bridge to it" note. Added (A/B/C of the note): sales yesterday / last week, days and hours,
+  who runs the shop, top and slow sellers, purchase frequency and last purchase, supplier backup, late udhaar,
+  household withdrawals, third-party money, guarantor, the 25%-drop plan; monthly_purchase, payment mix and seasonality
+  moved from walk-in-only to everyone. Rechecks: the indicative residual (sales − purchases − costs vs income, shown
+  as "not verified profit"), yesterday × 26 and last week × 4.3 against the month.
+- **Living conditions** (`living.js`, 2026-10-22): at home, after the outside photo, Sarthi asks (skippably) for
+  `home_inside`. Home photos use `livingPrompt`, which ends with a `LIVING:` JSON line — house kachha / semi_pucca / pucca,
+  floors, vehicles, items — parsed by `splitNames`. **No scores or bands** (lead, 2026-10-22: "just write facts and what
+  you think"): `livingFacts` gathers what was seen next to the bank-supported and claimed income, the assets they
+  mentioned and the bureau's loans; `factLines` writes them plainly; `analyseLiving` (one LLM call at finish, skipped in
+  scripted mode) writes 3-4 officer-style sentences from those facts only — a gap is a question to ask, never a verdict,
+  nothing on caste, religion, people or taste. Report: "Living conditions" = the facts, then the analysis. No flags.
+- **Repeat PDs** (`repeat.js`, 2026-10-22): every PD is kept — `bo_sarthi_reports` gets one entry per PD (`pdNo`, `mode`,
+  `complete`, `coverage`, `collected`, `state`), and transcript / claims / evidence / photos are keyed by the PD id, never
+  the case (old reports fall back to the case key). Readers that `find` by `caseId` get the latest, since entries are
+  prepended. The brief lists "PDs done" and, once one exists, "New PD" asks why: **resume** (`seedResume` carries the
+  answers and asked-state, minus who/where — only what is left is asked), **strict** (each non-low flag becomes a file
+  question asked in new words, 12 cross-questions, 3 surprise checks), **cross** (`crossSteps` → `memory.quickPd`, the
+  earlier key answers in a shuffled order, flagged first), **full**. In every mode `memory.prior` (`priorFacts`) holds the
+  latest earlier answer per field; `checkContradictions` raises `repeat_pd` when `priorClash` (number >20%, years >1.5,
+  enum any change; free text never) and the recheck says both answers on the call. The report opens `?pd=<id>`.
+  The brief's **History** tab is the audit trail: one card per PD, its events timestamped (`pdEvents`: started — by
+  whom (`by`, from `OFFICER`), which mode, after which PD; call completed / ended early with `endedBecause`, exchanges and
+  minutes from `startedAt`/`endedAt`; report verdict with flags and changed answers);
+  Every PD is marked with one outcome (`pdOutcome`): **Satisfactory** (GREEN and complete), **Human intervention**
+  (AMBER, or any PD that ended early), **Red flags** (RED) — shown on the report stamp, the History cards and the
+  customer list. Section 7 of a report still starts GREEN/AMBER/RED (`extractRecommendation` reads it), followed by the
+  outcome label. "New PD from here" on any PD, the Sarthi AI button and the report's button all open `NewPdSheet`, whose options come
+  from `pdOptions(pd)`. Mahesh Agarwal is seeded with 3 PDs (`data/sarthi/pdHistory.json`, `daysAgo` → dates) as the
+  default of `useSarthiReports`; the Sarthi reset stamp was bumped so returning users get them.
 - **Questions for this file** (`prep.js`): the brief screen drafts 12-15 file-specific questions with the LLM (cached in
   `bo_sarthi_hotq_<case>`), each with a `why` for the officer and a `section`; with no model, `ruleHotQuestions` builds
   them from the file's own figures (cash share, running loans, enquiries, ITR, GST threshold, deposits, purpose).

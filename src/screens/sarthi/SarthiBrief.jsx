@@ -10,6 +10,7 @@ import { IoLogoWhatsapp, IoSparkles } from 'react-icons/io5';
 import Page, { listContainer, listItem } from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import EmptyState from '../../components/ui/EmptyState';
+import NewPdSheet from '../../components/sarthi/NewPdSheet';
 import Card, { MetricCard } from '../../components/ui/Card';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
@@ -19,6 +20,7 @@ import { pdCaseStage } from '../../utils/fileStages';
 import { useToast } from '../../hooks/useToast';
 import { useSarthiReports } from '../../hooks/useSarthiReports';
 import { formatINR } from '../../utils/formatters';
+import { pdEvents, pdOutcome } from '../../services/sarthi/repeat';
 import { getCase, lookupRiskPattern, bankIncome } from '../../services/sarthi/knowledge';
 import { computeEligibility } from '../../services/sarthi/verifier';
 import { validatePan, maskPan } from '../../services/sarthi/idChecks';
@@ -28,7 +30,7 @@ import styles from './SarthiBrief.module.css';
 
 const RISK = { low: 'Low risk', medium: 'Medium risk', high: 'High risk' };
 const RISK_TONE = { low: 'success', medium: 'warning', high: 'danger' };
-const TABS = ['Overview', 'Money', 'KYC', 'Questions'];
+const TABS = ['Overview', 'History', 'Money', 'KYC', 'Questions'];
 const SECTION = {
   personal: { label: 'Personal', icon: FiUser },
   business: { label: 'Business', icon: FiBriefcase },
@@ -37,6 +39,9 @@ const SECTION = {
   loan_purpose: { label: 'Loan', icon: FiZap },
 };
 const inr = (n) => formatINR(n, { compact: false });
+// Audit-trail timestamps: the full date on the PD, the time on each event.
+const stamp = (d) => new Date(d).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+const time = (d) => new Date(d).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
 
 export default function SarthiBrief() {
   const { id } = useParams();
@@ -48,6 +53,7 @@ export default function SarthiBrief() {
   const [openWhy, setOpenWhy] = useState(null);
   const [tab, setTab] = useState('Overview');
   const [reports] = useSarthiReports();
+  const [sheetFor, setSheetFor] = useState(null); // the PD a new one follows up
   const { toast } = useToast();
   const isNew = !!c?.isNew;
 
@@ -105,9 +111,10 @@ export default function SarthiBrief() {
     ...(b.bank ? [{ icon: FiTrendingDown, term: 'Bounces', value: b.bank.bounces, note: `${b.bank.cashCreditPct}% cash · ${b.bank.upiCreditPct}% UPI`, tone: b.bank.bounces ? 'stamp' : 'clear' }] : []),
   ];
 
-  const report = reports.find((r) => r.caseId === c.id);
-  // Sarthi AI starts at once; "Take PD yourself" is its own button beside it.
-  const start = () => navigate(`/sarthi/interview/${c.id}`);
+  // Every PD of this person, newest first. The first starts at once; after that the BO / CO picks why another is needed.
+  const pds = reports.filter((r) => r.caseId === c.id);
+  const report = pds[0];
+  const start = () => (report ? setSheetFor(report) : navigate(`/sarthi/interview/${c.id}`));
   const tabs = isNew ? TABS.filter((t) => t !== 'Questions') : TABS;
 
   return (
@@ -126,12 +133,14 @@ export default function SarthiBrief() {
           <button className={styles.actBtn} style={{ color: 'var(--primary)' }} onClick={() => toast(`Opening maps for ${c.area}`)}><FiMapPin size={16} /> Location</button>
         </div>
         <div className={styles.actions} style={{ marginTop: 8 }}>
-          <button className={`${styles.actBtn} ${styles.actAi}`} onClick={start}><IoSparkles size={16} /> Sarthi AI</button>
+          <button className={`${styles.actBtn} ${styles.actAi}`} onClick={start}><IoSparkles size={16} /> {report ? 'New PD' : 'Sarthi AI'}</button>
           {report
             ? <button className={styles.actBtn} style={{ color: 'var(--primary)' }} onClick={() => navigate(`/sarthi/report/${c.id}`)}><FiFileText size={16} /> View report</button>
             : !isNew && <button className={styles.actBtn} style={{ color: 'var(--primary)' }} onClick={() => navigate(`/sarthi/officer/${c.id}`)}><FiUser size={16} /> Take PD yourself</button>}
         </div>
       </div>
+
+      <NewPdSheet open={!!sheetFor} onClose={() => setSheetFor(null)} caseId={c.id} pd={sheetFor} />
 
       <Card padding={16} noChevron>
         <div className="label" style={{ marginBottom: 8 }}>Loan file stage</div>
@@ -144,7 +153,7 @@ export default function SarthiBrief() {
 
       <div className={styles.tabs}>
         {tabs.map((t) => (
-          <button key={t} className={`${styles.tab} ${tab === t ? styles.tabOn : ''}`} onClick={() => setTab(t)}>
+          <button key={t} className={`${styles.tab} ${tab === t ? styles.tabOn : ''}`} onClick={() => setTab(t === 'History' && tab === t ? 'Overview' : t)}>
             {tab === t && <motion.span layoutId="cust-tab" className={styles.tabPill} transition={{ type: 'spring', stiffness: 400, damping: 30 }} />}
             <span style={{ position: 'relative' }}>{t}</span>
           </button>
@@ -301,6 +310,39 @@ export default function SarthiBrief() {
                 )}
               </section>
             ) : <EmptyState emoji="🪪" title="No documents on file" subtitle="Sarthi asks for PAN and Aadhaar during the interview." />
+          )}
+
+          {/* the audit trail: every PD as timestamped events, newest first — and a new PD from any of them */}
+          {tab === 'History' && (
+            <div className="stack">
+              <div className="row-between">
+                <div className="label">Audit trail · {pds.length} PD{pds.length === 1 ? '' : 's'}</div>
+                {report && <button className={styles.pdNew} onClick={() => setSheetFor(report)}><FiRefreshCw size={13} /> New PD</button>}
+              </div>
+              {pds.length === 0 && <EmptyState emoji="🗂️" title="No PD yet" subtitle="Every PD Sarthi runs with this customer is logged here, with its timestamps." />}
+              {pds.map((p) => (
+                <Card key={p.id} padding={16} noChevron>
+                  <div className={styles.trailTop}>
+                    <strong>PD {p.pdNo ?? 1}</strong>
+                    <Badge tone={pdOutcome(p).badge} soft>{pdOutcome(p).label}</Badge>
+                    <span className={styles.trailWhen}>{stamp(p.startedAt ?? p.createdAt)}</span>
+                  </div>
+                  <ol className={styles.trail}>
+                    {pdEvents(p, pds).map((e) => (
+                      <li key={e.title} className={`${styles.trailItem} ${styles[`tone_${e.tone}`]}`}>
+                        <div className={styles.trailHead}><strong>{e.title}</strong><span className={styles.trailWhen}>{time(e.at)}</span></div>
+                        <div className={styles.trailWhy}>{e.text}</div>
+                        {e.flags?.map((f) => <div key={f} className={styles.trailFlag}>• {f}</div>)}
+                      </li>
+                    ))}
+                  </ol>
+                  <div className={styles.trailActions}>
+                    <button onClick={() => navigate(`/sarthi/report/${c.id}?pd=${p.id}`)}><FiFileText size={13} /> Report</button>
+                    <button onClick={() => setSheetFor(p)}><IoSparkles size={13} /> New PD from here</button>
+                  </div>
+                </Card>
+              ))}
+            </div>
           )}
 
           {tab === 'Questions' && !isNew && (

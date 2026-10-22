@@ -6,6 +6,7 @@ import TopBar from '../../components/layout/TopBar';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { buildNewCase, CUSTOM_CASES_KEY, matchPattern } from '../../services/sarthi/knowledge';
 import { validateId, PAN_HOLDER } from '../../services/sarthi/idChecks';
+import { parseLatLng, NEAR_M } from '../../services/sarthi/geo';
 import businessKnowledge from '../../data/sarthi/businessKnowledge.json';
 import locationKnowledge from '../../data/sarthi/locationKnowledge.json';
 import styles from './SarthiNewCase.module.css';
@@ -22,8 +23,10 @@ export default function SarthiNewCase() {
   const [f, setF] = useState({
     name: '', phone: '', age: '', area: '', businessKey: TRADES[0].key,
     businessName: '', businessVintage: VINTAGES[1], loanPurpose: PURPOSES[0],
-    loanAmountRequested: '', declaredIncome: '',
+    loanAmountRequested: '', declaredIncome: '', shopLocation: '', homeLocation: '',
+    employment: 'Self-employed', employer: '', designation: '',
   });
+  const salaried = f.employment === 'Salaried';
   const [idKind, setIdKind] = useState('pan');
   const [idValue, setIdValue] = useState('');
 
@@ -39,15 +42,17 @@ export default function SarthiNewCase() {
     () => Object.keys(locationKnowledge.specific).find((k) => f.area.toLowerCase().includes(k.toLowerCase())) ?? null,
     [f.area],
   );
-  const pattern = useMemo(() => matchPattern(areaHit, f.businessKey), [areaHit, f.businessKey]);
+  const pattern = useMemo(() => (salaried ? null : matchPattern(areaHit, f.businessKey)), [salaried, areaHit, f.businessKey]);
 
-  const ready = f.name.trim() && f.area.trim() && f.businessName.trim() && Number(f.loanAmountRequested) > 0 && idResult?.ok;
+  const badPins = [f.shopLocation, f.homeLocation].some((v) => v.trim() && !parseLatLng(v));
+  const ready = !badPins && f.name.trim() && f.area.trim() && (salaried ? f.employer.trim() && f.designation.trim() : f.businessName.trim()) && Number(f.loanAmountRequested) > 0 && idResult?.ok;
 
   const start = () => {
     const trade = TRADES.find((t) => t.key === f.businessKey);
     const record = buildNewCase({
       ...f,
-      business: trade.label,
+      // A salaried applicant has no trade: no business data, so no trade questions or hisaab.
+      ...(salaried ? { businessKey: '', businessName: f.employer, business: `Salaried — ${f.designation}` } : { business: trade.label }),
       identity: idResult,
     });
     setCases([record, ...cases]);
@@ -71,7 +76,7 @@ export default function SarthiNewCase() {
           <Field label="Phone" value={f.phone} onChange={set('phone')} inputMode="numeric" placeholder="10 digits" />
           <Field label="Age" value={f.age} onChange={set('age')} inputMode="numeric" placeholder="Years" />
         </div>
-        <Field label="Where they live and trade" value={f.area} onChange={set('area')} placeholder="Locality, city" />
+        <Field label={salaried ? 'Where they live' : 'Where they live and trade'} value={f.area} onChange={set('area')} placeholder="Locality, city" />
         {f.area.trim() && (
           <p className={areaHit ? styles.hintGood : styles.hintFlat}>
             {areaHit
@@ -79,19 +84,48 @@ export default function SarthiNewCase() {
               : 'No local data for this area, so Sarthi will skip area questions rather than guess at rents or landmarks.'}
           </p>
         )}
+        <div className={styles.pair}>
+          {!salaried && <Field label="Shop location (optional)" value={f.shopLocation} onChange={set('shopLocation')} placeholder="lat, lng or Maps link" />}
+          <Field label="Home location (optional)" value={f.homeLocation} onChange={set('homeLocation')} placeholder="lat, lng or Maps link" />
+        </div>
+        {(f.shopLocation || f.homeLocation) && (
+          <p className={badPins ? styles.hintFlat : styles.hintGood}>
+            {badPins
+              ? 'Could not read a location — paste it as "28.65, 77.19" or a Google Maps link that shows the coordinates.'
+              : `The photos Sarthi asks for will be checked against these pins (within ${NEAR_M} m).`}
+          </p>
+        )}
+        {!f.shopLocation && !f.homeLocation && (
+          <p className={styles.hintFlat}>No pins? The report will show where each photo was taken, for you to check.</p>
+        )}
       </fieldset>
 
       <fieldset className={styles.group}>
-        <legend className={styles.legend}>The business</legend>
-        <Field label="Business name" value={f.businessName} onChange={set('businessName')} placeholder="As it appears on the shop" />
-        <Select label="Trade" value={f.businessKey} onChange={set('businessKey')} options={TRADES.map((t) => [t.key, t.label])} />
+        <legend className={styles.legend}>{salaried ? 'The job' : 'The business'}</legend>
+        <div className={styles.toggle}>
+          {['Self-employed', 'Salaried'].map((e) => (
+            <button key={e} className={f.employment === e ? styles.toggleOn : styles.toggleOff} onClick={() => setF((prev) => ({ ...prev, employment: e }))}>{e}</button>
+          ))}
+        </div>
+        {salaried ? (
+          <>
+            <Field label="Company / employer" value={f.employer} onChange={set('employer')} placeholder="Where they work" />
+            <Field label="Designation" value={f.designation} onChange={set('designation')} placeholder="e.g. Software engineer, accountant, driver" />
+            <p className={styles.hintFlat}>Sarthi will ask about the job, salary, bonus and increments, and test the role with questions only someone doing that work can answer.</p>
+          </>
+        ) : (
+          <>
+            <Field label="Business name" value={f.businessName} onChange={set('businessName')} placeholder="As it appears on the shop" />
+            <Select label="Trade" value={f.businessKey} onChange={set('businessKey')} options={TRADES.map((t) => [t.key, t.label])} />
+          </>
+        )}
         <div className={styles.pair}>
-          <Select label="Trading for" value={f.businessVintage} onChange={set('businessVintage')} options={VINTAGES.map((v) => [v, v])} />
+          <Select label={salaried ? 'In this job for' : 'Trading for'} value={f.businessVintage} onChange={set('businessVintage')} options={VINTAGES.map((v) => [v, v])} />
           <Select label="Loan is for" value={f.loanPurpose} onChange={set('loanPurpose')} options={PURPOSES.map((v) => [v, v])} />
         </div>
         <div className={styles.pair}>
           <Field label="Amount asked" value={f.loanAmountRequested} onChange={set('loanAmountRequested')} inputMode="numeric" placeholder="₹" />
-          <Field label="Income claimed" value={f.declaredIncome} onChange={set('declaredIncome')} inputMode="numeric" placeholder="₹ per month" />
+          <Field label={salaried ? 'In-hand salary' : 'Income claimed'} value={f.declaredIncome} onChange={set('declaredIncome')} inputMode="numeric" placeholder="₹ per month" />
         </div>
         {pattern && (
           <p className={styles.patternHit}>
@@ -143,7 +177,7 @@ export default function SarthiNewCase() {
       </button>
       {!ready && (
         <p className={styles.blocked}>
-          Name, area, business, amount and a document that passes its checks are needed before the interview.
+          Name, area, {salaried ? 'employer and designation' : 'business'}, amount and a document that passes its checks are needed before the interview.
         </p>
       )}
     </Page>

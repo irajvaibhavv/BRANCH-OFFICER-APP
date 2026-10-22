@@ -3,6 +3,7 @@ import borrowers from '../../data/sarthi/borrowers.json';
 import riskPatterns from '../../data/sarthi/riskPatterns.json';
 import locationKnowledge from '../../data/sarthi/locationKnowledge.json';
 import businessKnowledge from '../../data/sarthi/businessKnowledge.json';
+import { parseLatLng } from './geo';
 
 export const CASES = borrowers;
 export const CUSTOM_CASES_KEY = 'bo_sarthi_cases';
@@ -18,7 +19,7 @@ export function customCases() {
 
 // One-time wipe of all Sarthi data on each device — walk-ins, reports, transcripts, photos — so a new set of
 // seeded applicants starts clean. Bump the stamp to wipe again.
-const SARTHI_RESET = '2026-09-27-applicants-v2';
+const SARTHI_RESET = '2026-10-22-pd-history-v5';
 const RESET_KEY = 'bo_sarthi_reset';
 export function resetSarthiData() {
   try {
@@ -59,9 +60,11 @@ export function buildNewCase(form) {
     loanPurpose: form.loanPurpose,
     loanAmountRequested: Number(form.loanAmountRequested) || 0,
     declaredIncome: Number(form.declaredIncome) || 0,
-    employment: 'Self-employed',
+    employment: form.employment || 'Self-employed',
+    ...(form.employment === 'Salaried' ? { employer: form.employer?.trim(), designation: form.designation?.trim() } : {}),
     riskLevel: pattern ? 'high' : 'medium', // unknown-to-us is never "low"
     identity: form.identity ?? null,
+    locations: { shop: parseLatLng(form.shopLocation), home: parseLatLng(form.homeLocation) },
     hi: form.hi ?? {},
     brief: {
       avgMonthlyCredit: null,
@@ -78,8 +81,11 @@ export function buildNewCase(form) {
       areaDefaultRate: null,
       digInto: [
         'New to us — nothing on file to check the answers against',
-        'Income is self-declared only; no bank statement has been seen',
-        `Confirm the business exists at ${form.area.trim()} from the photographs`,
+        ...(form.employment === 'Salaried'
+          ? ['Salary is self-declared only; no salary slip, Form 16 or bank statement has been seen',
+            `Confirm they really work as ${form.designation?.trim() || 'claimed'} at ${form.employer?.trim() || 'the employer named'} — call HR or check the ID card`]
+          : ['Income is self-declared only; no bank statement has been seen',
+            `Confirm the business exists at ${form.area.trim()} from the photographs`]),
         ...(pattern ? [`Area and trade match ${pattern.patternId}, which has failed before`] : []),
       ],
     },
@@ -209,6 +215,6 @@ export function briefForCitation(c) {
     name: c.name, age: c.age, area: c.area, business: c.business, businessName: c.businessName,
     businessVintage: c.businessVintage, loanPurpose: c.loanPurpose,
     loanAmountRequested: c.loanAmountRequested, declaredIncome: c.declaredIncome,
-    employment: c.employment, ...c.brief,
+    employment: c.employment, employer: c.employer, designation: c.designation, ...c.brief,
   };
 }

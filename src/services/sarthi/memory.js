@@ -6,8 +6,31 @@ import { purposeSignals, judgeAnswer } from './probes';
 export const FIELD_KEYS = pdSchema.sections.flatMap((s) => (s.fields ?? []).map((f) => f.key));
 
 export const FIELD_DEFS = Object.fromEntries(
-  pdSchema.sections.flatMap((s) => (s.fields ?? []).map((f) => [f.key, { ...f, section: s.id }])),
+  pdSchema.sections.flatMap((s) => (s.fields ?? []).map((f) => [f.key, { ...f, section: s.id, employment: s.employment }])),
 );
+
+// A salaried applicant gets the job sections instead of the business ones (schema `employment` on a section).
+export const isSalaried = (caseData) => /salaried/i.test(caseData?.employment ?? '');
+
+// Questions on the claimed job, written by the model from its own knowledge of that work — see controller.
+export const PROFESSION_CHECKS = 4;
+
+// Optional schema fields are asked only once an answer or a flag links to them (schema `links`), at most this many per
+// PD — the adaptive part of the interview (controller.adaptivePick). A re-check PD may open more.
+export const OPTIONAL_CAP = 6;
+const STRICT_OPTIONAL_CAP = 10;
+
+/** Opens the optional fields `keys` link to, within the cap. */
+export function unlockLinks(memory, keys) {
+  const unlocked = [...(memory.unlocked ?? [])];
+  const cap = memory.strict ? STRICT_OPTIONAL_CAP : OPTIONAL_CAP;
+  for (const k of keys) {
+    for (const l of FIELD_DEFS[k]?.links ?? []) {
+      if (FIELD_DEFS[l]?.optional && !unlocked.includes(l) && unlocked.length < cap) unlocked.push(l);
+    }
+  }
+  return unlocked.length === (memory.unlocked ?? []).length ? memory : { ...memory, unlocked };
+}
 
 export const SCORE_KEYS = ['area_knowledge_score', 'business_domain_score'];
 
@@ -18,7 +41,7 @@ export const KEY_GUIDE = EXTRACTABLE_KEYS
   .map((k) => (FIELD_DEFS[k]?.options ? `${k} (${FIELD_DEFS[k].options.join('|')})` : k))
   .join(', ');
 
-export function createEmptyMemory(caseData, { hot = [] } = {}) {
+export function createEmptyMemory(caseData, { hot = [], prior = {} } = {}) {
   const collected = {};
   FIELD_KEYS.forEach((k) => { collected[k] = null; });
   SCORE_KEYS.forEach((k) => { collected[k] = null; });
@@ -31,6 +54,7 @@ export function createEmptyMemory(caseData, { hot = [] } = {}) {
     income_mentions: [], // every stated income, for coaching detection
     verification: { area: [], business: [] },
     tradeAnswers: [], // insider trade questions, answered verbatim — see probes.js
+    professionAnswers: [], // salaried: questions on the job they claim, answered verbatim
     crossQueue: [], // fields just answered that earn one cross-question (schema "cross")
     crossAsked: [],
     crossAnswers: [],
@@ -39,9 +63,13 @@ export function createEmptyMemory(caseData, { hot = [] } = {}) {
     recheckAsked: [],
     rechecks: [],
     hot, // questions prepared from the file before the call — see prep.js
+    prior, // answers from this person's earlier PDs — a changed one is a repeat_pd recheck (repeat.js)
     hotAsked: [],
     hotAnswers: [],
     photosAsked: [], // 'shop' / 'home' — asked by the controller, from where they are (current_place)
+    unlocked: [], // optional fields an answer or a flag has linked to — see unlockLinks
+    lastField: null, // the field last asked, whose links the next pick favours
+    seed: Math.random(), // this PD's own tie-break, so two PDs never walk the same order
     transcript: [],
     currentSection: 'greeting',
     sectionStartTurn: { greeting: 0 },
@@ -92,7 +120,8 @@ export function updateMemory(memory, facts = {}) {
     ];
   }
 
-  return { ...memory, collected, income_mentions: incomeMentions, crossQueue: queue };
+  const answered = Object.keys(facts).filter((k) => facts[k] != null && facts[k] !== '' && memory.collected[k] == null && k in collected);
+  return unlockLinks({ ...memory, collected, income_mentions: incomeMentions, crossQueue: queue }, answered);
 }
 
 /**
@@ -116,6 +145,10 @@ export function recordHotAnswer(memory, hot, text, turn) {
   return { ...memory, hotAnswers: [...(memory.hotAnswers ?? []), { id: hot.id, q: hot.q, why: hot.why, answer: text, turn }] };
 }
 
+export function recordProfessionAnswer(memory, question, text, turn) {
+  return { ...memory, professionAnswers: [...(memory.professionAnswers ?? []), { q: question, answer: text, turn }] };
+}
+
 export function recordCrossAnswer(memory, key, question, text, turn) {
   return { ...memory, crossAnswers: [...(memory.crossAnswers ?? []), { field: key, value: memory.collected[key], asked: question, answer: text, turn }] };
 }
@@ -129,7 +162,8 @@ export function addFlags(memory, flags = []) {
   if (!flags.length) return memory;
   const recomputed = new Set(flags.filter((f) => f.type === 'trade_math').map((f) => f.field));
   const kept = memory.flags.filter((f) => !(f.type === 'trade_math' && recomputed.has(f.field)));
-  return { ...memory, flags: [...kept, ...flags] };
+  // A doubt opens the optional questions around it: a sales figure that does not add up opens last week's sales.
+  return unlockLinks({ ...memory, flags: [...kept, ...flags] }, flags.map((f) => f.field));
 }
 
 export function recordTurn(memory, role, text) {
@@ -152,7 +186,11 @@ export function enterSection(memory, sectionId) {
 
 // Schema conditions are parsed from two literal shapes, never evaluated: "key === 'value'" and "key > n".
 function conditionMet(field, memory) {
+  if (field.employment && (field.employment === 'salaried') !== isSalaried(memory.caseData)) return false;
+  if (field.optional && !(memory.unlocked ?? []).includes(field.key)) return false;
   if (!field.condition) return true;
+  if (field.condition === 'salaried') return isSalaried(memory.caseData);
+  if (field.condition === 'self_employed') return !isSalaried(memory.caseData);
   const eq = /^(\w+) === '(\w+)'$/.exec(field.condition);
   if (eq) return memory.collected[eq[1]] === eq[2];
   const gt = /^(\w+) > (\d+)$/.exec(field.condition);
@@ -165,7 +203,8 @@ function conditionMet(field, memory) {
     if (field.condition === 'purpose_needs_probe') return p.newVenture || p.personal;
     if (field.condition === 'amount_stretch') return p.stretch;
   }
-  if (field.condition === 'place_known') return memory.collected.current_place != null;
+  // Salaried: only the home is photographed, so someone already at home has no other place to go to.
+  if (field.condition === 'place_known') return memory.collected.current_place != null && !(isSalaried(memory.caseData) && memory.collected.current_place === 'home');
   if (field.condition === 'name_mismatch') return !memory.caseData?.isNew && namesMatch(memory.collected.stated_name, memory.caseData?.name) === false;
   return true;
 }

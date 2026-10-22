@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FiX } from 'react-icons/fi';
 import { IoCall, IoCamera, IoMic, IoMicOff, IoRefresh, IoSend, IoVolumeHigh, IoVolumeMute } from 'react-icons/io5';
@@ -11,7 +11,7 @@ import { parseClaims, peekSpeech, peekDisplay, writeReport, VISION_URL, COMPLETE
 import { extractFacts, askTurn } from '../../services/sarthi/model';
 import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../services/sarthi/script';
 import { verifyClaims, computeEligibility, toNumber } from '../../services/sarthi/verifier';
-import { createEmptyMemory, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor, recordTradeAnswer, recordCrossAnswer, recordHotAnswer, acceptedFacts, MAX_ASKS } from '../../services/sarthi/memory';
+import { createEmptyMemory, knownFacts, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor, recordTradeAnswer, recordProfessionAnswer, recordCrossAnswer, recordHotAnswer, acceptedFacts, MAX_ASKS } from '../../services/sarthi/memory';
 import { readIntent, replyPrefix } from '../../services/sarthi/intent';
 import { queueRechecks, recordRecheckAnswer, driftRechecks } from '../../services/sarthi/recheck';
 import { loadHot, ruleHotQuestions } from '../../services/sarthi/prep';
@@ -24,12 +24,17 @@ import PhotoCapture from '../../components/sarthi/PhotoCapture';
 import { startFrameCapture, stopCamera, pauseCamera, resumeCamera, getObservations, resetObservations } from '../../services/sarthi/video';
 import { downscale, analysePhoto, PHOTO_ASKS } from '../../services/sarthi/photo';
 import { checkUpload, liveProvenance } from '../../services/sarthi/photoCheck';
+import { getFix, checkPlace, inDistance } from '../../services/sarthi/geo';
+import { MODES, priorFacts, seedResume, flagQuestions, crossSteps } from '../../services/sarthi/repeat';
+import { checkAgainstEarlierPds, crossPdFlags } from '../../services/sarthi/crossPd';
+import { livingFacts, factLines, analyseLiving } from '../../services/sarthi/living';
 import { stopSpeaking, listen, canListen, canSpeak, setSilent, ANSWER_PAUSE_MS } from '../../services/voice';
 import { speakStreamed } from '../../services/sarthi/stream';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { sarthiVoice, prerendered, gendered, aboutSarthi } from '../../services/sarthi/voice';
 import voiceManifest from '../../data/sarthi/voiceManifest.json';
 import { useSarthiReports } from '../../hooks/useSarthiReports';
+import { OFFICER } from '../../context/AuthContext';
 import { checkTradeMath, understanding } from '../../services/sarthi/probes';
 import styles from './SarthiInterview.module.css';
 
@@ -51,13 +56,18 @@ const CAPTION_FALLBACK_MS = 3000;
 const LEAVING = /\b(bye|alvida|band karo|band kar do|rehne do|nahi karna|cut karo|cut kar raha|mujhe jaana hai)\b|अलविदा|बाय|बंद करो/i;
 
 // One topic = one schema field (or fixed section / verification task), so re-asks don't advance the count.
-const topicKey = (a) => `${a?.section ?? 'x'}:${a?.crossOf ? `cross_${a.crossOf}` : a?.recheckOf ? `recheck_${a.recheckOf}` : a?.hot ? `hot_${a.hot.id}` : a?.photo ? `photo_${a.photo}` : a?.missingFields?.[0] ?? a?.verificationTask ?? a?.tradeProbe ?? ''}`;
+const topicKey = (a) => `${a?.section ?? 'x'}:${a?.crossOf ? `cross_${a.crossOf}` : a?.recheckOf ? `recheck_${a.recheckOf}` : a?.hot ? `hot_${a.hot.id}` : a?.photo ? `photo_${a.photo}` : a?.professionCheck ? `profession_${a.professionCheck}` : a?.challenge ? `challenge_${a.challenge.id}_${a.challenge.step}` : a?.missingFields?.[0] ?? a?.verificationTask ?? a?.tradeProbe ?? ''}`;
 
 export default function SarthiInterview() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isIntake = id === 'new';
-  const [, setReports] = useSarthiReports();
+  const [reports, setReports] = useSarthiReports();
+  const [params] = useSearchParams();
+  // Every earlier PD of this person, newest first; a repeat PD runs in the mode picked on the brief (repeat.js).
+  const past = useMemo(() => reports.filter((r) => r.caseId === id), [reports, id]);
+  const mode = MODES[params.get('mode')] ? params.get('mode') : 'full';
+  const basePd = past.find((r) => r.id === params.get('from')) ?? past[0] ?? null;
   const [, setCases] = useLocalStorage(CUSTOM_CASES_KEY, []);
   // Stable identities: the startup effect keys off caseData, and getCase() re-parses localStorage.
   const existing = useMemo(() => (isIntake ? null : getCase(id)), [id, isIntake]);
@@ -97,6 +107,7 @@ export default function SarthiInterview() {
   const [photoBusy, setPhotoBusy] = useState(false);
   const [capture, setCapture] = useState(null); // { kind, volunteered } while the camera screen is open
   const startedAt = useRef(0);
+  const endReason = useRef(null); // why a call ended before the schema did — shown in the PD audit trail
   const [shownPhoto, setShownPhoto] = useState(null);
   const [collected, setCollected] = useState({});
   // Schema coverage, not question count — the controller ends on coverage.
@@ -469,6 +480,7 @@ export default function SarthiInterview() {
     const exitLine = presenceLines(caseData).unwilling;
     // They do not want the call. Before we know it is the applicant: leave, no report. After: close kindly and report.
     if (intent === 'stop') {
+      endReason.current = 'They asked to stop the call';
       if (presence.current === 'done' || isIntake || caseData.isNew) sayFixed(exitLine, { then: finish });
       else { presence.current = 'done'; sayFixed(exitLine, { then: leaveForLater }); }
       return;
@@ -530,6 +542,22 @@ export default function SarthiInterview() {
       // An insider trade question is answered verbatim — the words ARE the evidence.
       if (lastAction.current?.tradeProbeDef) {
         memory.current = recordTradeAnswer(memory.current, lastAction.current.tradeProbeDef, text, borrowerTurn);
+      }
+      // A live challenge is kept verbatim; a photo they could not send drops that challenge's follow-up question.
+      const ch = lastAction.current?.challenge;
+      if (ch && intent !== 'question' && intent !== 'upset') {
+        const asked = transcript.current.filter((t) => t.role === 'assistant').at(-1)?.content ?? '';
+        const noPhoto = ch.photo && !/bheji\]$/.test(text);
+        memory.current = {
+          ...memory.current,
+          challengeAnswers: [...(memory.current.challengeAnswers ?? []), { id: ch.id, why: ch.why, photo: ch.photo ?? null, asked, answer: text, sent: ch.photo ? !noPhoto : null, turn: borrowerTurn }],
+          challengeQueue: noPhoto ? (memory.current.challengeQueue ?? []).filter((s) => s.id !== ch.id) : memory.current.challengeQueue,
+        };
+      }
+      // "Matlab?" is not an answer: the same check is asked again after the reply.
+      if (lastAction.current?.professionCheck && intent !== 'question' && intent !== 'upset') {
+        const asked = transcript.current.filter((t) => t.role === 'assistant').at(-1)?.content ?? '';
+        memory.current = recordProfessionAnswer(memory.current, asked, text, borrowerTurn);
       }
       if (lastAction.current?.crossOf) {
         const asked = transcript.current.filter((t) => t.role === 'assistant').at(-1)?.content ?? '';
@@ -752,7 +780,22 @@ export default function SarthiInterview() {
       const dataUrl = shot ?? await downscale(file);
       setShownPhoto(dataUrl);
       setPhotoAsk(null);
-      const record = await analysePhoto({ dataUrl, kind, caseData: caseRef.current ?? caseData, provenance });
+      const subject = caseRef.current ?? caseData;
+      const [record, fix] = await Promise.all([analysePhoto({ dataUrl, kind, caseData: subject, provenance }), getFix()]);
+      record.location = fix; // every photo: crossPd.js compares it with earlier applicants' photos
+      if (kind === 'shop' || kind === 'home') {
+        record.placeCheck = checkPlace(fix, subject?.locations?.[kind]);
+        // Asked on the call straight away, like a figure that does not add up; they may be at a second branch.
+        if (record.placeCheck.status === 'far') {
+          const place = kind === 'shop' ? 'dukaan' : 'ghar';
+          memory.current = { ...memory.current, recheckQueue: [...memory.current.recheckQueue, {
+            field: `photo_location_${kind}`,
+            detail: `Photo of ${record.label} was taken ${inDistance(record.placeCheck.distance)} from the ${kind} location on file`,
+            say: `Yeh photo jis jagah se aayi hai, woh file mein likhe ${place} ke pate se lagbhag ${inDistance(record.placeCheck.distance).replace('km', 'kilometre').replace(' m', ' meter')} door dikh rahi hai. Kya yeh aapki hi ${place} hai, ya aap abhi kahin aur hain?`,
+            turn: memory.current.turnCount,
+          }] };
+        }
+      }
       photos.current.push(record);
       setPhotoBusy(false);
       setTimeout(() => setShownPhoto(null), 2600); // long enough to see it landed
@@ -831,12 +874,30 @@ export default function SarthiInterview() {
     const photoFlags = photos.current.flatMap((p) => (p.provenance?.flags ?? []).map((f) => ({
       type: 'photo_provenance', field: `photo_${p.kind}`, severity: f.severity, detail: `Photo sent as ${p.label}: ${f.detail}`,
     })));
+    setProgress('Comparing photos with earlier PDs…');
+    const links = await checkAgainstEarlierPds(photos.current, subject.id);
+    links.forEach((l) => {
+      const p = photos.current.find((x) => x.kind === l.kind && !x.skipped);
+      if (p) p.links = [...(p.links ?? []), l];
+    });
+    const linkFlags = crossPdFlags(links);
+    // Living conditions: the facts from the home photos, and the model's few sentences on them (no scores).
+    const homeFacts = livingFacts(photos.current, subject, memory.current.collected);
+    if (homeFacts) setProgress('Reading the home photos…');
+    const living = homeFacts ? { facts: factLines(homeFacts), vehicles: homeFacts.vehicles, items: homeFacts.items, house: homeFacts.house, analysis: demoRef.current ? null : await analyseLiving(homeFacts) } : null;
+    const placeFlags = photos.current.flatMap((p) => {
+      const s = p.placeCheck?.status;
+      if (s === 'far') return [{ type: 'photo_location', field: `photo_location_${p.kind}`, severity: 'high', detail: `Photo of ${p.label} was taken ${inDistance(p.placeCheck.distance)} from the ${p.kind} location on file — may not be their place` }];
+      if (s === 'not_on_file') return [{ type: 'photo_location', field: `photo_location_${p.kind}`, severity: 'low', detail: `No ${p.kind} location on file — check the pin where the photo of ${p.label} was taken (${p.location.lat}, ${p.location.lng})` }];
+      if (s === 'no_fix') return [{ type: 'photo_location', field: `photo_location_${p.kind}`, severity: 'medium', detail: `Location was not shared when ${p.label} was photographed (${p.location?.error ?? 'unavailable'}) — place not verified` }];
+      return [];
+    });
 
     // Where verifier and controller flag the same field, keep the verifier's (it has a turn).
     const settled = new Set(claimFlags.map((f) => f.claimType).filter(Boolean));
     const math = checkTradeMath(memory.current);
     const depth = understanding(memory.current);
-    const flags = [...claimFlags, ...memory.current.flags, ...consistency, ...math.flags, ...photoFlags]
+    const flags = [...claimFlags, ...memory.current.flags, ...consistency, ...math.flags, ...photoFlags, ...placeFlags, ...linkFlags]
       .filter((f) => !(f.type === 'contradiction' && settled.has(CLAIM_FIELD[f.field])))
       .filter((f, i, all) => all.findIndex((o) => o.detail === f.detail) === i);
 
@@ -845,11 +906,16 @@ export default function SarthiInterview() {
     const observations = getObservations();
     const collectedFacts = memory.current.collected;
 
-    save(`bo_sarthi_transcript_${subject.id}`, turns);
-    save(`bo_sarthi_claims_${subject.id}`, captured);
-    save(`bo_sarthi_evidence_${subject.id}`, { evidence, flags, eligibility, observations, collected: collectedFacts, understanding: depth, tradeMath: math.results, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers });
+    // Every PD is kept: its own id, and its own keys — a repeat PD never overwrites an earlier one.
+    const endedAt = new Date().toISOString();
+    const pdId = `sarthi_report_${Date.now()}`;
+    const pdNo = past.length + 1;
+    const complete = demoRef.current ? stepRef.current >= scriptRef.current.length - 1 : getNextAction(memory.current, subject).action === 'end_interview';
+    save(`bo_sarthi_transcript_${pdId}`, turns);
+    save(`bo_sarthi_claims_${pdId}`, captured);
+    save(`bo_sarthi_evidence_${pdId}`, { evidence, flags, eligibility, observations, collected: collectedFacts, understanding: depth, tradeMath: math.results, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers });
     // Images are kept in their own key: base64 is heavy and must not risk the report's own write.
-    save(`bo_sarthi_photos_${subject.id}`, photos.current);
+    save(`bo_sarthi_photos_${pdId}`, photos.current);
 
     let report;
     let validation = null;
@@ -858,7 +924,7 @@ export default function SarthiInterview() {
     if (!demoRef.current) {
       try {
         setProgress('Writing the PD report…');
-        const raw = await writeReport({ caseData: subject, transcript: turns, claims: captured, evidence, flags, collected: collectedFacts, verification: memory.current.verification, understanding: depth, tradeMath: math.results, crossAnswers: memory.current.crossAnswers, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers, eligibility, observations, photos: photos.current, identity: subject.identity });
+        const raw = await writeReport({ caseData: subject, transcript: turns, claims: captured, evidence, flags, collected: collectedFacts, verification: memory.current.verification, understanding: depth, tradeMath: math.results, crossAnswers: memory.current.crossAnswers, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers, professionAnswers: memory.current.professionAnswers, challengeAnswers: memory.current.challengeAnswers, living, eligibility, observations, photos: photos.current, identity: subject.identity, mode: `Handover · PD ${pdNo}${past.length ? ` (${MODES[mode].label}, after ${past.length} earlier)` : ''}${complete ? '' : ' · ENDED EARLY — not every topic was covered'}` });
         setProgress('Checking every citation…');
         validation = validateReport(raw, turns, captured, briefForCitation(subject), eligibility, { flags, collected: collectedFacts });
         report = validation.cleanedReport;
@@ -870,12 +936,30 @@ export default function SarthiInterview() {
 
     if (!report) {
       setProgress('Writing the PD report…');
-      report = buildFallbackReport({ caseData: subject, transcript: turns, evidence, flags, eligibility, observations, photos: photos.current, identity: subject.identity, cameraOn: cameraRef.current, understanding: depth, tradeMath: math.results, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers });
+      report = buildFallbackReport({ caseData: subject, transcript: turns, evidence, flags, eligibility, observations, photos: photos.current, identity: subject.identity, cameraOn: cameraRef.current, understanding: depth, tradeMath: math.results, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers, professionAnswers: memory.current.professionAnswers, challengeAnswers: memory.current.challengeAnswers, living });
       validation = validateReport(report, turns, captured, briefForCitation(subject), eligibility, { flags, collected: collectedFacts });
     }
 
     const entry = {
-      id: `sarthi_report_${Date.now()}`,
+      id: pdId,
+      pdNo,
+      mode,
+      from: past.length ? basePd?.id ?? null : null, // the PD this one follows up, for the history trail
+      by: { id: OFFICER.id, name: OFFICER.name, role: OFFICER.designation },
+      startedAt: new Date(startedAt.current || Date.now()).toISOString(),
+      endedAt,
+      endedBecause: complete ? null : endReason.current ?? 'Ended before every topic was covered',
+      complete,
+      coverage: completeness(memory.current).pct,
+      collected: knownFacts(memory.current),
+      // What a "finish last PD" needs to skip what this one already asked (repeat.js seedResume).
+      state: {
+        hotAsked: memory.current.hotAsked ?? [],
+        crossAsked: memory.current.crossAsked ?? [],
+        tradeAnswers: memory.current.tradeAnswers ?? [],
+        professionAnswers: memory.current.professionAnswers ?? [],
+        challengePlanned: !!memory.current.challengePlanned,
+      },
       caseId: subject.id,
       name: subject.name,
       createdAt: new Date().toISOString(),
@@ -887,16 +971,17 @@ export default function SarthiInterview() {
       flags,
       eligibility,
       observations,
-      // metadata only — the images themselves live in bo_sarthi_photos_<case>
+      // metadata only — the images themselves live in bo_sarthi_photos_<pd id>
       photos: photos.current.map(({ dataUrl, ...rest }) => rest),
       identity: subject.identity ?? null,
+      living,
       understanding: depth.total ? depth : null,
       tradeMath: math.results.length ? math.results : null,
       validation,
       turns: turns.length,
     };
-    setReports((prev) => [entry, ...prev.filter((r) => r.caseId !== subject.id)]);
-    navigate(`/sarthi/report/${subject.id}`, { replace: true });
+    setReports((prev) => [entry, ...prev]);
+    navigate(`/sarthi/report/${subject.id}?pd=${pdId}`, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseData, navigate, setReports, teardown]);
 
@@ -906,7 +991,17 @@ export default function SarthiInterview() {
     resetObservations();
     scriptRef.current = isIntake ? buildIntakeScript() : buildScript(startCase);
     // The file's questions, prepared on the brief screen; if the officer started before they came back, the file's own.
-    memory.current = createEmptyMemory(startCase, { hot: isIntake || startCase.quickPd ? [] : (loadHot(startCase.id)?.questions ?? ruleHotQuestions(startCase)) });
+    const fileHot = isIntake || startCase.quickPd || mode === 'cross' ? [] : (loadHot(startCase.id)?.questions ?? ruleHotQuestions(startCase));
+    const prior = priorFacts(past);
+    memory.current = createEmptyMemory(startCase, { hot: fileHot, prior });
+    if (basePd && mode === 'resume') memory.current = seedResume(memory.current, basePd);
+    if (basePd && mode === 'strict') {
+      memory.current = { ...memory.current, strict: true, hot: [...flagQuestions(basePd.flags, basePd.pdNo), ...fileHot] };
+    }
+    if (mode === 'cross') {
+      const steps = crossSteps(prior, startCase, (basePd?.flags ?? []).map((f) => f.field));
+      if (steps.length) memory.current = { ...memory.current, quickPd: steps };
+    }
     caseRef.current = startCase;
 
     // The greeting is a fixed line, so it is said at once instead of waiting ~3s on a model call for the same words.
@@ -1152,7 +1247,7 @@ export default function SarthiInterview() {
               <p className={styles.confirmNote}>Sarthi abhi tak ke jawaabon se officer ke liye report bana dega.</p>
               <div className={styles.confirmRow}>
                 <button className={styles.sheetGhost} onClick={() => setConfirmEnd(false)}>Jaari rakhein</button>
-                <button className={styles.sheetDanger} onClick={() => { setConfirmEnd(false); finish(); }}>Khatam karein</button>
+                <button className={styles.sheetDanger} onClick={() => { setConfirmEnd(false); endReason.current = 'Ended with the Khatam button'; finish(); }}>Khatam karein</button>
               </div>
             </motion.div>
           </motion.div>

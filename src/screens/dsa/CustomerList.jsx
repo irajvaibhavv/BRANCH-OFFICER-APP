@@ -14,6 +14,7 @@ import { MiniMetricRow } from '../../components/charts/MiniMetric';
 import { useToast } from '../../hooks/useToast';
 import { formatINR, timeAgo } from '../../utils/formatters';
 import { bankIncome } from '../../services/sarthi/knowledge';
+import { pdOutcome } from '../../services/sarthi/repeat';
 import styles from './dsa.module.css';
 
 const RISK = { high: ['High risk', 'danger'], medium: ['Medium risk', 'warning'], low: ['Low risk', 'success'] };
@@ -55,7 +56,7 @@ export default function CustomerList({ files, reports, onClear }) {
                         {customerStage(c) === 'existing' && <Badge tone="success" soft>Existing</Badge>}
                         <StatusBadge status={pdCaseStage(c, !!report)} soft />
                         <Badge tone={riskTone}>{riskLabel}</Badge>
-                        {report && <Badge tone="primary" soft>Report ready</Badge>}
+                        {report && <Badge tone={pdOutcome(report).badge} soft>{pdOutcome(report).label}</Badge>}
                       </div>
                     </div>
                   </div>

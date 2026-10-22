@@ -317,3 +317,20 @@
 .briefChips { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 10px; }
 .briefChip { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; padding: 6px 10px; border-radius: 999px; background: var(--card); font-size: 13px; font-weight: 500; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .briefDot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--sec, var(--primary)); }
+
+/* PDs done, and the "why another PD" picker */
+.pdNew { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700; color: var(--primary); background: none; border: 0; padding: 4px 0; }
+/* PD audit trail: one card per PD, its events on a line, each dot coloured by what happened */
+.trailTop { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; font-size: 15px; color: var(--text-1); }
+.trail { list-style: none; margin: 0 0 12px 6px; padding: 0 0 0 18px; border-left: 2px solid var(--border); display: flex; flex-direction: column; gap: 14px; }
+.trailItem { position: relative; display: flex; flex-direction: column; gap: 4px; }
+.trailItem::before { content: ''; position: absolute; left: -25px; top: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 0 3px var(--card); }
+.tone_ok::before { background: var(--success); }
+.tone_warn::before { background: var(--warning); }
+.tone_bad::before { background: var(--danger); }
+.trailHead { display: flex; align-items: baseline; gap: 8px; font-size: 14px; color: var(--text-1); }
+.trailWhen { margin-left: auto; font-size: 12px; color: var(--text-3); white-space: nowrap; }
+.trailWhy { font-size: 13px; line-height: 1.45; color: var(--text-2); }
+.trailFlag { font-size: 12.5px; line-height: 1.45; color: var(--text-2); }
+.trailActions { display: flex; gap: 8px; flex-wrap: wrap; }
+.trailActions button { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--primary); background: var(--primary-soft); border: 0; border-radius: 999px; padding: 6px 12px; }

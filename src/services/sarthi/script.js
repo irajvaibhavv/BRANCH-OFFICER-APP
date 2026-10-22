@@ -4,6 +4,7 @@ import { identitySummary } from './idChecks';
 import { toNumber } from './verifier';
 import { formatINR } from '../../utils/formatters';
 import { PHOTO_ASKS } from './photo';
+import { isSalaried } from './memory';
 
 const fmt = (n) => formatINR(n, { compact: false });
 
@@ -21,21 +22,30 @@ export function buildScript(c) {
       speech: 'नमस्ते जी। मैं सारथी हूँ, ब्रांच से। कुछ आसान सवाल पूछूँगा, बस पाँच मिनट। पहले अपना पूरा नाम बताइए?',
       collect: 'stated_name',
     },
-    {
-      text: `Sabse pehle confirm kar lein — aap ${c.area} mein rehte hain aur ${c.businessName} chalate hain, sahi hai?`,
-      speech: `सबसे पहले, एक बार कन्फर्म कर लें। आप ${hi.area ?? ''} में रहते हैं, और ${hi.businessName ?? ''} चलाते हैं। सही है?`,
-    },
-    {
-      text: 'Roz ka kaam kaise chalta hai? Aap khud baithte ho, ya koi aur sambhalta hai?',
-      speech: 'रोज़ का काम कैसे चलता है? आप खुद बैठते हैं, या कोई और सँभालता है?',
-    },
-    { text: 'Business kitne saal se chal raha hai?', speech: 'बिज़नेस, कितने साल से चल रहा है?', claimType: 'vintage' },
-    { text: 'Mahine ki income kitni ho jaati hai, roughly?', speech: 'महीने की इनकम, लगभग कितनी हो जाती है?', claimType: 'income' },
+    // No model in scripted mode, so a salaried applicant gets fixed job questions; the role-specific ones need live mode.
+    ...(isSalaried(c) ? [
+      { text: 'Aap kis company mein kaam karte hain, aur wahan aapka kya role hai?', speech: 'आप किस कंपनी में काम करते हैं, और वहाँ आपका क्या रोल है?' },
+      { text: 'Kal office mein aapne kya-kya kaam kiya? Thoda detail mein bataiye.', speech: 'कल ऑफिस में आपने क्या-क्या काम किया? थोड़ा डिटेल में बताइए।' },
+      { text: 'Is company mein kitne saal se hain, aur kul experience kitna hai?', speech: 'इस कंपनी में कितने साल से हैं, और कुल एक्सपीरियंस कितना है?', claimType: 'vintage' },
+      { text: 'Haath mein mahine ki salary kitni aati hai, aur saal ka package kitna hai?', speech: 'हाथ में महीने की सैलरी कितनी आती है, और साल का पैकेज कितना है?', claimType: 'income' },
+      { text: 'Pichhli baar bonus ya increment kab mila tha, aur kitna?', speech: 'पिछली बार बोनस या इंक्रीमेंट कब मिला था, और कितना?' },
+    ] : [
+      {
+        text: `Sabse pehle confirm kar lein — aap ${c.area} mein rehte hain aur ${c.businessName} chalate hain, sahi hai?`,
+        speech: `सबसे पहले, एक बार कन्फर्म कर लें। आप ${hi.area ?? ''} में रहते हैं, और ${hi.businessName ?? ''} चलाते हैं। सही है?`,
+      },
+      {
+        text: 'Roz ka kaam kaise chalta hai? Aap khud baithte ho, ya koi aur sambhalta hai?',
+        speech: 'रोज़ का काम कैसे चलता है? आप खुद बैठते हैं, या कोई और सँभालता है?',
+      },
+      { text: 'Business kitne saal se chal raha hai?', speech: 'बिज़नेस, कितने साल से चल रहा है?', claimType: 'vintage' },
+      { text: 'Mahine ki income kitni ho jaati hai, roughly?', speech: 'महीने की इनकम, लगभग कितनी हो जाती है?', claimType: 'income' },
+    ]),
     { text: 'Ghar ka mahine ka kharcha kitna ho jaata hai?', speech: 'और घर का खर्चा, महीने का कितना हो जाता है?', claimType: 'expense' },
     { text: 'Ghar mein aapke alawa aur koi kamata hai?', speech: 'घर में आपके अलावा, और कोई कमाता है?' },
   ];
 
-  if (area.avgShopRent) {
+  if (area.avgShopRent && !isSalaried(c)) {
     steps.push({ text: 'Shop ka monthly rent kitna hai? Ya shop apni hai?', speech: 'शॉप का मंथली रेंट, कितना है? या शॉप अपनी है?', claimType: 'rent' });
   }
   // Only surveyed areas have landmarks.
@@ -72,16 +82,24 @@ export function buildScript(c) {
   (biz?.knowledgeQuestions ?? []).slice(0, 3).forEach((q) => steps.push({ text: q.q, speech: q.qHi ?? q.q, knowledge: 'business', expect: q.expect, flag: q.flag }));
   (pattern?.questionsToAsk ?? []).slice(0, 3).forEach((q, i) => steps.push({ text: q, speech: pattern.questionsToAskHi?.[i] ?? q, knowledge: 'pattern', patternId: pattern.patternId }));
 
-  steps.push({ text: PHOTO_ASKS.shop.ask, speech: PHOTO_ASKS.shop.speech, photo: 'shop' });
+  if (!isSalaried(c)) steps.push({ text: PHOTO_ASKS.shop.ask, speech: PHOTO_ASKS.shop.speech, photo: 'shop' });
   steps.push({ text: PHOTO_ASKS.home.ask, speech: PHOTO_ASKS.home.speech, photo: 'home' });
+  steps.push({ text: PHOTO_ASKS.home_inside.ask, speech: PHOTO_ASKS.home_inside.speech, photo: 'home_inside' });
 
   // Income asked again in different words — the coaching check.
-  steps.push({
+  steps.push(isSalaried(c) ? {
+    text: 'Ek baar aur confirm kar lein — pichle mahine account mein salary kitni aayi thi?',
+    speech: 'एक बार और कन्फर्म कर लें। पिछले महीने अकाउंट में सैलरी कितनी आई थी?',
+    claimType: 'income',
+  } : {
     text: 'Ek baar aur confirm kar lein — pichle mahine ka total collection kitna raha tha?',
     speech: 'एक बार और कन्फर्म कर लें। पिछले महीने का टोटल कलेक्शन, कितना रहा था?',
     claimType: 'income',
   });
-  steps.push({
+  steps.push(isSalaried(c) ? {
+    text: 'Agar kabhi naukri chhooti ya salary ruki, toh EMI kaise manage karenge?',
+    speech: 'अगर कभी नौकरी छूटी या सैलरी रुकी, तो ईएमआई कैसे मैनेज करेंगे?',
+  } : {
     text: 'Agar business mein 2-3 mahine slow chala, toh EMI kaise manage karenge?',
     speech: 'अगर बिज़नेस में, दो-तीन महीने स्लो चला। तो ईएमआई, कैसे मैनेज करेंगे?',
   });
@@ -188,6 +206,9 @@ const FLAG_HEADS = {
   internal_consistency: 'Their own numbers do not add up',
   inconsistency: 'Stated differently across the interview',
   photo_provenance: 'Photo may not be genuine',
+  photo_location: 'Photo location vs the file',
+  cross_pd: 'Same place as another applicant',
+  repeat_pd: 'Answer changed since an earlier PD',
 };
 
 const photoSource = (p) => (p.provenance?.source === 'live_camera' ? ' (live camera)' : p.provenance ? ' (uploaded file)' : '');
@@ -208,14 +229,22 @@ function depthLines(understanding, tradeMath) {
   return lines.join('\n');
 }
 
-export function buildFallbackReport({ caseData, transcript, evidence, flags, eligibility, observations, photos = [], identity, cameraOn, understanding = null, tradeMath = [], rechecks = [], hotAnswers = [], mode = 'Handover' }) {
+export function buildFallbackReport({ caseData, transcript, evidence, flags, eligibility, observations, photos = [], identity, cameraOn, understanding = null, tradeMath = [], rechecks = [], hotAnswers = [], professionAnswers = [], challengeAnswers = [], living = null, mode = 'Handover' }) {
   const c = caseData;
   const rechecked = rechecks.length
-    ? `\n\n**Figures rechecked during the call**\n${rechecks.map((r) => `- ${r.detail}. Shown both figures, they said: "${r.answer}"${r.changed ? ` — revised from ${r.before} to ${r.after}` : ' — figure unchanged'} (Turn ${r.turn})`).join('\n')}`
+    ? `\n\n**Figures rechecked during the call**\n${rechecks.map((r) => `- ${r.detail}. Shown both figures, they said: "${r.answer}"${r.before == null ? '' : r.changed ? ` — revised from ${r.before} to ${r.after}` : ' — figure unchanged'} (Turn ${r.turn})`).join('\n')}`
     : '';
   const fileQs = hotAnswers.length
     ? `\n\n**Sarthi's suggested questions (prepared from the file)**\n${hotAnswers.map((h) => `- ${h.q} — "${h.answer}" (Turn ${h.turn}). Why asked: ${h.why}`).join('\n')}`
     : '';
+  // No model to judge them here: the officer reads each answer against the job claimed.
+  const profQs = professionAnswers.length
+    ? `\n\n**Profession check (salaried — judge each answer against the job they claim)**\n${professionAnswers.map((a) => `- ${a.q} — "${a.answer}" (Turn ${a.turn})`).join('\n')}`
+    : '';
+  const surprise = challengeAnswers.length
+    ? `\n\n**Surprise checks (picked at random during the call)**\n${challengeAnswers.map((a) => `- ${a.asked} — ${a.sent === false ? 'photo NOT sent' : `"${a.answer}"`} (Turn ${a.turn}). Why: ${a.why}`).join('\n')}`
+    : '';
+  const homeLife = living ? `\n\n**Living conditions (from the home photos)**\n${living.facts.map((f) => `- ${f}`).join('\n')}${living.analysis ? `\n\n${living.analysis}` : ''}` : '';
   const pattern = c.riskPatternMatch ? lookupRiskPattern(c.riskPatternMatch.patternId) : null;
   const biz = lookupBusiness(c.businessKey);
   const area = lookupLocation(c.areaKey || c.area);
@@ -229,9 +258,9 @@ export function buildFallbackReport({ caseData, transcript, evidence, flags, eli
       ? 'AMBER'
       : 'GREEN';
   const recLine = {
-    RED: 'RED: Significant red flags. Recommend detailed field verification before proceeding.',
-    AMBER: 'AMBER: Some concerns found. Officer should verify the items listed below before proceeding.',
-    GREEN: 'GREEN: Profile looks clean. Recommend for further processing.',
+    RED: 'RED: Red flags — significant concerns. Recommend detailed field verification before proceeding.',
+    AMBER: 'AMBER: Human intervention — some concerns found. Officer should verify the items listed below before proceeding.',
+    GREEN: 'GREEN: Satisfactory — profile looks clean. Recommend for further processing.',
   }[rec];
 
   const summary = evidence.length
@@ -271,7 +300,7 @@ ${observations?.length
       : '- Video analysis: No notable observations.'}
 
 ### 2. INTERVIEW SUMMARY
-${summary}${rechecked}${fileQs}
+${summary}${rechecked}${fileQs}${profQs}${surprise}${homeLife}
 
 ### 3. CLAIM VERIFICATION
 

@@ -1,0 +1,4 @@
+.reason { display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: left; padding: 14px; margin-bottom: 10px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); color: var(--text-1); }
+.reason strong { font-size: 15px; }
+.reason span { font-size: 13px; line-height: 1.45; color: var(--text-2); }
+.reason:active { transform: scale(0.98); }

@@ -1,7 +1,7 @@
 // Friendly rechecks: when a figure just given disagrees with their own earlier figures or the bank statement, Sarthi
 // says both numbers openly and asks again, while they are still on the call. Decided in code; the model only phrases it.
 import { bankIncome, tradeOf, lookupBusiness, ventureArea } from './knowledge';
-import { toNumber } from './verifier';
+import { toNumber, toYears } from './verifier';
 import { readNumbers } from './hindiNumbers';
 import { FIELD_DEFS } from './memory';
 
@@ -192,6 +192,72 @@ export function findRechecks(memory, caseData, facts = {}) {
     }
   }
 
+  // What is left after the supplier and the running costs. An indicative residual, never profit: unsold stock, udhaar,
+  // tax and household withdrawals all move it — so it is shown to them and asked about, not concluded.
+  const purchase = toNumber(c.monthly_purchase);
+  const costs = toNumber(c.monthly_expenses);
+  if ((got('monthly_purchase') || got('monthly_expenses') || got('monthly_sales') || got('monthly_income')) && sales && purchase != null && costs != null) {
+    const residual = sales - purchase - costs;
+    if (residual <= 0 || (income && income > residual * 1.3 + 3000)) {
+      out.push({
+        field: 'hisaab_residual',
+        detail: `Sales ${inWords(sales)} − purchases ${inWords(purchase)} − running costs ${inWords(costs)} leaves about ${inWords(residual)} a month (indicative, not verified profit)${income ? `; income was given as ${inWords(income)}` : ''}`,
+        say: `Aapne bataya mahine ki bikri ${inWords(sales)}, maal ${inWords(purchase)} ka aata hai, aur baaki kharcha ${inWords(costs)}. ${residual <= 0
+          ? 'Is hisaab se toh kuch bachta hi nahi dikh raha.'
+          : `Is hisaab se lagbhag ${inWords(residual)} bachta hai${income ? `, aur aapne kamai ${inWords(income)} batayi` : ''}.`} Supplier aur kharcha dene ke baad aam taur par aapke paas kitna bachta hai? Aur dukaan mein pada maal aur grahakon ka udhaar aap kaise ginte hain?`,
+      });
+    }
+  }
+
+  // A real day and a real week against the month they gave. Yesterday may have been unusual — asked, never assumed.
+  const yesterday = toNumber(c.sales_yesterday);
+  if ((got('sales_yesterday') || got('monthly_sales')) && sales && yesterday) {
+    const ratio = (yesterday * 26) / sales;
+    if (ratio > 1.8 || ratio < 0.45) {
+      out.push({
+        field: 'sales_yesterday',
+        detail: `Yesterday's sales ${inWords(yesterday)} × 26 days ≈ ${inWords(yesterday * 26)}, against monthly sales of ${inWords(sales)}`,
+        say: `Kal ki bikri ${inWords(yesterday)} batayi — is hisaab se mahine ki lagbhag ${inWords(yesterday * 26)} banti hai, aur aapne mahine ki ${inWords(sales)} batayi. Kal aam din tha, ya kuch alag tha?`,
+      });
+    }
+  }
+  const week = toNumber(c.sales_last_week);
+  if ((got('sales_last_week') || got('monthly_sales')) && sales && week) {
+    const ratio = (week * 4.3) / sales;
+    if (ratio > 1.7 || ratio < 0.55) {
+      out.push({
+        field: 'sales_last_week',
+        detail: `Last week's sales ${inWords(week)} × 4.3 ≈ ${inWords(week * 4.3)} a month, against ${inWords(sales)} given for the month`,
+        say: `Pichhle hafte ki bikri ${inWords(week)} batayi — is hisaab se mahine ki lagbhag ${inWords(week * 4.3)} banti hai, aur aapne ${inWords(sales)} batayi. Woh hafta aam tha, ya kuch alag tha?`,
+      });
+    }
+  }
+
+  // Salaried: a year of in-hand pay is usually 60-90% of the CTC (PF, tax, variable pay). Above the CTC is impossible;
+  // far below it means the package or the in-hand figure is off.
+  const ctc = toNumber(c.annual_ctc);
+  if ((got('annual_ctc') || got('monthly_income')) && ctc && income) {
+    const share = (income * 12) / ctc;
+    if (share > 1.05 || share < 0.45) {
+      out.push({
+        field: 'monthly_income',
+        detail: `In-hand salary ${inWords(income)} a month is ${Math.round(share * 100)}% of the ${inWords(ctc)} CTC over a year (usually 60-90%)`,
+        say: `Aapne saal ka package ${inWords(ctc)} bataya, aur haath mein mahine ki ${inWords(income)} — yaani saal ka ${inWords(income * 12)}. ${share > 1
+          ? 'Yeh toh package se zyada ho gaya — kya haath ki salary mein kuch aur bhi judta hai?'
+          : 'Package ke hisaab se haath mein thoda kam lag raha hai — kya kuch katta hai, ya package ka figure alag hai?'}`,
+      });
+    }
+  }
+  const inJob = toYears(c.job_years);
+  const career = toYears(c.total_experience);
+  if ((got('job_years') || got('total_experience')) && inJob != null && career != null && inJob > career + 0.5) {
+    out.push({
+      field: 'total_experience',
+      detail: `${inJob} years in the current job but ${career} years of experience in all`,
+      say: `Aapne bataya is company mein ${inJob} saal se hain, lekin kul experience ${career} saal ka. Yeh thoda samajh nahi aaya — ek baar phir bataiye?`,
+    });
+  }
+
   return out;
 }
 
@@ -224,10 +290,10 @@ export function driftRechecks(memory, facts = {}, text = '') {
 
 // Flags from the contradiction, hisaab and consistency checks, asked on the call instead of only landing in the report.
 // No `say`: their details are English and some name the trade's normal range, which must never be told to them.
-const ASK_FLAGS = new Set(['contradiction', 'coaching_detected', 'trade_math', 'internal_consistency']);
+const ASK_FLAGS = new Set(['contradiction', 'coaching_detected', 'trade_math', 'internal_consistency', 'repeat_pd']);
 export const flagRechecks = (flags = []) => flags
   .filter((f) => ASK_FLAGS.has(f.type) && f.severity !== 'low')
-  .map((f) => ({ field: f.field, detail: f.detail, say: null }));
+  .map((f) => ({ field: f.field, detail: f.detail, say: f.say ?? null })); // only repeat_pd carries one: both figures are theirs
 
 /**
  * Queue this turn's rechecks, one per field for the whole interview, and settle any open flag on the same field.

@@ -76,14 +76,14 @@ http.createServer(async (req, res) => {
       if (req.url.includes('vision')) {
         if (!payload.image) return send(400, { error: 'No image supplied' });
         if (claudeOn()) {
-          const text = await visionClaude({ image: payload.image, prompt: payload.prompt || VISION_PROMPT, maxTokens: payload.prompt ? 200 : 100 });
+          const text = await visionClaude({ image: payload.image, prompt: payload.prompt || VISION_PROMPT, maxTokens: payload.prompt ? 400 : 100 });
           return send(200, { observation: text.includes('nothing_notable') ? null : text });
         }
         const text = await gemini({
           contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: payload.image } }, { text: payload.prompt || VISION_PROMPT }] }],
           // thinkingBudget 0 is mandatory: thought tokens count against maxOutputTokens, so a
           // thinking model given 100 tokens spends them all thinking and returns nothing.
-          generationConfig: { temperature: 0.3, maxOutputTokens: payload.prompt ? 200 : 100, thinkingConfig: { thinkingBudget: 0 } },
+          generationConfig: { temperature: 0.3, maxOutputTokens: payload.prompt ? 400 : 100, thinkingConfig: { thinkingBudget: 0 } },
         });
         return send(200, { observation: text.includes('nothing_notable') ? null : text });
       }

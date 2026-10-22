@@ -277,3 +277,11 @@
 .shotWarn { font-size: 12.5px; line-height: 1.5; color: var(--s-watch); }
 .shotOk { font-size: 12.5px; line-height: 1.5; color: var(--s-clear); }
 .shotFoot { font-size: 12px; line-height: 1.5; color: var(--s-ink-3); margin-top: 12px; }
+.shotLink { color: inherit; text-decoration: underline; text-underline-offset: 2px; word-break: break-word; }
+.incomplete { font-size: 13px; line-height: 1.5; color: var(--s-watch); border-left: 2px solid var(--s-watch); padding: 6px 10px; margin: 0 0 14px; }
+.newPd { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin: 4px 0 18px; padding: 13px; border: 0; border-radius: 14px; font-size: 15px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #7c3aed, #4c1d95); }
+.newPd:active { transform: scale(0.98); }
+.stampLong { font-size: 22px; letter-spacing: 0.03em; }
+.living { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 14px; border: 1px solid var(--s-line); }
+.livingFacts { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; font-size: 13px; line-height: 1.5; color: var(--s-ink-2); }
+.livingAnalysis { margin: 0; font-size: 14px; line-height: 1.6; color: var(--s-ink); }

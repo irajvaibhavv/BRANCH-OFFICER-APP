@@ -1,0 +1,312 @@
+[
+  {
+    "id": "seed_pd_mahesh_3",
+    "minutes": 16,
+    "by": {
+      "id": "EMP10234",
+      "name": "Rajesh Kumar",
+      "role": "Branch Officer"
+    },
+    "validation": {
+      "isClean": true,
+      "checked": {
+        "citations": 9
+      },
+      "issues": []
+    },
+    "caseId": "sarthi_kirana_1",
+    "name": "Mahesh Agarwal",
+    "pdNo": 3,
+    "mode": "strict",
+    "from": "seed_pd_mahesh_2",
+    "daysAgo": 5,
+    "complete": true,
+    "coverage": 96,
+    "demoMode": false,
+    "cameraOn": true,
+    "turns": 41,
+    "recommendation": "red",
+    "collected": {
+      "stated_name": "Mahesh Agarwal",
+      "current_place": "shop",
+      "business_age": "14",
+      "shop_ownership": "owned",
+      "customers_per_day": 90,
+      "avg_bill_value": 220,
+      "monthly_sales": 550000,
+      "monthly_income": 60000,
+      "existing_emi": 6500,
+      "loan_amount": 500000,
+      "loan_purpose": "Diwali ka stock aur naya chiller"
+    },
+    "state": {
+      "hotAsked": [],
+      "crossAsked": [
+        "monthly_income",
+        "monthly_sales",
+        "shop_ownership"
+      ],
+      "tradeAnswers": [],
+      "professionAnswers": [],
+      "challengePlanned": true
+    },
+    "evidence": [
+      {
+        "id": "e3_1",
+        "claim": "Monthly income",
+        "declared": "Rs 60,000",
+        "verified": "Rs 45,600 (bank turnover at kirana margin)",
+        "status": "contradicted",
+        "verbatim": "Saath hazaar ke aas-paas bach jaata hai",
+        "detail": "32% above what the bank statement supports",
+        "source": "Turn 18 · Brief: avgMonthlyCredit",
+        "turn": 18
+      },
+      {
+        "id": "e3_2",
+        "claim": "Existing EMI",
+        "declared": "Rs 6,500",
+        "verified": "Rs 6,500 (bureau)",
+        "status": "confirmed",
+        "verbatim": "Bike ki kisht 6500 jaati hai",
+        "detail": "Matches the two-wheeler loan on the bureau",
+        "source": "Turn 24 · Brief: existingEMIs",
+        "turn": 24
+      }
+    ],
+    "flags": [
+      {
+        "type": "repeat_pd",
+        "field": "monthly_sales",
+        "severity": "high",
+        "turn": 12,
+        "detail": "Monthly sales: said 4 lakh in PD 2, now 5.5 lakh"
+      },
+      {
+        "type": "repeat_pd",
+        "field": "shop_ownership",
+        "severity": "high",
+        "turn": 7,
+        "detail": "Business premises owned or rented: said rented in PD 1, now owned"
+      },
+      {
+        "type": "repeat_pd",
+        "field": "customers_per_day",
+        "severity": "high",
+        "turn": 14,
+        "detail": "Customers a day: said 150 in PD 2, now 90"
+      },
+      {
+        "type": "contradiction",
+        "field": "monthly_income",
+        "severity": "medium",
+        "turn": 18,
+        "detail": "Said income 60 hazaar; the bank supports about 45.6 hazaar (turnover at the kirana margin)"
+      },
+      {
+        "type": "photo_location",
+        "field": "photo_location_shop",
+        "severity": "low",
+        "detail": "Shop photo taken 35 m from the shop location on file"
+      }
+    ],
+    "rechecks": [
+      {
+        "field": "shop_ownership",
+        "detail": "Said rented in PD 1, owned now",
+        "asked": "Pichhli baar aapne dukaan kiraye ki batayi thi, aaj apni bata rahe hain — kya beech mein khareed li?",
+        "answer": "Haan woh... matlab papa ke naam pe hai, kiraya ghar mein dete hain",
+        "turn": 8
+      },
+      {
+        "field": "monthly_sales",
+        "detail": "Said 4 lakh in PD 2, 5.5 lakh now",
+        "asked": "Pichhli baar mahine ki bikri 4 lakh batayi thi, aaj 5.5 lakh — kya badla hai?",
+        "answer": "Tyohaar ka season hai na, abhi zyada chal raha hai",
+        "turn": 13
+      }
+    ],
+    "report": "# PD report — Mahesh Agarwal (PD 3 of 3, re-check of flags)\n\n### 1. Summary\nThis PD re-asked the points flagged in PD 2. Three answers changed from earlier PDs, and the explanations given were partial. (Flag: monthly_sales) (Flag: shop_ownership) (Flag: customers_per_day)\n\n### 2. Answers that changed between PDs\n- **Shop ownership:** rented in PD 1, owned now. Shown the change, he said the shop is \"papa ke naam pe\" and the rent is paid at home (Turn 8). The rent agreement on file names him as tenant (Brief: docsSubmitted).\n- **Monthly sales:** 4 lakh in PD 2, 5.5 lakh now; he put it down to the festive season (Turn 13). A season explains some rise, not 37%.\n- **Customers a day:** 150 in PD 2, 90 now (Turn 14). With 5.5 lakh of sales, 90 customers means a bill of about Rs 200 — but 150 customers in PD 2 gave Rs 90.\n\n### 3. Income\nSaid Rs 60,000 a month (Turn 18); the bank statement supports about Rs 45,600 at the kirana margin (Brief: avgMonthlyCredit).\n\n### 4. Risk findings\n- Three answers changed across PDs, two of them the figures that decide eligibility. (Flag: monthly_sales) (Flag: customers_per_day)\n- Ownership story contradicts the rent agreement. (Flag: shop_ownership)\n\n### 5. Living conditions\nA two-floor pucca home with a car, an AC and a full set of appliances (Photo: home) (Photo: home_inside) points to more spending than the Rs 45,600 a month the bank supports. The two-wheeler matches the bike loan on the bureau; the car was never mentioned among assets or loans — ask whose it is and how it was paid for.\n\n### 7. OFFICER RECOMMENDATION\nRED: Red flags — significant concerns. Recommend detailed field verification before proceeding.\n- Visit the shop: see the rent receipts and who holds the premises.\n- Ask for the last 3 months of purchase bills from the distributor.\n\n---\n*This report was generated by Sarthi AI. The final loan decision must be made by an authorized human officer. AI assessment is advisory only.*",
+    "photos": [],
+    "living": {
+      "house": "pucca",
+      "vehicles": [
+        "two_wheeler",
+        "car"
+      ],
+      "items": [
+        "tv",
+        "sofa",
+        "fridge",
+        "ac",
+        "washing_machine"
+      ],
+      "facts": [
+        "House: Pucca, 2 floors (they said owned)",
+        "Vehicles seen: Two-wheeler, Car",
+        "Inside the home: TV, Sofa, Fridge, AC, Washing machine",
+        "Income: bank supports about Rs 45,600 a month; they claim Rs 60,000",
+        "Assets they mentioned: bike · loans on the bureau: Two-wheeler loan"
+      ],
+      "analysis": "A two-floor pucca home with a car, an AC and a full set of appliances points to a household spending more than the Rs 45,600 a month the bank supports, and somewhat more than the Rs 60,000 he claims. The two-wheeler matches the bike loan on the bureau, but the car was never mentioned among his assets or loans. Ask whose name the car is in and how it was paid for, and whether another family member earns or the house came from the family."
+    }
+  },
+  {
+    "id": "seed_pd_mahesh_2",
+    "minutes": 14,
+    "by": {
+      "id": "EMP10234",
+      "name": "Rajesh Kumar",
+      "role": "Branch Officer"
+    },
+    "validation": {
+      "isClean": true,
+      "checked": {
+        "citations": 7
+      },
+      "issues": []
+    },
+    "caseId": "sarthi_kirana_1",
+    "name": "Mahesh Agarwal",
+    "pdNo": 2,
+    "mode": "resume",
+    "from": "seed_pd_mahesh_1",
+    "daysAgo": 13,
+    "complete": true,
+    "coverage": 92,
+    "demoMode": false,
+    "cameraOn": true,
+    "turns": 38,
+    "recommendation": "amber",
+    "collected": {
+      "stated_name": "Mahesh Agarwal",
+      "current_place": "shop",
+      "customers_per_day": 150,
+      "avg_bill_value": 180,
+      "monthly_sales": 400000,
+      "monthly_income": 75000,
+      "monthly_expenses": 40000,
+      "existing_emi": 6500,
+      "existing_loans": "Bike loan",
+      "loan_amount": 500000,
+      "loan_purpose": "Diwali ka stock aur naya chiller",
+      "billing_method": "bill_book"
+    },
+    "state": {
+      "hotAsked": [],
+      "crossAsked": [
+        "monthly_income",
+        "business_location"
+      ],
+      "tradeAnswers": [],
+      "professionAnswers": [],
+      "challengePlanned": true
+    },
+    "evidence": [
+      {
+        "id": "e2_1",
+        "claim": "Monthly income",
+        "declared": "Rs 75,000",
+        "verified": "Rs 45,600 (bank turnover at kirana margin)",
+        "status": "contradicted",
+        "verbatim": "Pachattar hazaar mahina aa jaata hai",
+        "detail": "64% above what the bank statement supports",
+        "source": "Turn 9 · Brief: avgMonthlyCredit",
+        "turn": 9
+      }
+    ],
+    "flags": [
+      {
+        "type": "contradiction",
+        "field": "monthly_income",
+        "severity": "high",
+        "turn": 9,
+        "detail": "Said income 75 hazaar; the bank supports about 45.6 hazaar (turnover at the kirana margin)"
+      },
+      {
+        "type": "internal_consistency",
+        "field": "customers_per_day",
+        "severity": "high",
+        "turn": 6,
+        "detail": "150 customers a day at Rs 180 is about 8.1 lakh a month, against sales of 4 lakh"
+      },
+      {
+        "type": "coaching_detected",
+        "field": "monthly_income",
+        "severity": "medium",
+        "turn": 27,
+        "detail": "Income given as 75 hazaar at Turn 9 and 52 hazaar at Turn 27"
+      }
+    ],
+    "rechecks": [
+      {
+        "field": "monthly_income",
+        "detail": "Said 75 hazaar; bank supports about 45.6 hazaar",
+        "asked": "Aapne 75 hazaar bataya, bank mein mahine ka 3.8 lakh aata hai — is hisaab se kamai 45 hazaar ke aas-paas banti hai. Kuch chhoot toh nahi gaya?",
+        "answer": "Woh cash bhi aata hai na, sab bank mein nahi jaata",
+        "turn": 10
+      }
+    ],
+    "report": "# PD report — Mahesh Agarwal (PD 2 of 2, finishing PD 1)\n\n### 1. Summary\nPD 1 ended early; this PD asked only the topics it had not reached. The business looks real (shop photo, bill book with entries across months), but the income figures do not hold together. (Flag: monthly_income)\n\n### 2. Income\n- Said Rs 75,000 a month (Turn 9); the bank supports about Rs 45,600 (Brief: avgMonthlyCredit). Shown both, he said part of the sales is cash that never reaches the bank (Turn 10).\n- Later in the call he gave Rs 52,000 (Turn 27). (Flag: monthly_income)\n\n### 3. Hisaab\n150 customers a day at Rs 180 is about 8.1 lakh a month, against sales of 4 lakh he gave himself. (Flag: customers_per_day)\n\n### 7. OFFICER RECOMMENDATION\nAMBER: Human intervention — some concerns found. Officer should verify income and daily footfall before proceeding.\n- Re-check the flagged figures in a follow-up PD.\n\n---\n*This report was generated by Sarthi AI. The final loan decision must be made by an authorized human officer. AI assessment is advisory only.*",
+    "photos": []
+  },
+  {
+    "id": "seed_pd_mahesh_1",
+    "minutes": 6,
+    "by": {
+      "id": "EMP10234",
+      "name": "Rajesh Kumar",
+      "role": "Branch Officer"
+    },
+    "validation": {
+      "isClean": true,
+      "checked": {
+        "citations": 2
+      },
+      "issues": []
+    },
+    "caseId": "sarthi_kirana_1",
+    "name": "Mahesh Agarwal",
+    "pdNo": 1,
+    "mode": "full",
+    "daysAgo": 20,
+    "complete": false,
+    "coverage": 44,
+    "endedBecause": "Said a customer had come in and ended the call (\"grahak aa gaye, baad mein\")",
+    "demoMode": false,
+    "cameraOn": true,
+    "turns": 17,
+    "recommendation": "amber",
+    "collected": {
+      "stated_name": "Mahesh Agarwal",
+      "current_place": "shop",
+      "age": 44,
+      "family_size": 5,
+      "dependents": 3,
+      "earning_members": 1,
+      "residence_type": "owned",
+      "residence_duration": "20",
+      "business_type": "kirana",
+      "business_age": "14",
+      "business_location": "Ajmal Khan Road, Karol Bagh",
+      "shop_ownership": "rented",
+      "shop_rent": 22000,
+      "employees": 1
+    },
+    "state": {
+      "hotAsked": [],
+      "crossAsked": [
+        "business_location",
+        "business_age"
+      ],
+      "tradeAnswers": [],
+      "professionAnswers": [],
+      "challengePlanned": false
+    },
+    "evidence": [],
+    "flags": [],
+    "rechecks": [],
+    "report": "# PD report — Mahesh Agarwal (PD 1, ended early)\n\n### 1. Summary\nThe call ended at Turn 17 when he said a customer had come in. Identity, family, home and the shop's basics were covered; money, loans, documents and the loan purpose were not. (Turn 17)\n\n### 2. What was covered\n- Kirana for 14 years on Ajmal Khan Road; landmark answered at once (Turn 11).\n- Shop is rented at Rs 22,000 a month, one helper (Turn 13).\n\n### 7. OFFICER RECOMMENDATION\nAMBER: Human intervention — the PD ended early. Officer should verify the topics not covered — run \"Finish last PD\".\n\n---\n*This report was generated by Sarthi AI. The final loan decision must be made by an authorized human officer. AI assessment is advisory only.*",
+    "photos": []
+  }
+]

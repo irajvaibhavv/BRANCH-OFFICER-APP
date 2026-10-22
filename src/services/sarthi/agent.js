@@ -324,8 +324,8 @@ You must ONLY use facts from the AREA KNOWLEDGE and BUSINESS KNOWLEDGE sections 
 One exception: when the THIS TURN block asks you to cross-check a PLACE they named (their shop, or where a new shop
 will open), you may use your general knowledge of that city's markets, roads and sectors to ask sharper questions and
 to voice a doubt as a question. Never quote a rent, price or figure from your own knowledge — the code does the numbers.
-A second exception: a PROFESSION CHECK turn asks you to use your own knowledge of the job they claim, to write a
-question only someone doing that job answers easily. Never state a salary or pay scale for a job from your own knowledge.
+A second exception: a PROFESSION CHECK or TRADE CHECK turn asks you to use your own knowledge of the job or trade they
+claim, to write a question only someone doing it answers easily. Never state a salary, margin or price from your own knowledge.
 
 ## Important
 - Keep each message short (2-4 sentences max). This is a conversation, not a lecture.
@@ -514,6 +514,17 @@ failed check or an identity_document flag as a high-severity finding — a forei
   CHECK: the question, what they said (Turn X), and your judgement — fits the role, vague, or does not fit. Judge with your
   knowledge of that job, and say it is your judgement, not a verification. Two or more vague or not-fitting answers is a
   finding: they may not do the job they claim. Ask the officer to verify salary slips, Form 16 and the salary credits.
+- A self-employed applicant with TRADE CHECKS (their trade has no insider pack): put them under BUSINESS UNDERSTANDING —
+  each question, what they said (Turn X) and your judgement (fits someone running this trade, vague, does not fit), said
+  to be your judgement from general knowledge of the trade, not a verification. Two or more vague or not-fitting answers
+  is a finding: they may not run this business day to day.
+- FACE CHECK: report it in the identity part in one line, always as "an AI comparison, not biometric verification".
+  DIFFERENT is a high finding — the officer should confirm in person who took the call (Flag: face). UNSURE or not
+  compared means the officer looks at both pictures; never treat it as a mismatch.
+- liveness, call_location, name_match and stock_check flags come from an AI read of one frame or photo, or from GPS: report
+  each as what was seen, for the officer to confirm (Flag: field) — never as proof. A name_match flag (someone else's name
+  on the board, QR, bill book or shop papers) is the friend's-or-relative's-shop question: say whose name it is and ask the
+  officer to establish who owns the shop.
 - LIVING CONDITIONS get their own short section in plain sentences: the facts (Photo: home / Photo: home_inside), then
   whether they fit the income. No scores, ratings or bands. A gap is a question for the officer — other income, family
   money, or an income claim that is too high — never a conclusion: joint families, inherited homes and gifts explain many.
@@ -554,7 +565,7 @@ failed check or an identity_document flag as a high-severity finding — a forei
   weakest months, and their plan if sales fall 25% for two months (Fact: stress_plan).
 - Output plain markdown only. No preamble, no code fences around the report.`;
 
-export function buildReporterInput({ caseData, transcript, claims, evidence, flags = [], collected = null, verification = null, understanding = null, tradeMath = [], crossAnswers = [], rechecks = [], hotAnswers = [], professionAnswers = [], challengeAnswers = [], living = null, eligibility, observations, photos = [], identity, mode = 'Handover' }) {
+export function buildReporterInput({ caseData, transcript, claims, evidence, flags = [], collected = null, verification = null, understanding = null, tradeMath = [], crossAnswers = [], rechecks = [], hotAnswers = [], professionAnswers = [], challengeAnswers = [], living = null, face = null, eligibility, observations, photos = [], identity, mode = 'Handover' }) {
   const turns = transcript
     .map((m, i) => `[${i + 1}] ${m.role === 'assistant' ? 'SARTHI' : 'BORROWER'}: ${m.content}`)
     .join('\n');
@@ -590,8 +601,11 @@ ${flags.length ? JSON.stringify(flags, null, 2) : 'None raised.'}
 ## TRADE DEPTH (insider questions only a real operator answers easily; "status" was decided in code)
 ${understanding?.total ? JSON.stringify(understanding, null, 2) : 'No trade depth questions on file for this business.'}
 
-## PROFESSION CHECKS (salaried: questions on the job they claim, answered verbatim)
-${professionAnswers?.length ? JSON.stringify(professionAnswers, null, 2) : 'Not a salaried applicant, or none asked.'}
+## PROFESSION / TRADE CHECKS (questions the interviewer wrote on the job — salaried — or the trade — one with no insider pack — they claim; answered verbatim)
+${professionAnswers?.length ? JSON.stringify(professionAnswers, null, 2) : 'None asked.'}
+
+## FACE CHECK (customer photo taken by the officer, against a frame from this call — an AI comparison, not biometrics)
+${face ? (face.verdict ? `${face.verdict.toUpperCase()}${face.reason ? ` — ${face.reason}` : ''}` : 'Not compared (camera off or the vision service did not answer).') : 'No customer photo on file.'}
 
 ## LIVING CONDITIONS (facts from the home photos and the file, with the analysis already written from them)
 ${living ? `${living.facts.join('\n')}${living.analysis ? `\nAnalysis: ${living.analysis}` : ''}` : 'No home photo was read.'}

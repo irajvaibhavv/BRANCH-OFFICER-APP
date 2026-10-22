@@ -1,6 +1,6 @@
 // Asserts the cross-PD matching in src/services/sarthi/crossPd.js. Run: npm run check:crosspd
 import assert from 'node:assert/strict';
-import { sharedNames, findLinks, crossPdFlags } from '../src/services/sarthi/crossPd.js';
+import { sharedNames, findLinks, crossPdFlags, fileNameCheck, nameFlags } from '../src/services/sarthi/crossPd.js';
 
 assert.deepEqual(sharedNames(['Gupta Traders', 'Paytm'], ['GUPTA TRADERS', 'paytm']), ['Gupta Traders']);
 assert.deepEqual(sharedNames(['PhonePe'], ['phone pe']), []);
@@ -23,5 +23,21 @@ assert.equal(flag({ verdict: 'same' }), 'high');
 assert.equal(flag({ verdict: 'different' }), 'low');
 assert.equal(flag(null), 'medium');
 assert.equal(flag({ verdict: 'different' }, ['Gupta Traders']), 'high');
+
+// Names on this applicant's photos against their own file.
+const mahesh = { name: 'Mahesh Agarwal', businessName: 'Agarwal General Store', brief: { kyc: { pan: 'BQMPA4821K', nameOnPan: 'MAHESH AGARWAL' } } };
+const [qr, book, supplier] = fileNameCheck([
+  { kind: 'qr', label: 'the QR', names: ['Sharma Kirana', 'PhonePe'] },
+  { kind: 'records', label: 'the book', names: ['Agarwal General Store', '07BQMPA4821K1Z5'] },
+  { kind: 'purchase_bill', label: 'supplier bill', names: ['Bansal Distributors'] },
+], mahesh);
+assert.equal(qr.verdict, 'none');
+assert.equal(book.verdict, 'match');
+assert.equal(book.gstin, 'match', 'a proprietor GSTIN carries their PAN');
+assert.equal(supplier, undefined, "a supplier's bill is not checked against the applicant");
+assert.equal(nameFlags([qr], mahesh)[0].severity, 'medium');
+const firm = { ...mahesh, brief: { ...mahesh.brief, gstin: '07AAKFQ4410M1ZQ' } };
+assert.equal(fileNameCheck([{ kind: 'records', label: 'b', names: ['07BQMPA4821K1Z5'] }], firm)[0].gstin, 'mismatch');
+assert.equal(fileNameCheck([{ kind: 'qr', label: 'q', names: ['mahesh.agarwal@okicici'] }], mahesh)[0].verdict, 'match');
 
 console.log('cross-PD checks pass');

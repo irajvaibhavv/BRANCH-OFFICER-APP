@@ -44,3 +44,17 @@ export function checkPlace(fix, onFile) {
   const distance = distanceM(fix, onFile);
   return { status: distance - (fix.accuracy ?? 0) > NEAR_M ? 'far' : 'near', distance };
 }
+
+/**
+ * Where the call itself was taken from, against every pin on file: the place it is near, if any, and — when they said
+ * they were at their shop or home (current_place) — whether that pin is near. Taken at the start and at the end.
+ */
+export function callPlace(fix, locations = {}, said = null) {
+  if (!fix || fix.error) return { status: 'no_fix' };
+  const pins = Object.entries(locations ?? {}).map(([kind, p]) => ({ kind, ...checkPlace(fix, p) })).sort((a, b) => a.distance - b.distance);
+  if (!pins.length) return { status: 'not_on_file' };
+  const at = pins.find((p) => p.status === 'near')?.kind ?? null;
+  const claimed = said === 'shop' || said === 'home' ? said : null;
+  const away = claimed && locations[claimed] && at !== claimed ? pins.find((p) => p.kind === claimed) : null;
+  return { status: at ? 'near' : 'far', at, nearest: pins[0], claimed, away: away?.status === 'far' ? away : null };
+}

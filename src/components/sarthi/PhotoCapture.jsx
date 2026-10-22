@@ -15,7 +15,8 @@ const SPEAK_GAP_MS = 4500;
 // framing guide and a live light/blur check while aiming, then a review — light and blur checked in code, framing
 // (too far, too close, counter missing) by the vision model — with Retake. The gallery is offered only when the
 // camera cannot open.
-export default function PhotoCapture({ kind = 'extra', title, hint, tips = [], onCapture, onUpload, onCancel }) {
+// `quiet`: the BO is holding the phone (a customer photo), so Sarthi's spoken guidance is skipped.
+export default function PhotoCapture({ kind = 'extra', title, hint, tips = [], onCapture, onUpload, onCancel, quiet = false }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [facing, setFacing] = useState('environment');
@@ -28,7 +29,7 @@ export default function PhotoCapture({ kind = 'extra', title, hint, tips = [], o
   const latest = useRef(null); // the shot whose framing read is out
 
   const say = (line) => {
-    if (!line?.speech) return;
+    if (quiet || !line?.speech) return;
     voice.current.at = Date.now();
     stopSpeaking();
     speak(gendered(line.speech), { voice: sarthiVoice() });

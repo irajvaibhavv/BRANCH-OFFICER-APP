@@ -285,3 +285,29 @@
 .living { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 14px; border: 1px solid var(--s-line); }
 .livingFacts { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; font-size: 13px; line-height: 1.5; color: var(--s-ink-2); }
 .livingAnalysis { margin: 0; font-size: 14px; line-height: 1.6; color: var(--s-ink); }
+.faces { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.faces figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.faces img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; }
+.faces figcaption { font-size: 12px; color: var(--s-ink-3); text-align: center; }
+.checkerLine { font-size: 12px; color: var(--s-ink-3); text-align: center; margin: -4px 0 14px; }
+/* ---------------------------------------------------------------- call log */
+.log { margin-top: 26px; border: 1px solid var(--s-line); border-radius: 12px; padding: 12px 14px; }
+.log summary { font-size: 13px; font-weight: 600; color: var(--s-ink-2); cursor: pointer; }
+.log ol { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.log li { display: grid; grid-template-columns: 74px 1fr; column-gap: 8px; font-size: 12.5px; line-height: 1.45; color: var(--s-ink); }
+.logTime { grid-row: span 2; color: var(--s-ink-3); font-variant-numeric: tabular-nums; }
+.logWho { font-size: 11px; font-weight: 600; color: var(--s-ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
+.logText { overflow-wrap: anywhere; }
+.logSys .logText { color: var(--s-ink-2); font-style: italic; }
+.logWarn .logText { color: var(--s-watch); }
+/* ---------------------------------------------------------------- maker-checker */
+.review { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--s-line); border-radius: 14px; }
+.reviewNote { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--s-ink); }
+.reviewField { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600; color: var(--s-ink-3); }
+.reviewField input, .reviewField select, .reviewField textarea {
+  font: inherit; font-size: 14px; font-weight: 400; color: var(--s-ink); background: transparent;
+  border: 1px solid var(--s-line); border-radius: 10px; padding: 10px 12px; width: 100%; box-sizing: border-box;
+}
+.reviewChoices { display: flex; flex-wrap: wrap; gap: 8px; }
+.choice, .choiceOn { font: inherit; font-size: 13px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--s-line); background: transparent; color: var(--s-ink); }
+.choiceOn { background: var(--s-accent); border-color: var(--s-accent); color: #fff; }

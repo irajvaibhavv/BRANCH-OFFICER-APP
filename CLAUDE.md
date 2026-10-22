@@ -333,6 +333,33 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   household withdrawals, third-party money, guarantor, the 25%-drop plan; monthly_purchase, payment mix and seasonality
   moved from walk-in-only to everyone. Rechecks: the indicative residual (sales − purchases − costs vs income, shown
   as "not verified profit"), yesterday × 26 and last week × 4.3 against the month.
+- **Customer photo + face check** (`face.js`, 2026-10-22): the BO takes the customer's photo with the live camera
+  (`CustomerPhotoField`: consent tick first, then `PhotoCapture` with `quiet` so Sarthi's voice stays silent) on the walk-in
+  form, the Marketing "Customer" lead, or the brief's KYC tab (any customer, seeded ones too). Stored under
+  `bo_sarthi_face_<case>`, shown as the avatar. On the call, `checkFace` grabs a still (`grabFrame`) after the name
+  (turn 2, again at turn 8 if unsure) and `compareFace` asks the vision model SAME / DIFFERENT / UNSURE with both side by
+  side (`visionCompare` in crossPd.js, shared with the same-place check) — in the background, never holding a turn.
+  DIFFERENT is a high `face_check` flag, UNSURE low, camera off low; Sarthi never says anything about it on the call. The
+  report shows both pictures and always calls it "an AI comparison, not biometric verification".
+- **Gaps from the PD review meeting** (2026-10-22), all decided in code, the model only reads pictures:
+  (1) **Dropped calls**: the PD id is fixed at mount; after every answer the interview saves a draft
+  (`bo_sarthi_draft_<pd>`, plus its transcript and photos under the PD id). `useSarthiReports` turns any leftover draft into
+  an incomplete PD (`takeDrafts` in repeat.js, `dropped: true`) on the next PD screen, so "Finish last PD" resumes it.
+  (2) **Names vs the applicant's own file** (`fileNameCheck` / `nameFlags` in crossPd.js): names and GSTINs read off the
+  board, QR, bill book, shop papers and bills are matched to the file's name, business name and name on PAN; a GSTIN to
+  `brief.gstin`, else to the PAN inside it (proprietor). Someone else's name is asked about once on the call (`nameRecheck`)
+  — the friend's-shop question; a `shop_document` live challenge (rent agreement / licence / Udyam / shop bill) feeds it.
+  A supplier's bill is never matched. (3) **Call GPS** at start and end (`callPlace` in geo.js): a medium `call_location`
+  flag only when they said shop/home and that pin is far. (4) **Liveness** (`LIVENESS` in face.js): once per PD at turn
+  4-7 (seed), camera on and applicant confirmed, one random action; frames before and ~2s after go to `visionCompare` with
+  YES/NO/UNSURE; identical frames = frozen feed. (5) **Stock vs shop photo**: the shop vision prompt adds a `STOCK:` JSON
+  (fullness + a wide retail range); `stockCheck` flags only beyond 3× either way and asks kindly about a godown.
+  (6) **Call log**: every transcript entry carries `at`; system events (GPS, photos, liveness) go to `callLog`; the report
+  shows both in time order. (7) **Maker-checker**: `pdOutcome` is the checker's outcome once `review` exists (`aiOutcome`
+  is Sarthi's); `makeReview` refuses the officer who ran the PD, needs a reason, and the History trail shows "Awaiting
+  checker" until then. (8) **Trades with no insider pack** (35 of 44, e.g. machinery, cafe): the trade_depth section asks
+  `TRADE_CHECKS` (3) model-written insider questions (`professionDirective`), stored with `professionAnswers` and judged in
+  BUSINESS UNDERSTANDING as the writer's judgement, not a verification.
 - **Living conditions** (`living.js`, 2026-10-22): at home, after the outside photo, Sarthi asks (skippably) for
   `home_inside`. Home photos use `livingPrompt`, which ends with a `LIVING:` JSON line — house kachha / semi_pucca / pucca,
   floors, vehicles, items — parsed by `splitNames`. **No scores or bands** (lead, 2026-10-22: "just write facts and what

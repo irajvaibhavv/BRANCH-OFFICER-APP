@@ -15,6 +15,7 @@ import { useToast } from '../../hooks/useToast';
 import { formatINR, timeAgo } from '../../utils/formatters';
 import { bankIncome } from '../../services/sarthi/knowledge';
 import { pdOutcome } from '../../services/sarthi/repeat';
+import { loadFace } from '../../services/sarthi/face';
 import styles from './dsa.module.css';
 
 const RISK = { high: ['High risk', 'danger'], medium: ['Medium risk', 'warning'], low: ['Low risk', 'success'] };
@@ -39,7 +40,7 @@ export default function CustomerList({ files, reports, onClear }) {
               <motion.div key={c.id} variants={listItem}>
                 <Card noChevron padding={16} onClick={() => navigate(`/sarthi/brief/${c.id}`)}>
                   <div className="row" style={{ gap: 12, alignItems: 'flex-start' }}>
-                    <Avatar name={c.name} size={48} />
+                    <Avatar name={c.name} size={48} src={loadFace(c.id)?.dataUrl} />
                     <div className="grow">
                       <div className="row-between">
                         <div className="grow">

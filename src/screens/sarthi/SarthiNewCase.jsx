@@ -7,6 +7,8 @@ import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { buildNewCase, CUSTOM_CASES_KEY, matchPattern } from '../../services/sarthi/knowledge';
 import { validateId, PAN_HOLDER } from '../../services/sarthi/idChecks';
 import { parseLatLng, NEAR_M } from '../../services/sarthi/geo';
+import { saveFace } from '../../services/sarthi/face';
+import CustomerPhotoField from '../../components/sarthi/CustomerPhotoField';
 import businessKnowledge from '../../data/sarthi/businessKnowledge.json';
 import locationKnowledge from '../../data/sarthi/locationKnowledge.json';
 import styles from './SarthiNewCase.module.css';
@@ -27,6 +29,7 @@ export default function SarthiNewCase() {
     employment: 'Self-employed', employer: '', designation: '',
   });
   const salaried = f.employment === 'Salaried';
+  const [face, setFace] = useState(null);
   const [idKind, setIdKind] = useState('pan');
   const [idValue, setIdValue] = useState('');
 
@@ -56,6 +59,7 @@ export default function SarthiNewCase() {
       identity: idResult,
     });
     setCases([record, ...cases]);
+    if (face) saveFace(record.id, face);
     navigate(`/sarthi/brief/${record.id}`);
   };
 
@@ -72,6 +76,7 @@ export default function SarthiNewCase() {
       <fieldset className={styles.group}>
         <legend className={styles.legend}>Who is in front of you</legend>
         <Field label="Full name" value={f.name} onChange={set('name')} placeholder="As written on the document" />
+        <CustomerPhotoField value={face} onChange={setFace} />
         <div className={styles.pair}>
           <Field label="Phone" value={f.phone} onChange={set('phone')} inputMode="numeric" placeholder="10 digits" />
           <Field label="Age" value={f.age} onChange={set('age')} inputMode="numeric" placeholder="Years" />

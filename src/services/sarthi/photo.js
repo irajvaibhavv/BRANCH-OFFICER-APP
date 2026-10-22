@@ -87,6 +87,11 @@ export const PHOTO_ASKS = {
     tips: ['Bijli ya paani ka bill nikaliye', 'Naam, pata aur bill ki tareekh frame mein ho', 'Seedha upar se photo lijiye'],
     vision: 'a utility bill from their home. Read the name, the address and the bill date/period, and say if any cannot be read.',
   },
+  shop_document: {
+    label: 'a paper for the shop (rent agreement / licence / Udyam / bill)', ask: '', speech: '', hint: 'Dukaan ka kaagaz', frame: 'Kaagaz pe naam aur pata saaf dikhe',
+    tips: ['Rent agreement, shop licence, Udyam ya dukaan ka bijli bill — koi bhi ek', 'Jis panne pe naam aur pata ho, woh kholiye', 'Seedha upar se photo lijiye'],
+    vision: 'a document for their shop — a rent agreement, shop and establishment licence, Udyam certificate, trade licence or the electricity bill for the shop. Say which document it is, and read the name(s) on it, the address and any date.',
+  },
   // Sent on the applicant's own initiative from the message box, not because Sarthi asked.
   extra: { label: 'an extra photo', ask: '', speech: '', hint: 'Photo', frame: 'Jo dikhana hai, uski photo lijiye', tips: [] },
 };
@@ -259,14 +264,32 @@ Describe ONLY what is visible, in 1-2 sentences:
 Rules:
 - Report only what is in the image. Never guess at income, wealth or character.
 - If the image is too dark, blurred or close-cropped to tell, say exactly that.
-- Do not say whether the loan should be approved.${NAMES_RULE}`;
+- Do not say whether the loan should be approved.${kind === 'shop' ? STOCK_RULE : ''}${NAMES_RULE}`;
 }
 
 // Names read off a photo are compared across PDs (crossPd.js): two applicants whose QR, board or bill book carry the
 // same name or GSTIN were shown the same shop.
 const NAMES_RULE = `
 Then, on a separate LAST line, write "NAMES:" followed by every shop name, person name, GSTIN or UPI ID you can read in
-the image, separated by ";" — exactly as written. Write "NAMES: none" if you can read none.`;
+the image, separated by ";" — exactly as written. Not product or brand names printed on goods. Write "NAMES: none" if
+you can read none.`;
+
+// The shop photo also returns a rough value of the stock in view, compared in code with the stock they stated (stockCheck).
+const STOCK_RULE = `
+Then, on its own line, write "STOCK:" followed by ONE line of JSON for the goods visible in this photo only:
+{"fullness":"empty|sparse|half|full|packed|unclear","value_low":<rupees or null>,"value_high":<rupees or null>}
+value_low / value_high: a wide range for what the visible stock would cost at retail in India — the one value you may
+estimate; it is about the goods, never the person. null if you cannot tell.`;
+
+/** Stated stock against the shop photo's rough estimate: 'more' / 'less' only when far outside it (one photo, one angle). */
+export function stockCheck(stock, declared) {
+  const hi = Number(stock?.value_high) || 0;
+  const lo = Number(stock?.value_low) || 0;
+  const said = Number(declared) || 0;
+  if (!hi || !said) return null;
+  const status = said > hi * 3 ? 'more' : lo && said < lo / 3 ? 'less' : 'fits';
+  return { status, low: lo || null, high: hi, declared: said, fullness: stock.fullness ?? null };
+}
 
 // Home photos also return what the living standard is read from — only what is visible, scored in code (living.js).
 const LIVING_RULE = `
@@ -275,19 +298,21 @@ value "unclear", rather than guess):
 {"house":"kachha|semi_pucca|pucca|unclear","floors":<number or null>,"vehicles":["two_wheeler","car","auto_rickshaw","bicycle","tractor"],"items":["tv","sofa","fridge","ac","washing_machine","cooler","computer","dining_table","almirah","bed"]}
 kachha = mud, thatch or tin; semi_pucca = brick walls with a tin/asbestos roof or unplastered; pucca = plastered brick or concrete.`;
 
-/** Splits the vision reply into the observation, the names it read (NAMES:) and, for a home, what it saw (LIVING:). */
+/** Splits the vision reply into the observation, the names it read (NAMES:), a home's LIVING: and a shop's STOCK: JSON. */
 export function splitNames(text) {
   let rest = String(text ?? '');
-  let living = null;
-  const l = rest.match(/^\s*LIVING:\s*(\{.*\})\s*$/im);
-  if (l) {
-    try { living = JSON.parse(l[1]); } catch { living = null; }
+  const json = (tag) => {
+    const l = rest.match(new RegExp(`^\\s*${tag}:\\s*(\\{.*\\})\\s*$`, 'im'));
+    if (!l) return null;
     rest = rest.replace(l[0], '');
-  }
+    try { return JSON.parse(l[1]); } catch { return null; }
+  };
+  const living = json('LIVING');
+  const stock = json('STOCK');
   const m = rest.match(/\s*NAMES:\s*(.*)\s*$/i);
-  if (!m) return { observation: rest.trim(), names: [], living };
+  if (!m) return { observation: rest.trim(), names: [], living, stock };
   const names = /^none\.?$/i.test(m[1].trim()) ? [] : m[1].split(';').map((n) => n.trim()).filter(Boolean);
-  return { observation: rest.slice(0, m.index).trim(), names, living };
+  return { observation: rest.slice(0, m.index).trim(), names, living, stock };
 }
 
 function livingPrompt(kind, caseData) {
@@ -336,10 +361,10 @@ export async function analysePhoto({ dataUrl, kind, caseData, provenance = null 
     if (!res.ok) throw new Error(`vision ${res.status}`);
     const data = await res.json();
     if (!data.observation) throw new Error('no observation');
-    const { observation, names, living } = splitNames(data.observation);
+    const { observation, names, living, stock } = splitNames(data.observation);
     const flag = visionFlag(observation);
     const withFlag = flag && provenance ? { ...provenance, flags: [...provenance.flags, flag] } : provenance;
-    return { ...base, provenance: withFlag, aiChecked: true, observation, names, ...(living ? { living } : {}) };
+    return { ...base, provenance: withFlag, aiChecked: true, observation, names, ...(living ? { living } : {}), ...(stock ? { stock } : {}) };
   } catch {
     return {
       ...base,

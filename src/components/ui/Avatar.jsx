@@ -1,7 +1,7 @@
 import { avatarColor, initials } from '../../utils/colors';
 
-/** Gradient circle with initials. Color is stable per name. */
-export default function Avatar({ name, size = 48, className = '', style, ring = false }) {
+/** Gradient circle with initials (or the person's photo, `src`). Color is stable per name. */
+export default function Avatar({ name, size = 48, className = '', style, ring = false, src = null }) {
   const bg = avatarColor(name);
   return (
     <div
@@ -27,7 +27,7 @@ export default function Avatar({ name, size = 48, className = '', style, ring = 
       }}
       aria-label={name}
     >
-      {initials(name)}
+      {src ? <img src={src} alt={name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : initials(name)}
     </div>
   );
 }

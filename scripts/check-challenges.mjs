@@ -12,7 +12,7 @@ for (let i = 0; i < 200; i++) {
 // Over many calls every shop challenge turns up — nothing a BO could learn as "the" questions.
 const seen = new Set();
 for (let i = 0; i < 500; i++) ids(planChallenges('shop', { billing_method: 'bill_book' })).forEach((id) => seen.add(id));
-assert.deepEqual([...seen].sort(), ['bill_back', 'opening_day', 'purchase_bill', 'qr_code', 'shelf_item']);
+assert.deepEqual([...seen].sort(), ['bill_back', 'opening_day', 'purchase_bill', 'qr_code', 'shelf_item', 'shop_document']);
 
 assert.deepEqual(ids(planChallenges('home', {})), ['utility_bill']);
 assert.deepEqual(planChallenges('other', {}), []);

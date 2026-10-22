@@ -106,6 +106,20 @@ export function startFrameCapture(visionUrl, onObservation) {
   }, CAPTURE_MS);
 }
 
+/** A still from the call's camera as a JPEG data URL, for the face check; null when the camera is off or paused. */
+export function grabFrame(width = 480) {
+  if (!stream || !videoEl || videoEl.readyState < 2 || !videoEl.videoWidth) return null;
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = Math.round((videoEl.videoHeight / videoEl.videoWidth) * width);
+    canvas.getContext('2d').drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.75);
+  } catch {
+    return null;
+  }
+}
+
 export function getObservations() {
   return observations;
 }

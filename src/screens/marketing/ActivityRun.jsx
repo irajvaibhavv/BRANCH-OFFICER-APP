@@ -21,6 +21,8 @@ import { typeOf, clock } from '../../components/marketing/activityTypes';
 import { AREA_COORDS } from '../../utils/areas';
 import { START, km } from '../../utils/route';
 import { buildNewCase, CUSTOM_CASES_KEY } from '../../services/sarthi/knowledge';
+import { saveFace } from '../../services/sarthi/face';
+import CustomerPhotoField from '../../components/sarthi/CustomerPhotoField';
 import { PRODUCTS } from '../../utils/loanCalc';
 import { formatINR, toISODate } from '../../utils/formatters';
 import styles from './marketing.module.css';
@@ -127,6 +129,7 @@ export default function ActivityRun() {
         businessName: lead.business.trim(), businessVintage: '', loanPurpose: lead.product, loanAmountRequested: lead.amount, declaredIncome: 0,
       });
       setCases((prev) => [{ ...c, fromActivity: a.id }, ...prev]);
+      if (lead.face) saveFace(c.id, lead.face);
       clientId = c.id;
     } else {
       const [lat, lng] = AREA_COORDS[lead.area] ?? [START.lat, START.lng];
@@ -135,7 +138,8 @@ export default function ActivityRun() {
         lat, lng, distanceKm: +km(START, { lat, lng }).toFixed(1), ...(lead.kind === 'connector' && { channel: 'connector' }), fromActivity: a.id,
       }).id;
     }
-    const rec = { ...lead, id: `ld${crypto.randomUUID().slice(0, 8)}`, name, amount: Number(lead.amount) || null, at: new Date().toISOString(), by: officer.id, activityId: a.id, clientId };
+    const { face, ...said } = lead; // the photo lives under its own key, not in the marketing log
+    const rec = { ...said, hasFace: !!face, id: `ld${crypto.randomUUID().slice(0, 8)}`, name, amount: Number(lead.amount) || null, at: new Date().toISOString(), by: officer.id, activityId: a.id, clientId };
     saveMarketing({ id: a.id, leads: [...leads, rec] });
     const names = rec.tagged.map((c) => team.find((m) => m.empCode === c)?.name.split(' ')[0]).filter(Boolean);
     toast(`${rec.name} saved as a ${KIND_LABEL[rec.kind].toLowerCase()} in Clients${names.length ? ` · ${names.join(', ')} tagged` : ''}`, 'success', 2600);
@@ -279,6 +283,7 @@ export default function ActivityRun() {
             {lead.kind === 'customer' && <>
               <Select label="Interested in" value={lead.product} onChange={setL('product')} options={PRODUCTS.map((p) => ({ value: p, label: p }))} />
               <Input label="Amount needed (optional)" inputMode="numeric" prefix="₹" placeholder="500000" value={lead.amount} onChange={(e) => setLead((l) => ({ ...l, amount: e.target.value.replace(/\D/g, '') }))} />
+              <CustomerPhotoField value={lead.face} onChange={(face) => setLead((l) => ({ ...l, face }))} />
             </>}
             <Input label="Note (optional)" textarea placeholder="What they need, best time to call…" value={lead.note} onChange={setL('note')} />
             <CoworkerTags label="Tag a co-worker to follow up (optional)" value={lead.tagged} onChange={(tagged) => setLead((l) => ({ ...l, tagged }))} />

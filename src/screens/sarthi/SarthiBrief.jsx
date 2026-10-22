@@ -11,6 +11,8 @@ import Page, { listContainer, listItem } from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import EmptyState from '../../components/ui/EmptyState';
 import NewPdSheet from '../../components/sarthi/NewPdSheet';
+import CustomerPhotoField from '../../components/sarthi/CustomerPhotoField';
+import { loadFace, saveFace } from '../../services/sarthi/face';
 import Card, { MetricCard } from '../../components/ui/Card';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
@@ -54,6 +56,7 @@ export default function SarthiBrief() {
   const [tab, setTab] = useState('Overview');
   const [reports] = useSarthiReports();
   const [sheetFor, setSheetFor] = useState(null); // the PD a new one follows up
+  const [face, setFace] = useState(() => loadFace(id)?.dataUrl ?? null);
   const { toast } = useToast();
   const isNew = !!c?.isNew;
 
@@ -105,7 +108,7 @@ export default function SarthiBrief() {
       ? { icon: FiShield, term: 'Bureau score', value: 'No record', note: 'New to credit', tone: 'watch' }
       : { icon: FiShield, term: 'Bureau score', value: b.bureauScore, note: b.bureauScore >= 750 ? 'Strong' : b.bureauScore >= 700 ? 'Acceptable' : 'Below comfort', tone: b.bureauScore >= 750 ? 'clear' : b.bureauScore >= 700 ? 'watch' : 'stamp', meter: Math.max(0, Math.min(100, ((b.bureauScore - 300) / 600) * 100)) },
     { icon: FiRepeat, term: 'Running EMIs', value: b.existingEMIs == null ? 'Not on file' : inr(b.existingEMIs), note: b.runningLoans.length ? b.runningLoans.map((l) => l.type).join(', ') : b.existingEMIs == null ? 'No bureau record' : 'Nothing outstanding' },
-    { icon: FiFileText, term: 'Filed as income', value: b.itrIncome == null ? 'No ITR' : `${inr(b.itrIncome)}/yr`, note: b.gstRegistered ? `GST since ${b.gstVintage}` : 'Not GST registered', tone: b.itrIncome == null ? 'watch' : undefined },
+    { icon: FiFileText, term: 'Filed as income', value: b.itrIncome == null ? 'No ITR' : `${inr(b.itrIncome)}/yr`, note: b.gstRegistered ? `GST since ${b.gstVintage}${b.gstin ? ` · ${b.gstin}` : ''}` : 'Not GST registered', tone: b.itrIncome == null ? 'watch' : undefined },
     { icon: FiCalendar, term: 'Trading for', value: c.businessVintage || '—', note: c.businessName },
     { icon: FiMapPin, term: 'Area default', value: b.areaDefaultRate != null ? `${Math.round(b.areaDefaultRate * 100)}%` : '—', note: b.areaDefaultRate != null ? 'of loans in this locality' : 'No lending history', tone: b.areaDefaultRate > 0.15 ? 'stamp' : b.areaDefaultRate > 0.1 ? 'watch' : undefined },
     ...(b.bank ? [{ icon: FiTrendingDown, term: 'Bounces', value: b.bank.bounces, note: `${b.bank.cashCreditPct}% cash · ${b.bank.upiCreditPct}% UPI`, tone: b.bank.bounces ? 'stamp' : 'clear' }] : []),
@@ -123,7 +126,11 @@ export default function SarthiBrief() {
 
       {/* Same header as a DSA: who, how to reach them, then the PD */}
       <div className={styles.detailHead}>
-        <Avatar name={c.name} size={84} ring />
+        {/* the customer's photo, if the BO took one — tap to add or retake it on the KYC tab */}
+        <button type="button" className={styles.avatarBtn} onClick={() => setTab('KYC')} aria-label="Customer photo">
+          <Avatar name={c.name} size={84} ring src={face} />
+          {!face && <span className={styles.avatarAdd}>+ photo</span>}
+        </button>
         <h1 style={{ fontSize: 24 }}>{c.name}</h1>
         <span className="label">{c.business} · {c.area.split(',')[0]}</span>
         {c.riskLevel && <Badge tone={RISK_TONE[c.riskLevel]} size="md">{RISK[c.riskLevel]}</Badge>}
@@ -293,6 +300,12 @@ export default function SarthiBrief() {
             </>
           )}
 
+          {/* the customer's photo: Sarthi compares it with the person on the video call */}
+          {tab === 'KYC' && (
+            <Card padding={16} noChevron style={{ marginBottom: 14 }}>
+              <CustomerPhotoField value={face} onChange={(d) => (saveFace(id, d) ? setFace(d) : toast('Phone storage is full — the photo was not saved'))} />
+            </Card>
+          )}
           {tab === 'KYC' && (
             (b.kyc || b.bank || b.bureau) ? (
               <section className={styles.card} style={{ marginTop: 0 }}>
@@ -330,7 +343,7 @@ export default function SarthiBrief() {
                   <ol className={styles.trail}>
                     {pdEvents(p, pds).map((e) => (
                       <li key={e.title} className={`${styles.trailItem} ${styles[`tone_${e.tone}`]}`}>
-                        <div className={styles.trailHead}><strong>{e.title}</strong><span className={styles.trailWhen}>{time(e.at)}</span></div>
+                        <div className={styles.trailHead}><strong>{e.title}</strong><span className={styles.trailWhen}>{e.at ? time(e.at) : ''}</span></div>
                         <div className={styles.trailWhy}>{e.text}</div>
                         {e.flags?.map((f) => <div key={f} className={styles.trailFlag}>• {f}</div>)}
                       </li>

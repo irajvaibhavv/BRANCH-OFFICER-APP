@@ -209,6 +209,11 @@ const FLAG_HEADS = {
   photo_location: 'Photo location vs the file',
   cross_pd: 'Same place as another applicant',
   repeat_pd: 'Answer changed since an earlier PD',
+  face_check: 'Person on the call vs the customer photo',
+  liveness: 'Video may not be live',
+  name_match: 'Name on a photo vs the file',
+  stock_check: 'Stock stated vs the shop photo',
+  call_location: 'Where the call was taken from',
 };
 
 const photoSource = (p) => (p.provenance?.source === 'live_camera' ? ' (live camera)' : p.provenance ? ' (uploaded file)' : '');
@@ -239,7 +244,7 @@ export function buildFallbackReport({ caseData, transcript, evidence, flags, eli
     : '';
   // No model to judge them here: the officer reads each answer against the job claimed.
   const profQs = professionAnswers.length
-    ? `\n\n**Profession check (salaried — judge each answer against the job they claim)**\n${professionAnswers.map((a) => `- ${a.q} — "${a.answer}" (Turn ${a.turn})`).join('\n')}`
+    ? `\n\n**Profession / trade check (judge each answer against the job or trade they claim)**\n${professionAnswers.map((a) => `- ${a.q} — "${a.answer}" (Turn ${a.turn})`).join('\n')}`
     : '';
   const surprise = challengeAnswers.length
     ? `\n\n**Surprise checks (picked at random during the call)**\n${challengeAnswers.map((a) => `- ${a.asked} — ${a.sent === false ? 'photo NOT sent' : `"${a.answer}"`} (Turn ${a.turn}). Why: ${a.why}`).join('\n')}`

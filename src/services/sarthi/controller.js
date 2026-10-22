@@ -1,7 +1,7 @@
 // Decides WHAT to ask by walking pdSchema.json; the model only decides how to phrase it. No model calls here.
 import pdSchema from '../../data/sarthi/pdSchema.json';
 import { lookupLocation, tradeOf, hasAreaDetail, bankIncome, ventureArea } from './knowledge';
-import { getMissingFields, knownFacts, enterSection, gaveUp, isSalaried, PROFESSION_CHECKS, FIELD_DEFS as FIELD_DEFS_BY_KEY } from './memory';
+import { getMissingFields, knownFacts, enterSection, gaveUp, isSalaried, PROFESSION_CHECKS, TRADE_CHECKS, FIELD_DEFS as FIELD_DEFS_BY_KEY } from './memory';
 import { toNumber, toYears } from './verifier';
 import { namesMatch } from './idChecks';
 import { nextTradeProbe, nextTradeField, tradeProbes, purposeSignals } from './probes';
@@ -40,6 +40,9 @@ function verificationTasks(memory, section) {
     && !(t.source === 'locationKnowledge' && memory.areaChecked));
 }
 
+// A named trade with no insider pack: the model writes TRADE_CHECKS insider questions from its own knowledge instead.
+const aiTrade = (memory) => !!memory.collected.business_type && !tradeProbes(memory).length;
+
 function sectionComplete(memory, section) {
   const started = memory.sectionStartTurn[section.id] ?? memory.turnCount;
   const servedTime = memory.turnCount >= started + (section.minTurns ?? 1);
@@ -55,7 +58,9 @@ function sectionComplete(memory, section) {
     return memory.income_mentions.length >= 2 || servedTime;
   }
 
-  if (section.type === 'trade_probes') return !nextTradeField(memory) && !nextTradeProbe(memory);
+  if (section.type === 'trade_probes') {
+    return !nextTradeField(memory) && !nextTradeProbe(memory) && (!aiTrade(memory) || (memory.professionAnswers?.length ?? 0) >= TRADE_CHECKS);
+  }
 
   if (section.type === 'profession_probes') return (memory.professionAnswers?.length ?? 0) >= PROFESSION_CHECKS;
 
@@ -466,6 +471,9 @@ function buildInstruction(memory, section, caseData, config, pick = null) {
       instruction.missingFields = [field];
       instruction.directive = `Ask about: ${def.label}. Plain-words example: "${def.ask}"`
         + ' Ask ONE thing at a time, in your own words, as simply as the example.';
+    } else if (!probe) {
+      instruction.professionCheck = (memory.professionAnswers?.length ?? 0) + 1;
+      instruction.directive = professionDirective(memory, caseData);
     } else if (probe.parent) {
       instruction.tradeProbe = probe.key;
       instruction.tradeProbeDef = probe;
@@ -520,14 +528,27 @@ function buildInstruction(memory, section, caseData, config, pick = null) {
   return instruction;
 }
 
-// The one place the model writes the question itself: no JSON can hold every job, and an officer tests a claimed
-// job by asking what only someone doing it daily knows. Answers are kept verbatim and judged in the report.
+// The one place the model writes the question itself: no JSON can hold every job or trade, and an officer tests a claimed
+// one by asking what only someone doing it daily knows. Answers are kept verbatim and judged in the report.
 function professionDirective(memory, caseData) {
   const c = memory.collected;
+  const done = memory.professionAnswers ?? [];
+  const already = done.length ? ` Already asked — cover something DIFFERENT: ${done.map((d) => `"${d.q}"`).join('; ')}.` : '';
+  if (!isSalaried(caseData)) {
+    return `TRADE CHECK ${done.length + 1} of ${TRADE_CHECKS}. They say they run "${c.business_type}"`
+      + `${c.products_services ? ` (${c.products_services})` : ''}${c.business_age != null ? ` for ${c.business_age} years` : ''}.`
+      + ' Ask ONE question that anyone who really runs this trade in India answers without thinking, and someone who only'
+      + ' sits in the shop for the day cannot. Use your own knowledge of the trade: where the goods come from (which mandi,'
+      + ' distributor, company or manufacturer), credit days with suppliers, the margin on the main lines, the busy and slow'
+      + ' season, the licence or registration it needs, its typical problems (breakdowns, returns, wastage, spoilage) and its'
+      + ' jargon. E.g. a machinery or equipment dealer: which brands, how warranty and service work, how buyers pay for a'
+      + ' machine; a cafe or restaurant: food cost out of a 100-rupee bill, covers a day, the FSSAI licence, what gets wasted.'
+      + `${already} Ask it open and curious like a fellow trader, never as a quiz; never hint at, correct or praise the answer,`
+      + ' never state a margin or price yourself. If they say "pata nahi", accept it and move on. One question only.';
+  }
   const role = c.designation || caseData?.designation || 'their job';
   const employer = c.employer_name || caseData?.employer || '';
   const years = c.total_experience ?? c.job_years ?? caseData?.businessVintage ?? null;
-  const done = memory.professionAnswers ?? [];
   return `PROFESSION CHECK ${done.length + 1} of ${PROFESSION_CHECKS}. They say they work as "${role}"${employer ? ` at "${employer}"` : ''}`
     + `${years ? ` with ${years} years of experience` : ''}. Ask ONE question that anyone who really does this job answers without`
     + ' thinking, and someone who only knows the title cannot. Use your own knowledge of this profession: its daily work, tools,'
@@ -535,7 +556,7 @@ function professionDirective(memory, caseData) {
     + ' which language and framework, what an API or a database index is, how their code reaches production, a bug they fixed'
     + ' recently; an accountant: which software, what TDS or a GST return is; a nurse or teacher, a driver, a sales executive:'
     + ' their shift, their targets, the terms of their work. English technical words are fine when the job uses them.'
-    + (done.length ? ` Already asked — cover something DIFFERENT: ${done.map((d) => `"${d.q}"`).join('; ')}.` : '')
+    + already
     + ' Ask it open and curious like a friendly colleague, never as a quiz, never hint at the answer, never correct or praise'
     + ' it. If they say "pata nahi", accept it and move on. One question only.';
 }

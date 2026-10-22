@@ -30,9 +30,38 @@ export const OUTCOMES = {
   red: { label: 'Red flags', tone: 'bad', badge: 'danger', line: 'The interview contradicted the file. Visit before this goes further.' },
 };
 
-export function pdOutcome(pd) {
+// Maker-checker: Sarthi and the officer who ran the PD (the maker) only propose an outcome; a second person (the checker)
+// agrees, changes it, or sends it back for another PD. The checker's outcome is final, and both are kept in the trail.
+export const REVIEW_DECISIONS = {
+  agree: 'Agreed with Sarthi',
+  change: 'Changed the outcome',
+  send_back: 'Sent back for another PD',
+};
+
+/** Sarthi's own outcome — ignoring any checker. */
+export function aiOutcome(pd) {
   const key = pd?.recommendation === 'red' ? 'red' : pd?.recommendation === 'green' && pd.complete !== false ? 'satisfactory' : 'human';
   return { key, ...OUTCOMES[key] };
+}
+
+/** The outcome that stands: the checker's when the PD has been checked, else Sarthi's. A PD sent back needs a human. */
+export function pdOutcome(pd) {
+  const r = pd?.review;
+  const key = !r ? aiOutcome(pd).key : r.decision === 'send_back' ? 'human' : r.outcome ?? aiOutcome(pd).key;
+  return { key, ...OUTCOMES[key], checked: !!r };
+}
+
+/** A checker's decision, or the reason it is refused: maker and checker must be two different people. */
+export function makeReview(pd, { name, role, decision, outcome, note }) {
+  const who = String(name ?? '').trim();
+  if (!who) return { error: "Enter the checker's name" };
+  if (who.toLowerCase() === String(pd.by?.name ?? '').trim().toLowerCase()) {
+    return { error: `${pd.by.name} ran this PD — the maker cannot check it. A second person must review it.` };
+  }
+  if (!REVIEW_DECISIONS[decision]) return { error: 'Pick a decision' };
+  if (decision === 'change' && (!OUTCOMES[outcome] || outcome === aiOutcome(pd).key)) return { error: 'Pick the outcome you are changing it to' };
+  if (String(note ?? '').trim().length < 10) return { error: 'Write a short reason (it goes in the audit trail)' };
+  return { review: { by: who, role, decision, outcome: decision === 'change' ? outcome : null, note: note.trim(), at: new Date().toISOString(), ai: aiOutcome(pd).key } };
 }
 
 /**
@@ -55,11 +84,19 @@ export function pdEvents(pd, all = []) {
       : { at: end, tone: 'ok', title: 'Call completed', text: `All topics covered · ${pd.turns ?? 0} exchanges · ${mins} min` },
     {
       at: pd.createdAt,
-      tone: pdOutcome(pd).tone,
-      title: `Marked: ${pdOutcome(pd).label}`,
+      tone: aiOutcome(pd).tone,
+      title: `Sarthi marked: ${aiOutcome(pd).label}`,
       text: [flagged.length ? `${flagged.length} flagged` : 'No flags', changed ? `${changed} answer${changed > 1 ? 's' : ''} changed since an earlier PD` : null].filter(Boolean).join(' · '),
       flags: flagged.map((f) => f.detail),
     },
+    pd.review
+      ? {
+        at: pd.review.at,
+        tone: pdOutcome(pd).tone,
+        title: `Checked by ${pd.review.by}${pd.review.role ? ` (${pd.review.role})` : ''}`,
+        text: `${REVIEW_DECISIONS[pd.review.decision]}${pd.review.outcome ? ` — ${OUTCOMES[pd.review.ai]?.label} → ${OUTCOMES[pd.review.outcome].label}` : ''}: "${pd.review.note}"`,
+      }
+      : { at: null, tone: 'warn', title: 'Awaiting checker', text: 'A second person must review this PD before the file moves on' },
   ];
 }
 
@@ -144,3 +181,38 @@ export function crossSteps(prior, caseData, flagged = [], rand = Math.random) {
     ask: (salaried && FIELD_DEFS[k].askSalaried) || FIELD_DEFS[k].ask,
   }));
 }
+
+// A call that never reached finish (app closed, phone died, network gone) leaves the draft the interview saves after every
+// answer. Any PD screen that opens turns it into an incomplete PD, so "Finish last PD" can carry on from it.
+export const DRAFT_PREFIX = 'bo_sarthi_draft_';
+
+export function takeDrafts() {
+  const out = [];
+  try {
+    for (let i = window.localStorage.length - 1; i >= 0; i--) {
+      const key = window.localStorage.key(i);
+      if (!key?.startsWith(DRAFT_PREFIX)) continue;
+      const d = JSON.parse(window.localStorage.getItem(key));
+      window.localStorage.removeItem(key);
+      if (d?.id) out.push(droppedPd(d));
+    }
+  } catch { /* storage blocked — nothing to recover */ }
+  return out;
+}
+
+const droppedPd = (d) => ({
+  ...d,
+  complete: false,
+  dropped: true,
+  endedAt: d.savedAt,
+  createdAt: d.savedAt,
+  endedBecause: 'Call dropped — the app closed, or the phone or network went, before the PD ended. Saved at the last answer.',
+  recommendation: null,
+  evidence: [],
+  eligibility: null,
+  observations: [],
+  validation: null,
+  report: `## PD ${d.pdNo ?? 1} — call dropped\n\nThe call ended before Sarthi could write a report. Everything up to the last answer was`
+    + ` saved: ${d.coverage ?? 0}% of the topics, ${d.turns ?? 0} exchanges.\n\nStart **Finish last PD** from the customer page —`
+    + ' the answers so far are carried over and only what is left is asked.',
+});

@@ -55,6 +55,12 @@ const POOL = [
     steps: () => [{ ask: 'Aaj dukaan kitne baje kholi, aur pehla grahak kya lekar gaya?' }],
   },
   {
+    id: 'shop_document',
+    place: 'shop',
+    why: "A rent agreement, shop licence, Udyam or the shop's electricity bill names whose shop it is — a friend's shop carries the friend's name",
+    steps: () => [{ photo: 'shop_document', ask: 'Dukaan ka koi bhi kaagaz dikhaiye jis par naam ho — rent agreement, shop licence, Udyam ya dukaan ka bijli bill. Uski photo bhejiye.' }],
+  },
+  {
     id: 'utility_bill',
     place: 'home',
     why: 'Name and address on a utility bill tie the person to the home photographed',

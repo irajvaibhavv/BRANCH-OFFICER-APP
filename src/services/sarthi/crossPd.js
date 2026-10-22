@@ -72,28 +72,29 @@ async function sideBySide(a, b, height = 420) {
   return canvas.toDataURL('image/jpeg', 0.7);
 }
 
-/** 'same' | 'different' | 'unsure', with the model's one-line reason; null when no vision service answers. */
-export async function samePlace(dataUrlA, dataUrlB) {
+/** Two images side by side, one SAME / DIFFERENT / UNSURE question → { verdict, reason }; null when vision is down. */
+export async function visionCompare(dataUrlA, dataUrlB, prompt, words = ['SAME', 'DIFFERENT', 'UNSURE']) {
   try {
     const { VISION_URL } = await import('./agent'); // lazy, so the pure matching runs in node (check:crosspd)
     const image = await sideBySide(dataUrlA, dataUrlB);
-    const prompt = 'The LEFT and RIGHT halves are two separate photographs sent by two DIFFERENT loan applicants. Are they of'
-      + ' the same physical place — the same shop, counter, racks, wall, floor, door or house — even if the angle, light or'
-      + ' stock differs? Reply with exactly one word first: SAME, DIFFERENT or UNSURE. Then one short sentence naming what'
-      + ' matches or differs. Judge the place only, never the people.';
     const res = await fetch(VISION_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: image.split(',')[1], prompt }),
+      body: JSON.stringify({ image: image.split(',')[1], prompt: `${prompt} Reply with exactly one word first: ${words.join(', ')}. Then one short sentence naming what matches or differs.` }),
     });
     if (!res.ok) return null;
     const text = String((await res.json()).observation ?? '').trim();
-    const word = text.match(/\b(SAME|DIFFERENT|UNSURE)\b/i)?.[1]?.toLowerCase();
-    return word ? { verdict: word, reason: text.replace(/^\W*(SAME|DIFFERENT|UNSURE)\W*/i, '').trim() } : null;
+    const alt = words.join('|');
+    const word = text.match(new RegExp(`\\b(${alt})\\b`, 'i'))?.[1]?.toLowerCase();
+    return word ? { verdict: word, reason: text.replace(new RegExp(`^\\W*(${alt})\\W*`, 'i'), '').trim() } : null;
   } catch {
     return null;
   }
 }
+
+export const samePlace = (a, b) => visionCompare(a, b, 'The LEFT and RIGHT halves are two separate photographs sent by two DIFFERENT loan applicants.'
+  + ' Are they of the same physical place — the same shop, counter, racks, wall, floor, door or house — even if the angle,'
+  + ' light or stock differs? Judge the place only, never the people.');
 
 const readJson = (key, fallback) => {
   try { return JSON.parse(window.localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
@@ -130,4 +131,50 @@ export function crossPdFlags(links) {
         + (different ? '. Likely a neighbouring place; check if they are related.' : '. The same place may have been shown for two applicants.'),
     };
   });
+}
+
+// ---- Names on THIS applicant's photos against their own file: a friend's shop carries the friend's name on the board,
+// the QR, the bill book and the shop's papers. Words on every board that say nothing about whose it is are skipped.
+const TRADE_WORDS = new Set(['store', 'stores', 'shop', 'general', 'kirana', 'traders', 'trading', 'enterprises', 'enterprise',
+  'electricals', 'electrical', 'electronics', 'mart', 'centre', 'center', 'and', 'sons', 'company', 'pvt', 'ltd', 'the', 'new',
+  'shri', 'sri', 'mobile', 'mobiles', 'garments', 'cafe', 'restaurant', 'hardware', 'medical', 'bhandar', 'agency', 'agencies']);
+const nameWords = (s) => String(s ?? '').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !TRADE_WORDS.has(w) && !GENERIC.has(w));
+const GSTIN = /\d{2}[A-Z]{5}\d{4}[A-Z][A-Z0-9]Z[A-Z0-9]/;
+// Photos whose names should be the applicant's. A supplier's bill carries the supplier, so it is not one of them.
+const OWN_KINDS = new Set(['shop', 'home', 'qr', 'records', 'records_back', 'shop_document', 'utility_bill']);
+
+/** One entry per own-kind photo that had names read off it: which matched the file, which GSTIN, and the verdict. */
+export function fileNameCheck(photos, caseData) {
+  const own = new Set([caseData?.name, caseData?.businessName, caseData?.brief?.kyc?.nameOnPan].flatMap(nameWords));
+  const fileGstin = caseData?.brief?.gstin ?? null;
+  const pan = caseData?.brief?.kyc?.pan ?? null;
+  return photos.filter((p) => !p.skipped && p.names?.length && OWN_KINDS.has(p.kind)).map((p) => {
+    const gstins = p.names.map((n) => n.toUpperCase().replace(/\s/g, '').match(GSTIN)?.[0]).filter(Boolean);
+    const read = p.names.filter((n) => !GSTIN.test(n.toUpperCase().replace(/\s/g, '')) && nameWords(n).length);
+    const matched = read.filter((n) => nameWords(n).some((w) => own.has(w)));
+    // A proprietor's GSTIN carries their PAN (characters 3-12); a firm's carries the firm's.
+    const gstin = !gstins.length ? null
+      : fileGstin ? (gstins.includes(fileGstin) ? 'match' : 'mismatch')
+        : pan ? (gstins.some((g) => g.slice(2, 12) === pan) ? 'match' : 'not_on_file') : 'not_on_file';
+    return { kind: p.kind, label: p.label, at: p.at, read, matched, gstins, gstin, verdict: read.length ? (matched.length ? 'match' : 'none') : null };
+  });
+}
+
+/** Report flags from fileNameCheck. A bare shop photo may show only a brand board, so its miss is low. */
+export function nameFlags(checks, caseData) {
+  const onFile = [caseData?.businessName, caseData?.name].filter(Boolean).join(' / ');
+  return checks.flatMap((ch) => [
+    ch.gstin === 'mismatch' && { type: 'name_match', field: `photo_${ch.kind}`, severity: 'high', detail: `GSTIN read on ${ch.label} (${ch.gstins.join(', ')}) is not the GSTIN on file (${caseData.brief.gstin})` },
+    ch.gstin === 'not_on_file' && { type: 'name_match', field: `photo_${ch.kind}`, severity: 'low', detail: `GSTIN ${ch.gstins.join(', ')} read on ${ch.label}; none on file to match — check it on the GST portal` },
+    ch.verdict === 'none' && {
+      type: 'name_match', field: `photo_${ch.kind}`, severity: ch.kind === 'shop' || ch.kind === 'home' ? 'low' : 'medium',
+      detail: `Photo of ${ch.label} shows "${ch.read.join('", "')}" — not the applicant's name or business name on file (${onFile}). Ask whose it is; it may be a relative's or a friend's`,
+    },
+  ].filter(Boolean));
+}
+
+/** The line Sarthi says on the call when a photo carries someone else's name. */
+export function nameRecheck(ch) {
+  const whose = ch.kind === 'home' || ch.kind === 'utility_bill' ? 'Yeh ghar kiske naam pe hai?' : 'Dukaan kiske naam pe hai — aapke ya kisi aur ke?';
+  return `Photo mein "${ch.read[0]}" likha dikh raha hai — yeh naam kiska hai? ${whose}`;
 }

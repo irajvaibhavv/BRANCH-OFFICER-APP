@@ -14,6 +14,8 @@ export const isSalaried = (caseData) => /salaried/i.test(caseData?.employment ??
 
 // Questions on the claimed job, written by the model from its own knowledge of that work — see controller.
 export const PROFESSION_CHECKS = 4;
+// The same, for a trade with no insider pack in businessKnowledge.json (machinery dealer, cafe, ...) — see controller.
+export const TRADE_CHECKS = 3;
 
 // Optional schema fields are asked only once an answer or a flag links to them (schema `links`), at most this many per
 // PD — the adaptive part of the interview (controller.adaptivePick). A re-check PD may open more.

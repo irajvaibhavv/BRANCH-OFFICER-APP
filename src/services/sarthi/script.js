@@ -5,6 +5,7 @@ import { toNumber } from './verifier';
 import { formatINR } from '../../utils/formatters';
 import { PHOTO_ASKS } from './photo';
 import { isSalaried } from './memory';
+import { genuineOperator } from './assisted';
 
 const fmt = (n) => formatINR(n, { compact: false });
 
@@ -214,13 +215,14 @@ const FLAG_HEADS = {
   name_match: 'Name on a photo vs the file',
   stock_check: 'Stock stated vs the shop photo',
   call_location: 'Where the call was taken from',
+  assisted: 'Owner vs the person who runs it',
 };
 
 const photoSource = (p) => (p.provenance?.source === 'live_camera' ? ' (live camera)' : p.provenance ? ' (uploaded file)' : '');
 
 // Findings only: no question, task wording or quote reaches the officer, so a BO who reads hundreds of these cannot
 // coach the next applicant. Each item lands in one of three lists — red flag, checked, BO / CO to check.
-export function buildFallbackReport({ caseData, transcript, evidence, flags, eligibility, observations, photos = [], identity, cameraOn, understanding = null, tradeMath = [], rechecks = [], hotAnswers = [], professionAnswers = [], challengeAnswers = [], challengeWhy = [], living = null, mode = 'Handover' }) {
+export function buildFallbackReport({ caseData, transcript, evidence, flags, eligibility, observations, photos = [], identity, cameraOn, understanding = null, tradeMath = [], rechecks = [], hotAnswers = [], professionAnswers = [], challengeAnswers = [], challengeWhy = [], living = null, collected = null, mode = 'Handover' }) {
   const c = caseData;
   const pattern = c.riskPatternMatch ? lookupRiskPattern(c.riskPatternMatch.patternId) : null;
   const area = lookupLocation(c.areaKey || c.area);
@@ -285,6 +287,13 @@ export function buildFallbackReport({ caseData, transcript, evidence, flags, eli
   });
   (observations ?? []).forEach((o) => todo.push(`- Video: ${o.observation} (Vision: ${o.at})`));
   if (living) todo.push(`- Living conditions vs income: ${living.facts.join('; ')}${living.analysis ? `. ${living.analysis}` : ''}`);
+
+  // assisted PD: a genuine operator is a BO / CO decision, not a flag
+  const operator = collected && genuineOperator(collected, flags);
+  if (operator) {
+    ok.push('- ✓ Owner and the person who runs the business agree on sales, premises and who keeps the money.');
+    todo.push(`- ${operator} runs the business day to day — consider adding them as co-applicant or guarantor.`);
+  }
 
   // area and file
   if (area.source === 'specific') ok.push(`- ✓ Area knowledge checked against surveyed data for ${c.areaKey}.`);

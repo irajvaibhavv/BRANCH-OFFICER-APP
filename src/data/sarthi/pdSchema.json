@@ -303,6 +303,23 @@
           "ask": "Kaam aap akele chalate hain ya kisi ke saath milkar?"
         },
         {
+          "key": "who_runs",
+          "weight": 3,
+          "label": "Who runs the business day to day",
+          "type": "enum",
+          "options": ["self", "family", "employee", "partner", "other"],
+          "ask": "Dukaan roz kaun chalata hai — aap khud, ya ghar ka koi aur ya koi staff?"
+        },
+        {
+          "key": "operator_present",
+          "weight": 3,
+          "label": "Whether the person who runs it is with them now",
+          "type": "enum",
+          "options": ["yes", "no"],
+          "condition": "run_by_other",
+          "ask": "Kya woh abhi aapke saath hain? Unse bhi do-chaar baatein karni hain."
+        },
+        {
           "key": "employees",
           "weight": 2,
           "links": ["absent_manager"],
@@ -749,6 +766,24 @@
       "type": "coaching_check",
       "action": "Ask about monthly earnings again in completely different words. Never say they were asked before.",
       "dependsOn": "monthly_income",
+      "minTurns": 1
+    },
+    {
+      "id": "operator",
+      "label": "The person who runs the business",
+      "note": "Assisted PD: asked to the operator after the applicant hands over the phone. Never repeat the applicant's answers to them.",
+      "handover": "HANDOVER — ask {applicant} ji, warmly, to hand the phone to the person who runs the business day to day, and to step away for a few minutes so you can talk to that person alone. Then greet that person in one line.",
+      "fields": [
+        {"key": "operator_name", "label": "Operator: their name", "type": "text", "condition": "assisted", "ask": "Namaste! Aapka poora naam kya hai?"},
+        {"key": "operator_relation", "label": "Operator: relation to the applicant", "type": "enum", "options": ["family", "employee", "partner", "other"], "condition": "assisted", "ask": "Aap {applicant} ji ke kya lagte hain?"},
+        {"key": "op_years", "label": "Operator: years they have run this business", "type": "text", "condition": "assisted", "ask": "Aap yeh dukaan kitne saal se sambhal rahe hain?"},
+        {"key": "op_monthly_sales", "label": "Operator: monthly sales, in their words", "type": "number", "condition": "assisted", "ask": "Dukaan mein mahine ki kul bikri kitni ho jaati hai?"},
+        {"key": "op_shop_ownership", "label": "Operator: premises owned or rented", "type": "enum", "options": ["owned", "rented", "family", "none"], "condition": "assisted", "ask": "Dukaan apni hai ya kiraye ki?"},
+        {"key": "op_shop_rent", "label": "Operator: monthly rent of the premises", "type": "number", "condition": "op_shop_ownership === 'rented'", "ask": "Kiraya mahine ka kitna jaata hai?"},
+        {"key": "op_cash_holder", "label": "Operator: who the day's cash and UPI go to", "type": "enum", "options": ["applicant", "me", "both", "bank"], "condition": "assisted", "ask": "Roz ki kamai — cash aur UPI — kiske paas jaati hai?"},
+        {"key": "op_owner_role", "label": "Operator: how often the applicant is at the business", "type": "enum", "options": ["daily", "sometimes", "never"], "condition": "assisted", "ask": "{applicant} ji dukaan pe kitna aate hain — roz, kabhi-kabhi, ya nahi aate?"},
+        {"key": "op_loan_use", "label": "Operator: what the loan will be used for, as they understand it", "type": "text", "condition": "assisted", "ask": "Yeh loan ka paisa kis kaam mein lagega?"}
+      ],
       "minTurns": 1
     },
     {

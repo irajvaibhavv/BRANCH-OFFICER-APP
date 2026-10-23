@@ -135,9 +135,14 @@ export function updateMemory(memory, facts = {}) {
 export function acceptedFacts(memory, facts = {}, action = null) {
   const asked = new Set(action?.missingFields ?? []);
   if (action?.section === 'income_recheck') asked.add('monthly_income');
-  return Object.fromEntries(Object.entries(facts).filter(([k]) => k.startsWith('_') || asked.has(k)
-    || (memory.collected[k] == null && !ASKED_ONLY.has(k))));
+  // Two people, one phone: the operator's answers fill only operator fields, the applicant's never do.
+  const operator = action?.section === 'operator';
+  return Object.fromEntries(Object.entries(facts).filter(([k]) => k.startsWith('_')
+    || (OPERATOR_KEYS.has(k) === operator && (asked.has(k) || (memory.collected[k] == null && !ASKED_ONLY.has(k))))));
 }
+
+export const OPERATOR_KEYS = new Set(pdSchema.sections.find((s) => s.id === 'operator')?.fields.map((f) => f.key) ?? []);
+export const isAssisted = (memory) => !!memory.assisted || memory.collected.operator_present === 'yes';
 
 // Income and sales drive eligibility and most flags, so they are taken only from their own question: a son's salary,
 // given when asked about other earners, once became the applicant's income and the real figure was then refused.
@@ -207,6 +212,9 @@ function conditionMet(field, memory) {
   }
   // Asked by the controller with the photos (getNextAction), never in the personal walk — see "photoTime".
   if (field.condition === 'place_known') return false;
+  // Assisted PD: declared on CallSetup, or the applicant said the one who runs it is with them (operator_present).
+  if (field.condition === 'assisted') return isAssisted(memory);
+  if (field.condition === 'run_by_other') return !memory.assisted && !!memory.collected.who_runs && memory.collected.who_runs !== 'self';
   if (field.condition === 'name_mismatch') return !memory.caseData?.isNew && namesMatch(memory.collected.stated_name, memory.caseData?.name) === false;
   return true;
 }

@@ -533,6 +533,13 @@ confirm, gaps between living conditions and income, documents to collect, places
   vague or shifted weakens it (RED FLAG). Name the claim, not the follow-up. Cite both turns.
 - HISAAB: each check with ✓ (WHAT SARTHI CHECKED) or ✕ (RED FLAGS) and its detail as given, a failed one cited
   (Flag: math_<check>). Never recompute these numbers.
+- ASSISTED PD (the INTERVIEW MODE line says so): the applicant owns the business and someone else runs it; the applicant
+  answered first, then the operator on the same phone — operator_* and op_* facts are the operator's. Every "assisted"
+  flag is a RED FLAG as given (decided in code). With none, it is a family- or staff-run business: put "Owner and the
+  person who runs it agree" under WHAT SARTHI CHECKED, and under WHAT THE BO / CO MUST CHECK name the operator and suggest
+  considering them as co-applicant or guarantor. Compare op_loan_use with the applicant's loan purpose in a few words.
+  A who_runs flag (someone else runs it, not on the call), an identity_mismatch with a family or employee speaker, or a
+  name_match naming a relative: suggest an assisted PD with the person who runs the business.
 - A loan_purpose flag (new venture, personal use, or an amount far above income) is a RED FLAG; summarise the reason they
   gave (purpose_reason / purpose_experience / amount_basis) in your own words, cited by turn.
 - A photograph's provenance.source says how it arrived: "live_camera" was taken during the interview, "upload" was a file. Never describe an uploaded file as taken during the interview.

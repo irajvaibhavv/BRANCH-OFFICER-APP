@@ -1,7 +1,7 @@
 // Decides WHAT to ask by walking pdSchema.json; the model only decides how to phrase it. No model calls here.
 import pdSchema from '../../data/sarthi/pdSchema.json';
 import { lookupLocation, tradeOf, hasAreaDetail, bankIncome, ventureArea } from './knowledge';
-import { getMissingFields, knownFacts, enterSection, gaveUp, isSalaried, PROFESSION_CHECKS, TRADE_CHECKS, FIELD_DEFS as FIELD_DEFS_BY_KEY } from './memory';
+import { getMissingFields, knownFacts, enterSection, gaveUp, isSalaried, PROFESSION_CHECKS, TRADE_CHECKS, OPERATOR_KEYS, FIELD_DEFS as FIELD_DEFS_BY_KEY } from './memory';
 import { toNumber, toYears } from './verifier';
 import { namesMatch } from './idChecks';
 import { nextTradeProbe, nextTradeField, tradeProbes, purposeSignals } from './probes';
@@ -348,6 +348,20 @@ export function getNextAction(memory, caseData) {
   // A change of topic gets a few words of bridge, so an adaptive order still sounds like one conversation.
   if (chosen && CORE.has(memory.currentSection) && memory.currentSection !== section.id) {
     instruction.directive = `New topic (${section.label}) — bridge to it in a few natural words. ${instruction.directive}`;
+  }
+  // Assisted PD: the phone changes hands once, on the first turn of the operator's part (the app shows it too).
+  if (section.handover && memory.currentSection !== section.id) {
+    instruction.directive = `${section.handover.replace('{applicant}', caseData.name)} Then: ${instruction.directive}`;
+    instruction.handover = true;
+  }
+  // The operator never hears what the applicant said: only their own answers and no open flags reach the model.
+  if (section.id === 'operator') {
+    instruction.known = Object.fromEntries(Object.entries(instruction.known ?? {}).filter(([k]) => OPERATOR_KEYS.has(k)));
+    instruction.contradictions = [];
+    instruction.riskAlert = null;
+    instruction.hyperLocal = null;
+    instruction.directive += ' You are now talking to the person who runs the business, not the applicant — never tell them any'
+      + ' figure or answer the applicant gave, never ask them to confirm one.';
   }
   // A flag is followed up once, in the turn it is raised with — not re-raised every turn after.
   const raised = new Set((instruction.contradictions ?? []).map((f) => f.detail));

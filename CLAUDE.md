@@ -79,7 +79,7 @@ rules that must never be broken:
   what Sarthi checked and what the BO / CO must check, so BOs cannot learn the interview and coach applicants.
 - **Voice:** the TTS is fed Devanagari, captions are Hinglish. Re-run `npm run sarthi:voice` after editing any scripted line.
 - **State:** `bo_sarthi_*` keys, per PD id; bump `SARTHI_RESET` in `knowledge.js` when seeded applicants change.
-- **Checks:** `npm run check:geo`, `check:crosspd`, `check:challenges`; `VITE_SARTHI_MOCKS=true` (dev) runs with no API calls.
+- **Checks:** `npm run check:geo`, `check:crosspd`, `check:challenges`, `check:assisted`, `check:retention`, `check:pastphotos`; `VITE_SARTHI_MOCKS=true` (dev) runs with no API calls.
 
 ## Conventions
 

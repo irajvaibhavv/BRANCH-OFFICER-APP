@@ -250,6 +250,20 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   deleted. Video is not recorded yet: a recorder writes `bo_sarthi_video_<pd>` with `{ at }`, and `purgeExpiredVideos`
   (run whenever a PD screen opens) deletes it once past the policy. In production the policy comes from the admin portal
   and video lives in object storage with a lifecycle rule, not on the phone. `npm run check:retention`.
+- **Assisted PD** (2026-10-23, lead: "the owner may be one person and the business run by someone else"): one call, one
+  phone. It starts when the BO ticks "Dukaan chalane wale bhi saath hain" on CallSetup (`memory.assisted`), or when the
+  applicant says someone else runs it (`who_runs`) and that person is with them (`operator_present`). After the
+  applicant's whole PD, the schema's `operator` section (before closing) opens with its `handover` line — "hand the phone
+  over and step away" — and the call screen shows "Dukaan chalane wale se". Its fields are separate keys (`operator_*`,
+  `op_*`), so extraction and prompts need no per-person split; `acceptedFacts` is the one guard that keeps the two apart
+  (the operator's answers fill only op_* keys, the applicant's never do), the operator's claims are not checked as the
+  applicant's, and in that section the model sees only the operator's own facts and no open flags. `assisted.js`
+  compares the two in code: sales a third apart (high), premises / rent / years that disagree (medium), and a likely
+  name-lender — applicant never (or only sometimes, and weak on the trade's insider questions) at the shop with the
+  day's cash going to the operator (high). Someone else runs it but was not on the call → a medium `who_runs` flag. No
+  flag → "owner and operator agree", and the BO / CO is told to consider the operator as co-applicant or guarantor
+  (`genuineOperator`). Live mode only (the scripted fallback interview has no operator part). `npm run check:assisted`
+  (loads the modules through Vite, since they import without extensions).
 - **Findings, not questions** (2026-10-23, lead): the report never shows a question Sarthi asked, a task's wording, the
   order of topics or the applicant's quoted words — a BO who reads 100-200 reports would learn the interview and coach the
   next applicant. Every report (`REPORTER_SYSTEM`, `buildFallbackReport`, `mockReport`, the seeds in `pdHistory.json`) has

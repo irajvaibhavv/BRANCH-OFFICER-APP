@@ -12,7 +12,8 @@ import { parseClaims, peekSpeech, peekDisplay, writeReport, VISION_URL, COMPLETE
 import { extractFacts, askTurn } from '../../services/sarthi/model';
 import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../services/sarthi/script';
 import { verifyClaims, computeEligibility, toNumber } from '../../services/sarthi/verifier';
-import { createEmptyMemory, knownFacts, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor, recordTradeAnswer, recordProfessionAnswer, recordCrossAnswer, recordHotAnswer, acceptedFacts, MAX_ASKS } from '../../services/sarthi/memory';
+import { createEmptyMemory, knownFacts, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor, recordTradeAnswer, recordProfessionAnswer, recordCrossAnswer, recordHotAnswer, acceptedFacts, MAX_ASKS, isSalaried, isAssisted } from '../../services/sarthi/memory';
+import { assistedFlags } from '../../services/sarthi/assisted';
 import { readIntent, replyPrefix } from '../../services/sarthi/intent';
 import { queueRechecks, recordRecheckAnswer, driftRechecks } from '../../services/sarthi/recheck';
 import { loadHot, ruleHotQuestions } from '../../services/sarthi/prep';
@@ -117,10 +118,12 @@ export default function SarthiInterview() {
   const [progress, setProgress] = useState('');
   const [asked, setAsked] = useState(0);
   const [photoAsk, setPhotoAsk] = useState(null); // 'shop' | 'home' while Sarthi waits for a picture
+  const [operatorTurn, setOperatorTurn] = useState(false); // assisted PD: the phone is with the one who runs the business
   const [photoBusy, setPhotoBusy] = useState(false);
   const [capture, setCapture] = useState(null); // { kind, volunteered } while the camera screen is open
   const startedAt = useRef(0);
   const boPresent = useRef(false); // declared on CallSetup: the officer is sitting with the applicant
+  const assistedStart = useRef(false); // declared on CallSetup: the one who runs the business is here too
   const lastChallengePhoto = useRef(null); // the photo kind a challenge's follow-up asks about
   const endReason = useRef(null); // why a call ended before the schema did — shown in the PD audit trail
   const faceCheck = useRef(null); // { verdict, reason, frame, at } — the call's face against the customer photo on file
@@ -698,6 +701,7 @@ export default function SarthiInterview() {
       const action = getNextAction(memory.current, subject);
       if (action.memory) memory.current = action.memory;
       lastAction.current = action;
+      if (action.handover) { setOperatorTurn(true); logEvent('Assisted PD: phone handed to the person who runs the business'); }
 
       if (action.action === 'end_interview') { finish(); return; }
 
@@ -744,7 +748,7 @@ export default function SarthiInterview() {
         },
       });
       const { display, speech, claims: found, facts: fenced, complete } = parseClaims(raw, borrowerTurn);
-      claims.current.push(...found);
+      if (answered?.section !== 'operator') claims.current.push(...found); // the operator's figures are compared in assisted.js, not as the applicant's claims
 
       // Gap-fill from the question call's facts fence, then run the code-only checks.
       const gapFill = acceptedFacts(memory.current, Object.fromEntries(Object.entries(fenced).filter(([k]) => !(k in facts))), answered);
@@ -1021,7 +1025,7 @@ export default function SarthiInterview() {
     const settled = new Set(claimFlags.map((f) => f.claimType).filter(Boolean));
     const math = checkTradeMath(memory.current);
     const depth = understanding(memory.current);
-    const flags = [...claimFlags, ...memory.current.flags, ...consistency, ...math.flags, ...photoFlags, ...placeFlags, ...linkFlags, ...faceFlags, ...nameFlags(nameChecks, subject), ...stockFlags, ...callFlags, ...liveFlags]
+    const flags = [...claimFlags, ...memory.current.flags, ...consistency, ...math.flags, ...photoFlags, ...placeFlags, ...linkFlags, ...faceFlags, ...nameFlags(nameChecks, subject), ...stockFlags, ...callFlags, ...liveFlags, ...assistedFlags(memory.current.collected, depth, subject.name)]
       .filter((f) => !(f.type === 'contradiction' && settled.has(CLAIM_FIELD[f.field])))
       .filter((f, i, all) => all.findIndex((o) => o.detail === f.detail) === i);
 
@@ -1050,7 +1054,7 @@ export default function SarthiInterview() {
     if (!demoRef.current) {
       try {
         setProgress('Writing the PD report…');
-        const raw = await writeReport({ caseData: subject, transcript: turns, claims: captured, evidence, flags, collected: collectedFacts, verification: memory.current.verification, understanding: depth, tradeMath: math.results, crossAnswers: memory.current.crossAnswers, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers, professionAnswers: memory.current.professionAnswers, challengeAnswers: memory.current.challengeAnswers, challengeWhy: memory.current.challengeWhy, living, face: hasFace ? faceResult ?? { verdict: null } : null, eligibility, observations, photos: photos.current, identity: subject.identity, mode: `Handover${memory.current.boPresent ? ' (officer sat with the applicant)' : ''} · PD ${pdNo}${past.length ? ` (${MODES[mode].label}, after ${past.length} earlier)` : ''}${complete ? '' : ' · ENDED EARLY — not every topic was covered'}` });
+        const raw = await writeReport({ caseData: subject, transcript: turns, claims: captured, evidence, flags, collected: collectedFacts, verification: memory.current.verification, understanding: depth, tradeMath: math.results, crossAnswers: memory.current.crossAnswers, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers, professionAnswers: memory.current.professionAnswers, challengeAnswers: memory.current.challengeAnswers, challengeWhy: memory.current.challengeWhy, living, face: hasFace ? faceResult ?? { verdict: null } : null, eligibility, observations, photos: photos.current, identity: subject.identity, mode: `Handover${memory.current.boPresent ? ' (officer sat with the applicant)' : ''}${isAssisted(memory.current) ? ' · ASSISTED PD — the applicant answered first, then handed the phone to the person who runs the business; the operator_* and op_* facts are that person’s answers' : ''} · PD ${pdNo}${past.length ? ` (${MODES[mode].label}, after ${past.length} earlier)` : ''}${complete ? '' : ' · ENDED EARLY — not every topic was covered'}` });
         setProgress('Checking every citation…');
         validation = validateReport(raw, turns, captured, briefForCitation(subject), eligibility, { flags, collected: collectedFacts });
         report = validation.cleanedReport;
@@ -1062,7 +1066,7 @@ export default function SarthiInterview() {
 
     if (!report) {
       setProgress('Writing the PD report…');
-      report = buildFallbackReport({ caseData: subject, transcript: turns, evidence, flags, eligibility, observations, photos: photos.current, identity: subject.identity, cameraOn: cameraRef.current, understanding: depth, tradeMath: math.results, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers, professionAnswers: memory.current.professionAnswers, challengeAnswers: memory.current.challengeAnswers, challengeWhy: memory.current.challengeWhy, living });
+      report = buildFallbackReport({ caseData: subject, collected: collectedFacts, transcript: turns, evidence, flags, eligibility, observations, photos: photos.current, identity: subject.identity, cameraOn: cameraRef.current, understanding: depth, tradeMath: math.results, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers, professionAnswers: memory.current.professionAnswers, challengeAnswers: memory.current.challengeAnswers, challengeWhy: memory.current.challengeWhy, living });
       validation = validateReport(report, turns, captured, briefForCitation(subject), eligibility, { flags, collected: collectedFacts });
     }
 
@@ -1120,6 +1124,7 @@ export default function SarthiInterview() {
     const prior = priorFacts(past);
     memory.current = createEmptyMemory(startCase, { hot: fileHot, prior });
     if (basePd && mode === 'resume') memory.current = seedResume(memory.current, basePd);
+    if (assistedStart.current) memory.current = { ...memory.current, assisted: true };
     if (boPresent.current) {
       memory.current = addFlags({ ...memory.current, boPresent: true }, [{ type: 'officer_present', field: 'officer_present', severity: 'low', turn: 0,
         detail: 'The officer sat with the applicant during the call (declared at the start) — answers may have been prompted; more surprise checks were set' }]);
@@ -1197,7 +1202,7 @@ export default function SarthiInterview() {
     );
   }
 
-  if (!ready) return <CallSetup title={`PD interview · ${caseData.name}`} greeting={(isIntake ? buildIntakeScript() : buildScript(startCase))[0]?.speech} askPresence={!isIntake} onStart={(o) => { boPresent.current = !!o?.boPresent; setReady(true); }} onBack={() => navigate(-1)} />;
+  if (!ready) return <CallSetup title={`PD interview · ${caseData.name}`} greeting={(isIntake ? buildIntakeScript() : buildScript(startCase))[0]?.speech} askPresence={!isIntake} askAssisted={!isIntake && !isSalaried(caseData)} onStart={(o) => { boPresent.current = !!o?.boPresent; assistedStart.current = !!o?.assisted; setReady(true); }} onBack={() => navigate(-1)} />;
 
   const total = scriptRef.current.length || 18;
 
@@ -1247,7 +1252,7 @@ export default function SarthiInterview() {
 
       <section className={styles.sheet}>
         <div className={styles.sheetHead}>
-          <span className={styles.step}>{asked > 0 ? `Sawaal ${asked}` : 'Shuru ho raha hai'}</span>
+          <span className={styles.step}>{operatorTurn ? 'Dukaan chalane wale se · ' : ''}{asked > 0 ? `Sawaal ${asked}` : 'Shuru ho raha hai'}</span>
           <span className={styles.progress} aria-hidden="true">
             <span className={styles.progressFill} style={{ width: `${Math.min(96, caseData.quickPd ? (asked / (caseData.quickPd.length + 1)) * 100 : covered?.filled ? covered.pct : (asked / total) * 100)}%` }} />
           </span>

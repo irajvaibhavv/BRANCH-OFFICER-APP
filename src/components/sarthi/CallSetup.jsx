@@ -14,7 +14,8 @@ const SAMPLE = { male: 'नमस्ते! मैं सारथी हूँ,
 // Before the call: camera and mic are checked and the voice is chosen here, so nothing on the call screen asks for a
 // choice mid-interview. The tap on Start also unlocks audio on Safari, so the greeting is heard at once.
 // `askPresence`: the officer says whether they will sit with the applicant — Sarthi then sets more surprise checks.
-export default function CallSetup({ title, greeting, onStart, onBack, askPresence = false }) {
+// `askAssisted`: the person who runs the business is here too — an assisted PD, both answering on this phone.
+export default function CallSetup({ title, greeting, onStart, onBack, askPresence = false, askAssisted = false }) {
   const video = useRef(null);
   const [cam, setCam] = useState('wait'); // wait | ok | off
   const [mic, setMic] = useState('wait'); // wait | ok | heard | off
@@ -22,6 +23,7 @@ export default function CallSetup({ title, greeting, onStart, onBack, askPresenc
   const [gender, setGender] = useState(getSarthiGender);
   const [playing, setPlaying] = useState(null);
   const [boPresent, setBoPresent] = useState(false);
+  const [assisted, setAssisted] = useState(false);
 
   // Both samples are rendered as the screen opens, so Suniye plays at once instead of waiting 3-4s on the TTS render.
   useEffect(() => { prefetch([SAMPLE.male], sarthiVoice('male')); prefetch([SAMPLE.female], sarthiVoice('female')); }, []);
@@ -66,7 +68,7 @@ export default function CallSetup({ title, greeting, onStart, onBack, askPresenc
     speak(SAMPLE[id], { voice: sarthiVoice(id), onEnd: () => setPlaying((p) => (p === id ? null : p)) });
   };
 
-  const start = () => { stopSpeaking(); onStart({ boPresent }); };
+  const start = () => { stopSpeaking(); onStart({ boPresent, assisted }); };
 
   return (
     <div className={styles.setup}>
@@ -112,6 +114,13 @@ export default function CallSetup({ title, greeting, onStart, onBack, askPresenc
         <label className={styles.presence}>
           <input type="checkbox" checked={boPresent} onChange={(e) => setBoPresent(e.target.checked)} />
           <span>Officer customer ke saath baithe rahenge<small>Report mein likha jaayega, aur surprise checks badh jaayenge</small></span>
+        </label>
+      )}
+
+      {askAssisted && (
+        <label className={styles.presence}>
+          <input type="checkbox" checked={assisted} onChange={(e) => setAssisted(e.target.checked)} />
+          <span>Dukaan chalane wale bhi saath hain (Assisted PD)<small>Pehle customer, phir phone dukaan chalane wale ko — dono se alag-alag baat</small></span>
         </label>
       )}
 

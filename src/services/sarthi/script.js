@@ -234,7 +234,7 @@ function depthLines(understanding, tradeMath) {
   return lines.join('\n');
 }
 
-export function buildFallbackReport({ caseData, transcript, evidence, flags, eligibility, observations, photos = [], identity, cameraOn, understanding = null, tradeMath = [], rechecks = [], hotAnswers = [], professionAnswers = [], challengeAnswers = [], living = null, mode = 'Handover' }) {
+export function buildFallbackReport({ caseData, transcript, evidence, flags, eligibility, observations, photos = [], identity, cameraOn, understanding = null, tradeMath = [], rechecks = [], hotAnswers = [], professionAnswers = [], challengeAnswers = [], challengeWhy = [], living = null, mode = 'Handover' }) {
   const c = caseData;
   const rechecked = rechecks.length
     ? `\n\n**Figures rechecked during the call**\n${rechecks.map((r) => `- ${r.detail}. Shown both figures, they said: "${r.answer}"${r.before == null ? '' : r.changed ? ` — revised from ${r.before} to ${r.after}` : ' — figure unchanged'} (Turn ${r.turn})`).join('\n')}`
@@ -247,7 +247,7 @@ export function buildFallbackReport({ caseData, transcript, evidence, flags, eli
     ? `\n\n**Profession / trade check (judge each answer against the job or trade they claim)**\n${professionAnswers.map((a) => `- ${a.q} — "${a.answer}" (Turn ${a.turn})`).join('\n')}`
     : '';
   const surprise = challengeAnswers.length
-    ? `\n\n**Surprise checks (picked at random during the call)**\n${challengeAnswers.map((a) => `- ${a.asked} — ${a.sent === false ? 'photo NOT sent' : `"${a.answer}"`} (Turn ${a.turn}). Why: ${a.why}`).join('\n')}`
+    ? `\n\n**Surprise checks (picked at random during the call${challengeWhy.length ? `; more of them because of ${challengeWhy.join(', ')}` : ''})**\n${challengeAnswers.map((a) => `- ${a.asked} — ${a.sent === false ? 'photo NOT sent' : `"${a.answer}"`} (Turn ${a.turn}). Why: ${a.why}`).join('\n')}`
     : '';
   const homeLife = living ? `\n\n**Living conditions (from the home photos)**\n${living.facts.map((f) => `- ${f}`).join('\n')}${living.analysis ? `\n\n${living.analysis}` : ''}` : '';
   const pattern = c.riskPatternMatch ? lookupRiskPattern(c.riskPatternMatch.patternId) : null;

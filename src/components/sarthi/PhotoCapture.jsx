@@ -10,13 +10,32 @@ const SEND_ANYWAY_AFTER = 2;
 const LIVE_CHECK_MS = 700;
 // Sarthi speaks a live hint only once it has held for two checks, and not more often than this — else it nags.
 const SPEAK_GAP_MS = 4500;
+// Mean grey-level change (0-1) between the two pan frames that counts as the camera having turned. Calibration knob.
+const PAN_MOVED = 0.08;
+const PAN_EDGE = 480;
+
+// A 32x24 grey thumbnail: enough to tell whether the camera turned between two frames.
+function tinyGray(source) {
+  const c = document.createElement('canvas');
+  c.width = 32;
+  c.height = 24;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(source, 0, 0, 32, 24);
+  const d = ctx.getImageData(0, 0, 32, 24).data;
+  const out = new Uint8Array(32 * 24);
+  for (let i = 0; i < out.length; i++) out[i] = (d[i * 4] + d[i * 4 + 1] + d[i * 4 + 2]) / 3;
+  return out;
+}
+const frameDiff = (a, b) => a.reduce((sum, v, i) => sum + Math.abs(v - b[i]), 0) / a.length / 255;
 
 // Full-screen live camera, guided the way an officer guides a PD photo, by voice as well as on screen: tips first, a
 // framing guide and a live light/blur check while aiming, then a review — light and blur checked in code, framing
 // (too far, too close, counter missing) by the vision model — with Retake. The gallery is offered only when the
 // camera cannot open.
 // `quiet`: the BO is holding the phone (a customer photo), so Sarthi's spoken guidance is skipped.
-export default function PhotoCapture({ kind = 'extra', title, hint, tips = [], onCapture, onUpload, onCancel, quiet = false }) {
+// `pan` ({ text, speech }): after the shot is accepted the camera stays open and they turn it as told — a second, live
+// frame from the same stream, which a photo held up to the lens cannot give.
+export default function PhotoCapture({ kind = 'extra', title, hint, tips = [], onCapture, onUpload, onCancel, quiet = false, pan = null }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [facing, setFacing] = useState('environment');
@@ -25,6 +44,7 @@ export default function PhotoCapture({ kind = 'extra', title, hint, tips = [], o
   const [live, setLive] = useState(null);   // last live quality check
   const [shot, setShot] = useState(null);   // { dataUrl, quality, checking }
   const [attempts, setAttempts] = useState(0);
+  const [panFrom, setPanFrom] = useState(null); // the accepted first shot, while they turn the camera
   const voice = useRef({ last: null, at: 0, pending: null });
   const latest = useRef(null); // the shot whose framing read is out
 
@@ -94,25 +114,52 @@ export default function PhotoCapture({ kind = 'extra', title, hint, tips = [], o
     canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL('image/jpeg', QUALITY);
     const quality = checkQuality(canvas);
+    const gray = pan ? tinyGray(canvas) : null;
     setAttempts((n) => n + 1);
     setStage('review');
     // Light and blur first, in code; only a shot that passes is sent for the framing read.
     if (!quality.ok || kind === 'extra') {
-      setShot({ dataUrl, quality });
+      setShot({ dataUrl, quality, gray });
       say(quality.ok ? GUIDE.good : quality.issues[0]);
       return;
     }
-    setShot({ dataUrl, quality, checking: true });
+    setShot({ dataUrl, quality, gray, checking: true });
     latest.current = dataUrl;
     const framing = await framingCheck(dataUrl, kind);
     if (latest.current !== dataUrl) return; // retaken while the read was out
     const final = framing ?? quality;
-    setShot({ dataUrl, quality: final });
+    setShot({ dataUrl, quality: final, gray });
     say(final.ok ? GUIDE.good : final.issues[0]);
   };
 
   const retake = () => { latest.current = null; setShot(null); setLive(null); setStage('aim'); };
-  const send = () => onCapture({ dataUrl: shot.dataUrl, facing, quality: shot.quality, attempts });
+  const send = () => {
+    if (!pan) { onCapture({ dataUrl: shot.dataUrl, facing, quality: shot.quality, attempts }); return; }
+    // The stream never stopped under the review image, so the turn is filmed by the same camera session.
+    setPanFrom({ ...shot, stream: streamRef.current, at: Date.now() });
+    setShot(null);
+    setStage('pan');
+    say(pan);
+  };
+
+  const panShoot = () => {
+    const v = videoRef.current;
+    if (!v || v.readyState < 2 || !v.videoWidth) return;
+    const scale = Math.min(1, PAN_EDGE / Math.max(v.videoWidth, v.videoHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(v.videoWidth * scale);
+    canvas.height = Math.round(v.videoHeight * scale);
+    canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height);
+    onCapture({
+      dataUrl: panFrom.dataUrl, facing, quality: panFrom.quality, attempts,
+      pan: {
+        dataUrl: canvas.toDataURL('image/jpeg', 0.5),
+        seconds: Math.round((Date.now() - panFrom.at) / 1000),
+        moved: frameDiff(panFrom.gray, tinyGray(canvas)) >= PAN_MOVED,
+        sameStream: streamRef.current === panFrom.stream,
+      },
+    });
+  };
 
   const flip = () => {
     setStatus('starting');
@@ -120,6 +167,7 @@ export default function PhotoCapture({ kind = 'extra', title, hint, tips = [], o
   };
 
   const liveText = status === 'starting' ? 'Camera khul raha hai…'
+    : stage === 'pan' ? pan.text
     : live && !live.ok ? live.issues[0].text
       : live?.ok ? GUIDE.live_ok.text : hint;
 
@@ -165,7 +213,7 @@ export default function PhotoCapture({ kind = 'extra', title, hint, tips = [], o
           <div className={styles.reviewBtns}>
             <button className={styles.ghostBtn} onClick={retake}><IoRefresh size={18} /> {GUIDE.retake.text}</button>
             {!shot.checking && (shot.quality.ok || attempts >= SEND_ANYWAY_AFTER) && (
-              <button className={styles.upload} onClick={send}>{shot.quality.ok ? 'Photo bhejiye' : 'Phir bhi bhejiye'}</button>
+              <button className={styles.upload} onClick={send}>{pan ? 'Theek hai, aage' : shot.quality.ok ? 'Photo bhejiye' : 'Phir bhi bhejiye'}</button>
             )}
           </div>
         </div>
@@ -177,7 +225,7 @@ export default function PhotoCapture({ kind = 'extra', title, hint, tips = [], o
             <p className={`${styles.hint} ${live && !live.ok ? styles.hintBad : ''}`}>{liveText}</p>
             <div className={styles.controls}>
               <span className={styles.spacer} />
-              <button className={styles.shutter} onClick={shoot} disabled={status !== 'live'} aria-label="Photo lein"><span /></button>
+              <button className={styles.shutter} onClick={stage === 'pan' ? panShoot : shoot} disabled={status !== 'live'} aria-label="Photo lein"><span /></button>
               <button className={styles.round} onClick={flip} aria-label="Camera badlein"><IoCameraReverse size={22} /></button>
             </div>
           </div>

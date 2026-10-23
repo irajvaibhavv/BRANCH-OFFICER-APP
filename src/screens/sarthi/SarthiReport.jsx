@@ -313,13 +313,17 @@ export default function SarthiReport() {
           <div className={styles.shots}>
             {photos.map((p, i) => (
               <figure key={i} className={styles.shot}>
-                {p.dataUrl
-                  ? <img src={p.dataUrl} alt={`Submitted as ${p.label}`} />
-                  : <div className={styles.noShot}>Not sent</div>}
+                <div className={styles.shotPics}>
+                  {p.dataUrl
+                    ? <img src={p.dataUrl} alt={`Submitted as ${p.label}`} />
+                    : <div className={styles.noShot}>Not sent</div>}
+                  {p.panDataUrl && <img src={p.panDataUrl} alt="The live turn to the shop door" />}
+                </div>
                 <figcaption>
                   <span className={styles.shotLabel}>Sent as {p.label}</span>
                   {p.skipped && <span className={styles.shotWarn}>Refused to photograph — worth asking why</span>}
                   {p.provenance?.source === 'live_camera' && <span className={styles.shotOk}>Taken with the live camera during the interview</span>}
+                  {p.pan?.moved && p.pan.sameStream && <span className={styles.shotOk}>Turned the camera to the shop door live, {p.pan.seconds}s later (second picture)</span>}
                   <PlaceLine p={p} onFile={caseData?.locations?.[p.kind]} />
                   {p.links?.map((l) => (
                     <span key={l.otherCase} className={l.vision?.verdict === 'different' && !l.names.length ? styles.shotObs : styles.shotWarn}>

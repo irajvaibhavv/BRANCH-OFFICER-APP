@@ -6,7 +6,7 @@ import { toNumber, toYears } from './verifier';
 import { namesMatch } from './idChecks';
 import { nextTradeProbe, nextTradeField, tradeProbes, purposeSignals } from './probes';
 import { formatINR } from '../../utils/formatters';
-import { planChallenges, CHALLENGES_PER_PD } from './challenges';
+import { planChallenges, challengeCount } from './challenges';
 import { priorClash } from './repeat';
 import { inWords, familyHisaab } from './recheck';
 
@@ -277,7 +277,8 @@ export function getNextAction(memory, caseData) {
     // Random live challenges, planned once where they are and after its photos (at the shop, once billing is known).
     if (hereKind && asked.includes(hereKind) && !memory.challengePlanned
       && (hereKind !== 'shop' || c.billing_method != null || gaveUp(memory, 'billing_method'))) {
-      memory = { ...memory, challengePlanned: true, challengeQueue: planChallenges(hereKind, c, Math.random, memory.strict ? CHALLENGES_PER_PD + 1 : CHALLENGES_PER_PD) };
+      const { count, why } = challengeCount(memory);
+      memory = { ...memory, challengePlanned: true, challengeWhy: why, challengeQueue: planChallenges(hereKind, c, Math.random, count) };
     }
     if (memory.challengeQueue?.length) {
       const [step, ...rest] = memory.challengeQueue;
@@ -287,7 +288,7 @@ export function getNextAction(memory, caseData) {
         sectionLabel: here()?.label ?? '',
         challenge: step,
         ...(step.photo ? { photo: step.photo } : {}),
-        directive: `LIVE CHECK — ask exactly this, in your own simple words, keeping every detail (which rack, which date): "${step.ask}"`
+        directive: `LIVE CHECK — ask exactly this, in your own simple words, keeping every detail (which rack, which date, which bill): "${step.ask}"`
           + (step.photo ? ` Say the camera will open on their phone. Output the \`\`\`photo ${step.photo}\`\`\` fence.` : '')
           + ' Ask it as a natural, friendly request. Never say it is a check or why you ask. No other question this turn.',
         known: knownFacts(memory),

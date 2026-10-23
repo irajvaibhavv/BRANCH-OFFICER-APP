@@ -251,6 +251,18 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   random tasks with random details cannot be briefed. Each challenge photo kind has a `vision` description in
   `PHOTO_ASKS`; answers land in `memory.challengeAnswers` → "Surprise checks" in the report. Live mode only.
   `npm run check:challenges`.
+- **Surprise checks, hardened** (2026-10-23, for a BO who sits with the applicant): (1) **count by risk** —
+  `challengeCount` adds one each for a re-check PD, the officer present (a CallSetup tick, also a low `officer_present`
+  flag and the report's mode line), a repeat PD, and a high flag / two refusals so far; cap `MAX_CHALLENGES` (4), the
+  reasons go to the report as `challengeWhy`. (2) A time limit was built and removed (lead, 2026-10-23). (3) **answers
+  checked in code** (`checkChallenge`) — shelf item MRP vs purchase rate against the trade's margin, the last supplier bill against
+  their earlier last-delivery and monthly-purchase figures; the QR's name is already `fileNameCheck`. (4) **live turn** —
+  the shelf photo's `pan`: the camera stays open after the shot and they turn it to the shop door; `PhotoCapture` keeps the
+  second frame (`panDataUrl`, never sent to a model) and compares 32x24 grey thumbnails (`PAN_MOVED`); a still view or a
+  switched camera is a provenance flag. (5) **follow-ups on the object** — which bill on that page, whose name on the QR /
+  paper / gas book, the neighbour's shop; `check: 'names'` compares the answer with the names the photo's vision read.
+  (6) **keep adding** — each task has an `added` date; `check:challenges` warns after `STALE_DAYS` (90) with nothing new.
+  Added now: `street_view` (shop), `gas_book`, `home_landmark` (home, which had one task, so it was always the same).
 - **Same place, different applicant** (`crossPd.js`, 2026-10-22): live photos are never byte-identical, so a BO staging
   several PDs in one shop is found by place, not pixels. Every photo now stores its GPS fix, and the vision prompts end
   with a `NAMES:` line (board, QR name, GSTIN, UPI — `splitNames` in photo.js; prompted vision calls get 300 tokens).

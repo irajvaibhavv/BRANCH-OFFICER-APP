@@ -107,6 +107,17 @@
 .listen.playing { background: #22a35a; }
 .pick:focus-visible, .listen:focus-visible, .start:focus-visible, .back:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
+.presence {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  color: #fff;
+  cursor: pointer;
+}
+.presence input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--primary); flex-shrink: 0; }
+.presence small { display: block; font-size: 12px; color: rgba(255, 255, 255, 0.6); margin-top: 2px; }
+
 .start {
   margin-top: auto;
   flex: 0 0 52px;

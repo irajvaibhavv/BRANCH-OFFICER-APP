@@ -65,7 +65,7 @@ export const PHOTO_ASKS = {
   records_back: {
     label: 'an older page of the bill book', ask: '', speech: '', hint: 'Purana bill', frame: 'Purane bill ki tareekh aur rakam saaf dikhe',
     tips: ['Jo tareekh boli gayi, us din ke aas-paas ka page kholiye', 'Upar se seedha photo lijiye', 'Tareekh aur rakam padhi ja sake'],
-    vision: 'an older page of their bill book, opened at a date Sarthi named during the call. Read the date(s) on the page, whether bill numbers run in sequence with the latest page, and whether this page looks as used as a weeks-old page should (carbon marks, wear, different pens) or as fresh as one written recently.',
+    vision: 'an older page of their bill book, opened at a date Sarthi named during the call. Read the date(s) on the page, list the bills on it from top to bottom (amount and item where readable — Sarthi then asks about one of them), whether bill numbers run in sequence with the latest page, and whether this page looks as used as a weeks-old page should (carbon marks, wear, different pens) or as fresh as one written recently.',
   },
   shelf: {
     label: 'an item from a shelf Sarthi picked', ask: '', speech: '', hint: 'Rack ka saamaan', frame: 'Saamaan haath mein, rack peeche dikhe',
@@ -91,6 +91,16 @@ export const PHOTO_ASKS = {
     label: 'a paper for the shop (rent agreement / licence / Udyam / bill)', ask: '', speech: '', hint: 'Dukaan ka kaagaz', frame: 'Kaagaz pe naam aur pata saaf dikhe',
     tips: ['Rent agreement, shop licence, Udyam ya dukaan ka bijli bill — koi bhi ek', 'Jis panne pe naam aur pata ho, woh kholiye', 'Seedha upar se photo lijiye'],
     vision: 'a document for their shop — a rent agreement, shop and establishment licence, Udyam certificate, trade licence or the electricity bill for the shop. Say which document it is, and read the name(s) on it, the address and any date.',
+  },
+  street: {
+    label: 'the street outside the shop door', ask: '', speech: '', hint: 'Bahar ki sadak', frame: 'Saamne ki sadak aur bagal ki dukaanein dikhein',
+    tips: ['Dukaan ke darwaaze pe khade hoiye', 'Camera bahar sadak ki taraf kijiye', 'Bagal ki dukaanon ke board frame mein hon'],
+    vision: 'the view from their shop door to the street outside. Describe the street (main road, lane, market) and read the names on the neighbouring shop boards.',
+  },
+  gas_book: {
+    label: 'an LPG passbook or cylinder receipt', ask: '', speech: '', hint: 'Gas ki passbook', frame: 'Naam, pata aur tareekh saaf dikhe',
+    tips: ['Gas ki passbook ya cylinder ki rasid nikaliye', 'Naam, pata aur pichhle cylinder ki tareekh frame mein ho', 'Seedha upar se photo lijiye'],
+    vision: 'an LPG gas connection passbook or a cylinder delivery receipt from their home. Read the consumer name, the address, the gas agency and the latest delivery date, and say if any cannot be read.',
   },
   // Sent on the applicant's own initiative from the message box, not because Sarthi asked.
   extra: { label: 'an extra photo', ask: '', speech: '', hint: 'Photo', frame: 'Jo dikhana hai, uski photo lijiye', tips: [] },

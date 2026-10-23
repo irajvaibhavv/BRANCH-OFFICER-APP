@@ -141,7 +141,7 @@ const TRADE_WORDS = new Set(['store', 'stores', 'shop', 'general', 'kirana', 'tr
 const nameWords = (s) => String(s ?? '').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !TRADE_WORDS.has(w) && !GENERIC.has(w));
 const GSTIN = /\d{2}[A-Z]{5}\d{4}[A-Z][A-Z0-9]Z[A-Z0-9]/;
 // Photos whose names should be the applicant's. A supplier's bill carries the supplier, so it is not one of them.
-const OWN_KINDS = new Set(['shop', 'home', 'qr', 'records', 'records_back', 'shop_document', 'utility_bill']);
+const OWN_KINDS = new Set(['shop', 'home', 'qr', 'records', 'records_back', 'shop_document', 'utility_bill', 'gas_book']);
 
 /** One entry per own-kind photo that had names read off it: which matched the file, which GSTIN, and the verdict. */
 export function fileNameCheck(photos, caseData) {
@@ -175,6 +175,6 @@ export function nameFlags(checks, caseData) {
 
 /** The line Sarthi says on the call when a photo carries someone else's name. */
 export function nameRecheck(ch) {
-  const whose = ch.kind === 'home' || ch.kind === 'utility_bill' ? 'Yeh ghar kiske naam pe hai?' : 'Dukaan kiske naam pe hai — aapke ya kisi aur ke?';
+  const whose = ['home', 'utility_bill', 'gas_book'].includes(ch.kind) ? 'Yeh ghar kiske naam pe hai?' : 'Dukaan kiske naam pe hai — aapke ya kisi aur ke?';
   return `Photo mein "${ch.read[0]}" likha dikh raha hai — yeh naam kiska hai? ${whose}`;
 }

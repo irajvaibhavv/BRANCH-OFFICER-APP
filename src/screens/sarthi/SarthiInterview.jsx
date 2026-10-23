@@ -6,7 +6,8 @@ import { IoCall, IoCamera, IoMic, IoMicOff, IoRefresh, IoSend, IoVolumeHigh, IoV
 import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
 import CallSetup from '../../components/sarthi/CallSetup';
 import AiAvatar from '../../components/sarthi/AiAvatar';
-import { getCase, briefForCitation, buildNewCase, CUSTOM_CASES_KEY } from '../../services/sarthi/knowledge';
+import { getCase, briefForCitation, buildNewCase, CUSTOM_CASES_KEY, tradeOf } from '../../services/sarthi/knowledge';
+import { checkChallenge } from '../../services/sarthi/challenges';
 import { parseClaims, peekSpeech, peekDisplay, writeReport, VISION_URL, COMPLETE_TAG } from '../../services/sarthi/agent';
 import { extractFacts, askTurn } from '../../services/sarthi/model';
 import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../services/sarthi/script';
@@ -62,7 +63,7 @@ const pdState = (m) => ({
   professionAnswers: m.professionAnswers ?? [],
   challengePlanned: !!m.challengePlanned,
 });
-const photoMeta = (list) => list.map(({ dataUrl, ...rest }) => rest);
+const photoMeta = (list) => list.map(({ dataUrl, panDataUrl, ...rest }) => rest);
 // The borrower ending the call themselves.
 const LEAVING = /\b(bye|alvida|band karo|band kar do|rehne do|nahi karna|cut karo|cut kar raha|mujhe jaana hai)\b|अलविदा|बाय|बंद करो/i;
 
@@ -118,6 +119,8 @@ export default function SarthiInterview() {
   const [photoBusy, setPhotoBusy] = useState(false);
   const [capture, setCapture] = useState(null); // { kind, volunteered } while the camera screen is open
   const startedAt = useRef(0);
+  const boPresent = useRef(false); // declared on CallSetup: the officer is sitting with the applicant
+  const lastChallengePhoto = useRef(null); // the photo kind a challenge's follow-up asks about
   const endReason = useRef(null); // why a call ended before the schema did — shown in the PD audit trail
   const faceCheck = useRef(null); // { verdict, reason, frame, at } — the call's face against the customer photo on file
   const faceTries = useRef(0);
@@ -618,8 +621,15 @@ export default function SarthiInterview() {
       if (ch && intent !== 'question' && intent !== 'upset') {
         const asked = transcript.current.filter((t) => t.role === 'assistant').at(-1)?.content ?? '';
         const noPhoto = ch.photo && !/bheji\]$/.test(text);
+        // The follow-up is checked against what the challenge's own photo showed.
+        const shown = photos.current.findLast((p) => p.kind === lastChallengePhoto.current);
+        const subject = caseRef.current ?? caseData;
+        const found = noPhoto ? [] : checkChallenge(ch, text, {
+          photoNames: shown?.names ?? [], collected: memory.current.collected, trade: tradeOf(memory.current.collected, subject), turn: borrowerTurn,
+        });
+        if (ch.photo) lastChallengePhoto.current = ch.photo;
         memory.current = {
-          ...memory.current,
+          ...addFlags(memory.current, found),
           challengeAnswers: [...(memory.current.challengeAnswers ?? []), { id: ch.id, why: ch.why, photo: ch.photo ?? null, asked, answer: text, sent: ch.photo ? !noPhoto : null, turn: borrowerTurn }],
           challengeQueue: noPhoto ? (memory.current.challengeQueue ?? []).filter((s) => s.id !== ch.id) : memory.current.challengeQueue,
         };
@@ -839,17 +849,21 @@ export default function SarthiInterview() {
     if (wasVolunteered) beginListening();
   }, [capture, closeCapture, beginListening]);
 
-  const submitPhoto = useCallback(async ({ dataUrl: shot, file, facing, quality, attempts }, { kind, volunteered }) => {
+  const submitPhoto = useCallback(async ({ dataUrl: shot, file, facing, quality, attempts, pan }, { kind, volunteered }) => {
     closeCapture();
     setPhotoBusy(true);
     try {
-      const provenance = file ? await checkUpload(file, { startedAt: startedAt.current }) : liveProvenance(facing, { quality, attempts });
+      const provenance = file ? await checkUpload(file, { startedAt: startedAt.current }) : liveProvenance(facing, { quality, attempts, pan });
+      if (!volunteered && lastAction.current?.challenge?.pan && !pan) {
+        provenance.flags.push({ severity: 'low', detail: 'Could not do the live turn to the shop door — the camera did not open, so this was sent as a file' });
+      }
       const dataUrl = shot ?? await downscale(file);
       setShownPhoto(dataUrl);
       setPhotoAsk(null);
       const subject = caseRef.current ?? caseData;
       const [record, fix] = await Promise.all([analysePhoto({ dataUrl, kind, caseData: subject, provenance }), getFix()]);
       record.location = fix; // every photo: crossPd.js compares it with earlier applicants' photos
+      if (pan) { const { dataUrl: panDataUrl, ...turn } = pan; Object.assign(record, { pan: turn, panDataUrl }); }
       if (kind === 'shop' || kind === 'home') {
         record.placeCheck = checkPlace(fix, subject?.locations?.[kind]);
         // Asked on the call straight away, like a figure that does not add up; they may be at a second branch.
@@ -1035,7 +1049,7 @@ export default function SarthiInterview() {
     if (!demoRef.current) {
       try {
         setProgress('Writing the PD report…');
-        const raw = await writeReport({ caseData: subject, transcript: turns, claims: captured, evidence, flags, collected: collectedFacts, verification: memory.current.verification, understanding: depth, tradeMath: math.results, crossAnswers: memory.current.crossAnswers, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers, professionAnswers: memory.current.professionAnswers, challengeAnswers: memory.current.challengeAnswers, living, face: hasFace ? faceResult ?? { verdict: null } : null, eligibility, observations, photos: photos.current, identity: subject.identity, mode: `Handover · PD ${pdNo}${past.length ? ` (${MODES[mode].label}, after ${past.length} earlier)` : ''}${complete ? '' : ' · ENDED EARLY — not every topic was covered'}` });
+        const raw = await writeReport({ caseData: subject, transcript: turns, claims: captured, evidence, flags, collected: collectedFacts, verification: memory.current.verification, understanding: depth, tradeMath: math.results, crossAnswers: memory.current.crossAnswers, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers, professionAnswers: memory.current.professionAnswers, challengeAnswers: memory.current.challengeAnswers, challengeWhy: memory.current.challengeWhy, living, face: hasFace ? faceResult ?? { verdict: null } : null, eligibility, observations, photos: photos.current, identity: subject.identity, mode: `Handover${memory.current.boPresent ? ' (officer sat with the applicant)' : ''} · PD ${pdNo}${past.length ? ` (${MODES[mode].label}, after ${past.length} earlier)` : ''}${complete ? '' : ' · ENDED EARLY — not every topic was covered'}` });
         setProgress('Checking every citation…');
         validation = validateReport(raw, turns, captured, briefForCitation(subject), eligibility, { flags, collected: collectedFacts });
         report = validation.cleanedReport;
@@ -1047,7 +1061,7 @@ export default function SarthiInterview() {
 
     if (!report) {
       setProgress('Writing the PD report…');
-      report = buildFallbackReport({ caseData: subject, transcript: turns, evidence, flags, eligibility, observations, photos: photos.current, identity: subject.identity, cameraOn: cameraRef.current, understanding: depth, tradeMath: math.results, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers, professionAnswers: memory.current.professionAnswers, challengeAnswers: memory.current.challengeAnswers, living });
+      report = buildFallbackReport({ caseData: subject, transcript: turns, evidence, flags, eligibility, observations, photos: photos.current, identity: subject.identity, cameraOn: cameraRef.current, understanding: depth, tradeMath: math.results, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers, professionAnswers: memory.current.professionAnswers, challengeAnswers: memory.current.challengeAnswers, challengeWhy: memory.current.challengeWhy, living });
       validation = validateReport(report, turns, captured, briefForCitation(subject), eligibility, { flags, collected: collectedFacts });
     }
 
@@ -1105,6 +1119,10 @@ export default function SarthiInterview() {
     const prior = priorFacts(past);
     memory.current = createEmptyMemory(startCase, { hot: fileHot, prior });
     if (basePd && mode === 'resume') memory.current = seedResume(memory.current, basePd);
+    if (boPresent.current) {
+      memory.current = addFlags({ ...memory.current, boPresent: true }, [{ type: 'officer_present', field: 'officer_present', severity: 'low', turn: 0,
+        detail: 'The officer sat with the applicant during the call (declared at the start) — answers may have been prompted; more surprise checks were set' }]);
+    }
     if (basePd && mode === 'strict') {
       memory.current = { ...memory.current, strict: true, hot: [...flagQuestions(basePd.flags, basePd.pdNo), ...fileHot] };
     }
@@ -1178,7 +1196,7 @@ export default function SarthiInterview() {
     );
   }
 
-  if (!ready) return <CallSetup title={`PD interview · ${caseData.name}`} greeting={(isIntake ? buildIntakeScript() : buildScript(startCase))[0]?.speech} onStart={() => setReady(true)} onBack={() => navigate(-1)} />;
+  if (!ready) return <CallSetup title={`PD interview · ${caseData.name}`} greeting={(isIntake ? buildIntakeScript() : buildScript(startCase))[0]?.speech} askPresence={!isIntake} onStart={(o) => { boPresent.current = !!o?.boPresent; setReady(true); }} onBack={() => navigate(-1)} />;
 
   const total = scriptRef.current.length || 18;
 
@@ -1371,6 +1389,7 @@ export default function SarthiInterview() {
           hint={PHOTO_ASKS[capture.kind].frame}
           tips={PHOTO_ASKS[capture.kind].tips}
           kind={capture.kind}
+          pan={capture.volunteered ? null : lastAction.current?.challenge?.pan}
           onCapture={(shot) => submitPhoto(shot, capture)}
           onUpload={(file) => submitPhoto({ file }, capture)}
           onCancel={cancelCapture}

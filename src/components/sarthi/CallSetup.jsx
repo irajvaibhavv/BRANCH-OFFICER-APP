@@ -13,13 +13,15 @@ const SAMPLE = { male: 'नमस्ते! मैं सारथी हूँ,
 
 // Before the call: camera and mic are checked and the voice is chosen here, so nothing on the call screen asks for a
 // choice mid-interview. The tap on Start also unlocks audio on Safari, so the greeting is heard at once.
-export default function CallSetup({ title, greeting, onStart, onBack }) {
+// `askPresence`: the officer says whether they will sit with the applicant — Sarthi then sets more surprise checks.
+export default function CallSetup({ title, greeting, onStart, onBack, askPresence = false }) {
   const video = useRef(null);
   const [cam, setCam] = useState('wait'); // wait | ok | off
   const [mic, setMic] = useState('wait'); // wait | ok | heard | off
   const [level, setLevel] = useState(0);
   const [gender, setGender] = useState(getSarthiGender);
   const [playing, setPlaying] = useState(null);
+  const [boPresent, setBoPresent] = useState(false);
 
   // Both samples are rendered as the screen opens, so Suniye plays at once instead of waiting 3-4s on the TTS render.
   useEffect(() => { prefetch([SAMPLE.male], sarthiVoice('male')); prefetch([SAMPLE.female], sarthiVoice('female')); }, []);
@@ -64,7 +66,7 @@ export default function CallSetup({ title, greeting, onStart, onBack }) {
     speak(SAMPLE[id], { voice: sarthiVoice(id), onEnd: () => setPlaying((p) => (p === id ? null : p)) });
   };
 
-  const start = () => { stopSpeaking(); onStart(); };
+  const start = () => { stopSpeaking(); onStart({ boPresent }); };
 
   return (
     <div className={styles.setup}>
@@ -105,6 +107,13 @@ export default function CallSetup({ title, greeting, onStart, onBack }) {
           ))}
         </div>
       </section>
+
+      {askPresence && (
+        <label className={styles.presence}>
+          <input type="checkbox" checked={boPresent} onChange={(e) => setBoPresent(e.target.checked)} />
+          <span>Officer customer ke saath baithe rahenge<small>Report mein likha jaayega, aur surprise checks badh jaayenge</small></span>
+        </label>
+      )}
 
       <button className={styles.start} onClick={start}>Interview shuru kijiye</button>
     </div>

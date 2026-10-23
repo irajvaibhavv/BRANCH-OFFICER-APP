@@ -534,7 +534,11 @@ failed check or an identity_document flag as a high-severity finding — a forei
   photograph's description (Photo: kind), and whether it fits — e.g. a purchase rate and supplier given at once for a
   random item, an old bill page that looks weeks old. A photo not sent, a purchase rate they could not give, a fresh-looking
   "old" page, or a QR paying someone else is a finding: the shop or the books may have been set up for the PD. These were
-  random, so a weak answer cannot be blamed on a hard question everyone gets.
+  random, so a weak answer cannot be blamed on a hard question everyone gets. A follow-up asks a detail of the
+  object just photographed (which bill on the page, whose name on the QR or paper, the neighbour's shop): compare the answer
+  with that photo's description — a mismatch means the person answering may not know the object. A shelf photo can carry a
+  live turn to the shop door (Photo provenance "Live turn"); a turn that hardly changed the view is a finding. The
+  surprise_check flags were decided in code (margin, delivery size, names) — report each (Flag: field).
 - In the interview summary, use CROSS-QUESTIONS: an answer that stayed specific under its follow-up (a real landmark,
   a year, a name, a real day's figure) supports the original claim; one that turned vague or shifted weakens it. Cite
   both turns.
@@ -573,7 +577,7 @@ failed check or an identity_document flag as a high-severity finding — a forei
   weakest months, and their plan if sales fall 25% for two months (Fact: stress_plan).
 - Output plain markdown only. No preamble, no code fences around the report.`;
 
-export function buildReporterInput({ caseData, transcript, claims, evidence, flags = [], collected = null, verification = null, understanding = null, tradeMath = [], crossAnswers = [], rechecks = [], hotAnswers = [], professionAnswers = [], challengeAnswers = [], living = null, face = null, eligibility, observations, photos = [], identity, mode = 'Handover' }) {
+export function buildReporterInput({ caseData, transcript, claims, evidence, flags = [], collected = null, verification = null, understanding = null, tradeMath = [], crossAnswers = [], rechecks = [], hotAnswers = [], professionAnswers = [], challengeAnswers = [], challengeWhy = [], living = null, face = null, eligibility, observations, photos = [], identity, mode = 'Handover' }) {
   const turns = transcript
     .map((m, i) => `[${i + 1}] ${m.role === 'assistant' ? 'SARTHI' : 'BORROWER'}: ${m.content}`)
     .join('\n');
@@ -621,7 +625,7 @@ ${face ? (face.verdict ? `${face.verdict.toUpperCase()}${face.reason ? ` — ${f
 ## LIVING CONDITIONS (facts from the home photos and the file, with the analysis already written from them)
 ${living ? `${living.facts.join('\n')}${living.analysis ? `\nAnalysis: ${living.analysis}` : ''}` : 'No home photo was read.'}
 
-## LIVE CHALLENGES (picked at random during the call, with random details, so nobody could prepare for them)
+## LIVE CHALLENGES (picked at random during the call, with random details, so nobody could prepare for them${challengeWhy?.length ? `; more of them were set because of ${challengeWhy.join(', ')}` : ''})
 ${challengeAnswers?.length ? JSON.stringify(challengeAnswers, null, 2) : 'None asked (they were not at the shop or home).'}
 
 ## CROSS-QUESTIONS (an answer tested with one follow-up before moving on)
@@ -646,7 +650,7 @@ ${observations?.length ? JSON.stringify(observations, null, 2) : 'No notable obs
 ${identity ? JSON.stringify(identity.checks.map((c) => ({ check: c.label, pass: c.pass, detail: c.detail })), null, 2) : 'No document captured.'}
 
 ## PHOTOGRAPHS THE APPLICANT SENT DURING THE INTERVIEW
-${photos.length ? JSON.stringify(photos.map(({ dataUrl, ...p }) => p), null, 2) : 'None requested.'}
+${photos.length ? JSON.stringify(photos.map(({ dataUrl, panDataUrl, ...p }) => p), null, 2) : 'None requested.'}
 
 ## ELIGIBILITY (calculated by system, do not modify these numbers)
 ${JSON.stringify(eligibility, null, 2)}`;

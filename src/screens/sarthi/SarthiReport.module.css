@@ -254,6 +254,7 @@
   margin: 0;
   align-items: start;
 }
+.shotPics { display: grid; gap: 6px; }
 .shot img {
   width: 104px;
   height: 104px;

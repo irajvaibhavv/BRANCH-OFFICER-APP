@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { FiCopy } from 'react-icons/fi';
 import { IoSparkles } from 'react-icons/io5';
 import NewPdSheet from '../../components/sarthi/NewPdSheet';
+import PastPhotos from '../../components/sarthi/PastPhotos';
 import Page from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import EmptyState from '../../components/ui/EmptyState';
@@ -352,6 +353,9 @@ export default function SarthiReport() {
           </p>
         </>
       )}
+
+      {/* past satellite / street photos of the pins on file, against the claimed vintage */}
+      <PastPhotos caseId={id} locations={caseData?.locations} claimedVintage={caseData?.businessVintage} />
 
       {/* the written report */}
       <h2 className={styles.head}>The full report</h2>

@@ -236,6 +236,15 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   a high `photo_location` flag and a FRIENDLY RECHECK on the call ("kya yeh aapki hi dukaan hai?"; live mode only — the
   script has no queue). No pin on file → the report shows where it was taken, with a map link, for the officer to check.
   `npm run check:geo` asserts the parser and distance maths.
+- **Past photos** (`pastPhotos.js` + `components/sarthi/PastPhotos.jsx`, 2026-10-23): the report shows each pin on file
+  through the years — Esri Wayback satellite (no key; one release per year, dated by the metadata layer's `SRC_DATE2`
+  because a release can carry years-old imagery, repeats of the same photo dropped), Mapillary street photos within ~60 m
+  (`VITE_MAPILLARY_TOKEN`) and Google Street View (`VITE_GOOGLE_MAPS_KEY`). Google's API gives only the latest pano, so
+  older dates are a deep link to Maps. The **officer** picks "first visible in" (saved in `bo_sarthi_pastphotos_<case>`);
+  `vintageCheck` compares it with `businessVintage` with `SLACK_YEARS = 1` (sparse captures), and "already in the oldest
+  photo" is amber, not green — nothing older to check. Never auto-judged: from above you see a building, not the board.
+  Offline → a note, no fetches. Only cases with a pin show the card (Mahesh, Imran, or a walk-in with a location).
+  `npm run check:pastphotos` asserts the vintage maths.
 - **Salaried applicants** (2026-10-22): the walk-in form's Self-employed | Salaried toggle sets `employment`; `isSalaried`
   (memory.js) gates schema sections by their `employment` key — `employment` (employer, role, years, CTC, bonus,
   increment, slips) and `profession_depth` replace business / trade_depth / business_deep_dive; `askSalaried` rewords

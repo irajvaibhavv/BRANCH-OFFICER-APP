@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiArrowLeft, FiArrowRight, FiBell, FiAward, FiCalendar, FiCheck, FiChevronDown, FiChevronRight, FiFilePlus, FiFolder, FiLock, FiUnlock, FiZap } from 'react-icons/fi';
+import { FiAlertTriangle, FiArrowLeft, FiArrowRight, FiBell, FiAward, FiCalendar, FiCheck, FiChevronDown, FiChevronRight, FiEyeOff, FiFilePlus, FiFileText, FiFolder, FiLock, FiShield, FiUnlock, FiZap } from 'react-icons/fi';
 import Page from '../../components/layout/Page';
 import BottomSheet from '../../components/ui/BottomSheet';
 import Button from '../../components/ui/Button';
 import { fireConfetti } from '../../components/ui/SuccessCheck';
 import { useRewards } from '../../hooks/useRewards';
 import { useToast } from '../../hooks/useToast';
-import { QUICK_TARGETS, LEVELS, PAST_EARNINGS, recommendedTarget, thisWeek } from '../../utils/rewards';
+import { QUICK_TARGETS, TIERS, PAST_EARNINGS, recommendedTarget, thisWeek } from '../../utils/rewards';
 import { incentiveRoadmap, PLAN } from '../../utils/incentive';
 import { useAppState } from '../../context/AppStateContext';
 import { formatINR, formatDate, toISODate } from '../../utils/formatters';
@@ -16,7 +16,7 @@ import styles from './rewards.module.css';
 
 const art = (name) => `${import.meta.env.BASE_URL}rewards/${name}.webp`;
 const inr = (n) => formatINR(n, { compact: false });
-// Where each milestone label and the "you are here" bubble sit on path.webp (% of the image) — they cover the mock's own labels.
+// Where each slab label and the "you are here" bubble sit on path.webp (% of the image) — they cover the mock's own labels.
 const MILE_POS = [
   { left: 69.5, top: 61, width: 21, height: 6.2 },
   { left: 60.5, top: 46.6, width: 25, height: 7 },
@@ -26,20 +26,129 @@ const MILE_POS = [
 const HERE_POS = { left: 48.3, top: 74.4, width: 42, height: 11.6 };
 // Mission kind → icon and tile colour.
 const MISSION_LOOK = { disburse: [FiFolder, '#10b981'], boss: [FiAward, '#f59e0b'], weekly: [FiFilePlus, '#8b5cf6'], daily: [FiZap, '#3b82f6'], unlock: [FiUnlock, '#ef4444'] };
+// Non-cash perks per tier — recognition, never more rupees than the grid pays.
 const PERKS = [null, ['🎁', '₹500 Gift voucher'], ['⭐', 'Priority lead access'], ['⚡', 'Double points weekend'], ['🏆', 'Branch Head shout-out']];
 const pct = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, `${v}%`]));
+// Crores to two places: "₹3.33 Cr" — one place ("₹3.3Cr") hid Rs 3 lakh of work.
+const amt = (n) => (n >= 1e7 ? `₹${+(n / 1e7).toFixed(2)} Cr` : n >= 1e5 ? `₹${+(n / 1e5).toFixed(1)} L` : inr(n));
 
 function Logo() {
   return <span className={styles.logo}><i className={styles.logoMark} /> INCENTIVE</span>;
 }
 
-/** /rewards — the mission path once a target is set; otherwise pick one first. */
-export default function RewardsHome() {
-  const { target } = useRewards();
-  return target ? <MissionPath /> : <Navigate to="/rewards/target" replace />;
+// A disbursal or a finished mission since the last visit pays its points now, with a cheer; a new slab opens the
+// level-up screen. Shared by the arena and What to do, so whichever opens first celebrates.
+function useCelebrate() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { claimFinished, newTier } = useRewards();
+  useEffect(() => {
+    const fresh = claimFinished();
+    if (fresh.some((m) => m.cash)) fireConfetti();
+    fresh.forEach((m, i) => setTimeout(() => toast(`+${m.pts} pts · ${m.title}`, 'success', 1800), i * 600));
+  }, [claimFinished, toast]);
+  useEffect(() => { if (newTier) navigate('/rewards/level-up'); }, [newTier, navigate]);
 }
 
-/** 1 · How much do you want to earn this month? */
+/**
+ * /rewards — the arena (research, 2026-10-23: SalesScreen + Kennect + the evidence). The level IS the slab; the money is
+ * shown as earned / held / under clawback watch; comparison is private (you vs you, the branch middle) — no ranked
+ * leaderboard and no volume contests, which backfire on the bottom half and are what RBI's 2026 sales-practice
+ * directions name. Quality badges sit next to the money so "how" is as visible as "how much".
+ */
+export default function RewardsHome() {
+  const navigate = useNavigate();
+  const { target, goal, roadmap: r, tier, purse: w, badges, pace: p, slabs } = useRewards();
+  useCelebrate();
+  const next = r.nextSlab;
+  const from = r.slab?.from ?? 0;
+  const span = next ? next.from - from : 1;
+  const solid = next ? Math.min(100, ((r.done - from) / span) * 100) : 100;
+  const ghost = next ? Math.min(100 - solid, (r.nearSum / span) * 100) : 0;
+  const max = Math.max(r.done, p.own, p.branch, 1);
+  const diff = r.done - p.own;
+
+  return (
+    <Page mode="slide" className={styles.page}>
+      <div className={styles.map}>
+        <div className={styles.mapTop}>
+          <div className={styles.head} style={{ width: '100%' }}>
+            <button className={styles.icon} onClick={() => navigate('/')} aria-label="Back"><FiArrowLeft size={22} /></button>
+            <Logo />
+            <button className={styles.icon} onClick={() => navigate('/rewards/statement')} aria-label="Statement"><FiFileText size={20} /></button>
+          </div>
+          <button className={styles.targetPill} onClick={() => navigate('/rewards/target')}>{target ? `${inr(goal)} goal` : 'Set a personal goal'} <FiChevronDown size={15} /></button>
+        </div>
+        <img src={art('path')} alt="" />
+        {slabs.slice(0, MILE_POS.length).map((s, i) => (
+          <span key={s.from} className={`${styles.mile} ${r.done >= s.from ? styles.mileDone : ''}`} style={pct(MILE_POS[i])}>
+            <b>{amt(s.from)}</b><small>{TIERS[i + 1]} · {s.rate}%</small>
+          </span>
+        ))}
+        <span className={styles.here} style={pct(HERE_POS)}>You are here<br /><b>{amt(r.done)}</b> disbursed · <b>{inr(r.earned)}</b></span>
+      </div>
+
+      <div className={styles.levelCard}>
+        <div className={styles.tierBadge}>{tier.n}</div>
+        <div className="grow" style={{ minWidth: 0 }}>
+          <div style={{ fontWeight: 800 }}>{tier.name}{r.slab ? ` · ${r.slab.rate}% slab` : ' · below the minimum'}</div>
+          <div style={{ fontSize: 12, color: '#64748b' }}>
+            {next ? <>{amt(next.more)} more → <b>whole month at {next.rate}%</b> · +{inr(next.pays)}</> : 'Top slab — every rupee pays the most'}
+          </div>
+          <div className={styles.bar} aria-label="Progress to the next slab"><i style={{ width: `${solid}%` }} /><i className={styles.barGhost} style={{ width: `${ghost}%` }} /></div>
+          {next && r.nearSum > 0 && <div className={styles.ghostNote}>Light green: {r.near.length} file{r.near.length > 1 ? 's' : ''} near disbursal · {amt(r.nearSum)}</div>}
+        </div>
+        <button className={styles.gift} onClick={() => navigate('/rewards/store')} aria-label="Rewards store">🎁</button>
+      </div>
+
+      <button className={styles.wallet} onClick={() => navigate('/rewards/statement')}>
+        <span className={styles.walletRow}>
+          <span><small>Earned</small><b>{inr(w.earned)}</b></span>
+          <span className={w.held ? styles.walletBad : ''}><small>Held</small><b>{inr(w.held)}</b></span>
+          <span className={w.bounced.length ? styles.walletBad : ''}><small>Clawback watch</small><b>{w.watch.length} file{w.watch.length === 1 ? '' : 's'}</b></span>
+        </span>
+        {w.overdue.length > 0 && (
+          <span className={styles.loss}><FiAlertTriangle size={15} /> Your whole {inr(w.earned)} is on hold — {w.overdue[0].doc} for {w.overdue[0].borrower} is {w.overdue[0].days} day{w.overdue[0].days === 1 ? '' : 's'} late{w.overdue.length > 1 ? ` (+${w.overdue.length - 1} more)` : ''}. Clear it to release.</span>
+        )}
+        {w.below && <span className={styles.loss}><FiLock size={15} /> {amt(w.minGap)} more to reach the monthly minimum — nothing pays below it.</span>}
+        <span className={styles.walletLink}>How this was calculated <FiChevronRight size={14} /></span>
+      </button>
+
+      <div className={styles.panel}>
+        <div className={styles.panelHead}><span>You vs you</span><span className={styles.private}><FiEyeOff size={12} /> Only you see this</span></div>
+        {[['This month', r.done, '#14b8a6'], ['Your usual by today', p.own, '#94a3b8'], ['Branch middle by today', p.branch, '#cbd5e1']].map(([label, v, c]) => (
+          <div key={label} className={styles.paceRow}>
+            <span>{label}</span>
+            <span className={styles.paceBar}><i style={{ width: `${(v / max) * 100}%`, background: c }} /></span>
+            <b>{amt(v)}</b>
+          </div>
+        ))}
+        <div className={styles.paceNote}>
+          {diff >= 0 ? `${amt(diff)} ahead of your usual pace — on track for about ${amt(p.projected)} this month.`
+            : `${amt(-diff)} behind your usual pace${r.nearSum ? ` — your ${r.near.length} near-disbursal file${r.near.length > 1 ? 's' : ''} would ${r.nearSum >= -diff ? 'cover it' : 'close part of it'}` : ''}.`}
+        </div>
+      </div>
+
+      <div className={styles.panel}>
+        <div className={styles.panelHead}><span><FiShield size={14} /> Quality shield</span><span className={styles.private}>How you earn, not how much</span></div>
+        <div className={styles.badges}>
+          {badges.map((b) => (
+            <div key={b.id} className={`${styles.badge} ${b.on ? styles.badgeOn : ''}`}>
+              <span className={styles.badgeIcon}>{b.icon}</span><b>{b.name}</b><small>{b.how}</small>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.pathActions}>
+        <button className={styles.ghost} onClick={() => navigate('/rewards/store')}>Rewards</button>
+        <button className={styles.go} style={{ flex: 2, height: 46, fontSize: 15 }} onClick={() => navigate('/rewards/missions')}>What to do <FiArrowRight size={16} /></button>
+      </div>
+    </Page>
+  );
+}
+
+/** 1 · An optional personal goal; without one the BO aims at the next slab. */
 export function RewardsTarget() {
   const navigate = useNavigate();
   const { target, setTarget } = useRewards();
@@ -56,8 +165,8 @@ export function RewardsTarget() {
         <Logo />
         <button className={styles.icon} onClick={() => navigate('/notifications')} aria-label="Notifications"><FiBell size={20} /></button>
       </div>
-      <h1 className={styles.title}>How much do you want to earn this month?</h1>
-      <p className={styles.sub}>Incentive is paid on your total disbursement. Type an amount to see what it takes.</p>
+      <h1 className={styles.title}>Set a personal goal</h1>
+      <p className={styles.sub}>Optional. Incentive is paid on your total disbursement — type an amount to see what it takes. Without a goal you aim at the next slab.</p>
 
       <label className={styles.amountBox}>
         <span>₹</span>
@@ -82,14 +191,12 @@ export function RewardsTarget() {
       {pick > 0 && <Roadmap r={road} />}
 
       <div className={styles.goBar}>
-        <button className={styles.go} disabled={!pick} onClick={() => { setTarget(pick); navigate('/rewards', { replace: true }); }}>Let&rsquo;s Go <FiArrowRight size={18} /></button>
+        <button className={styles.go} disabled={!pick} onClick={() => { setTarget(pick); navigate('/rewards', { replace: true }); }}>Set goal <FiArrowRight size={18} /></button>
+        {target && <button className={styles.ghost} style={{ width: '100%', marginTop: 10, height: 46 }} onClick={() => { setTarget(null); navigate('/rewards', { replace: true }); }}>No goal — aim at the next slab</button>}
       </div>
     </Page>
   );
 }
-
-// Crores to two places: "₹3.33 Cr" — one place ("₹3.3Cr") hid Rs 3 lakh of work.
-const amt = (n) => (n >= 1e7 ? `₹${+(n / 1e7).toFixed(2)} Cr` : n >= 1e5 ? `₹${+(n / 1e5).toFixed(1)} L` : inr(n));
 
 /** What the wanted incentive takes, as steps from the BO's own files (utils/incentive.js). */
 function Roadmap({ r }) {
@@ -142,11 +249,10 @@ function Roadmap({ r }) {
   );
 }
 
-/** The roadmap for the target already set, opened from the journey screen. */
+/** The roadmap for the goal (personal, or the next slab), opened from the arena. */
 export function RewardsPlan() {
   const navigate = useNavigate();
-  const { target, roadmap } = useRewards();
-  if (!target) return <Navigate to="/rewards/target" replace />;
+  const { target, goal, roadmap } = useRewards();
   return (
     <Page mode="slide" className={`${styles.page} ${styles.stars}`}>
       <div className={styles.head}>
@@ -154,82 +260,21 @@ export function RewardsPlan() {
         <Logo />
         <span style={{ width: 40 }} />
       </div>
-      <h1 className={styles.title}>Your plan to {inr(target)}</h1>
+      <h1 className={styles.title}>{target ? `Your plan to ${inr(goal)}` : `Your plan to the next slab · ${inr(goal)}`}</h1>
       <Roadmap r={roadmap} />
       <div className={styles.goBar}>
-        <button className={styles.ghost} style={{ width: '100%' }} onClick={() => navigate('/rewards/target')}>Change target</button>
+        <button className={styles.ghost} style={{ width: '100%', height: 46 }} onClick={() => navigate('/rewards/target')}>{target ? 'Change goal' : 'Set a personal goal'}</button>
       </div>
     </Page>
   );
 }
 
-/** 2 · The journey to the target, milestone by milestone. */
-function MissionPath() {
-  const navigate = useNavigate();
-  const { target, earned, roadmap, level, milestones, newLevel } = useRewards();
-  useEffect(() => { if (newLevel) navigate('/rewards/level-up'); }, [newLevel, navigate]);
-  const next = milestones.find((m) => earned < m) ?? target;
-  const prev = [...milestones].reverse().find((m) => earned >= m) ?? 0;
-
-  return (
-    <Page mode="slide" className={styles.page}>
-      <div className={styles.map}>
-        <div className={styles.mapTop}>
-          <div className={styles.head} style={{ width: '100%' }}>
-            <button className={styles.icon} onClick={() => navigate('/')} aria-label="Back"><FiArrowLeft size={22} /></button>
-            <Logo />
-            <span style={{ width: 40 }} />
-          </div>
-          <button className={styles.targetPill} onClick={() => navigate('/rewards/target')}>{inr(target)} Target <FiChevronDown size={15} /></button>
-        </div>
-        <img src={art('path')} alt="" />
-        {milestones.map((m, i) => (
-          <span key={m} className={`${styles.mile} ${earned >= m ? styles.mileDone : ''}`} style={pct(MILE_POS[i])}>{inr(m)}</span>
-        ))}
-        <span className={styles.here} style={pct(HERE_POS)}>You are here<br /><b>{inr(earned)}</b> earned</span>
-      </div>
-
-      <div className={styles.levelCard}>
-        <img className={styles.levelAva} src={art('avatar')} alt="" />
-        <div className="grow" style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 800 }}>Level {level.n} · {level.name}</div>
-          <div style={{ fontSize: 12, color: '#64748b' }}>{earned >= target ? 'Target reached!' : `${inr(next - earned)} to next milestone`}</div>
-          <div className={styles.bar}><i style={{ width: `${Math.min(100, ((earned - prev) / Math.max(1, next - prev)) * 100)}%` }} /></div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#0f766e' }}>{inr(earned)} / {inr(next)}</div>
-        </div>
-        <button className={styles.gift} onClick={() => navigate('/rewards/store')} aria-label="Rewards store">🎁</button>
-      </div>
-
-      <button className={styles.planLink} onClick={() => navigate('/rewards/plan')}>
-        <span className="grow" style={{ minWidth: 0 }}>
-          <b>{amt(roadmap.done)} disbursed</b> of {amt(roadmap.need ?? 0)} needed
-          <span>{roadmap.gap ? 'How to get there' : 'Target covered — see what keeps it paid'}</span>
-        </span>
-        <FiChevronRight size={18} />
-      </button>
-
-      <div className={styles.pathActions}>
-        <button className={styles.ghost} onClick={() => navigate('/rewards/store')}>Rewards</button>
-        <button className={styles.go} style={{ flex: 2, height: 46, fontSize: 15 }} onClick={() => navigate('/rewards/missions')}>What to do <FiArrowRight size={16} /></button>
-      </div>
-    </Page>
-  );
-}
-
-/** 3 · What to do: the target counted in disbursements, missions that are steps to disbursal, and the visit streak. */
+/** 3 · What to do: the goal counted in disbursements, missions that are steps to disbursal, and the visit streak. */
 export function RewardsMissions() {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { target, roadmap: r, missions, points, streak, visitDays, claimFinished, newLevel } = useRewards();
+  const { goal: target, roadmap: r, missions, points, streak, visitDays } = useRewards();
   const today = toISODate();
-  // A mission finished since the last visit pays its points now, with a cheer; a disbursal also fires confetti.
-  useEffect(() => {
-    const fresh = claimFinished();
-    if (fresh.some((m) => m.cash)) fireConfetti();
-    fresh.forEach((m, i) => setTimeout(() => toast(`+${m.pts} pts · ${m.title}`, 'success', 1800), i * 600));
-  }, [claimFinished, toast]);
-  useEffect(() => { if (newLevel) navigate('/rewards/level-up'); }, [newLevel, navigate]);
-  if (!target) return <Navigate to="/rewards/target" replace />;
+  useCelebrate();
   const left = Math.max(0, target - r.earned);
 
   return (
@@ -245,7 +290,7 @@ export function RewardsMissions() {
         <img src={art('avatar')} alt="" />
         <div className={styles.bubble}>
           {r.filesLeft
-            ? <>{inr(left)} more to your {inr(target)} — that is <b>{r.filesLeft} more disbursement{r.filesLeft > 1 ? 's' : ''}</b>. 💪</>
+            ? <>{inr(left)} more to {inr(target)} — that is <b>{r.filesLeft} more disbursement{r.filesLeft > 1 ? 's' : ''}</b>. 💪</>
             : <>Your disbursals already pay {inr(target)} — superb! 🎉</>}
         </div>
       </div>
@@ -268,6 +313,7 @@ export function RewardsMissions() {
         <span>Missions</span>
         <span className={styles.ptsChip}>⭐ {points.toLocaleString('en-IN')} pts</span>
       </div>
+      <p className={styles.ptsNote}>Points are for the rewards store. Your rupees come only from disbursement.</p>
       <div className={styles.missions}>
         {missions.map((m) => {
           const [Icon, tone] = MISSION_LOOK[m.kind];
@@ -312,39 +358,130 @@ export function RewardsMissions() {
   );
 }
 
-/** 4 · Milestone crossed: celebration, the badge, and what it unlocked. */
+/** 4 · A new slab reached: the celebration, the tier, and what it means in rupees. */
 export function RewardsLevelUp() {
   const navigate = useNavigate();
-  const { target, earned, level, milestones, markLevelSeen } = useRewards();
+  const { roadmap: r, tier, markTierSeen } = useRewards();
   useEffect(() => { fireConfetti(); const t = setTimeout(() => fireConfetti({ particleCount: 60 }), 900); return () => clearTimeout(t); }, []);
-  if (!target) return <Navigate to="/rewards/target" replace />;
-  const crossed = milestones[level.n - 2] ?? milestones[0];
-  const next = milestones.find((m) => earned < m) ?? target;
-  const perk = PERKS[Math.min(level.n - 1, PERKS.length - 1)];
+  const perk = PERKS[Math.min(tier.n, PERKS.length - 1)];
+  const next = r.nextSlab;
 
   return (
     <Page mode="fade" className={`${styles.page} ${styles.stars}`}>
       <div className={styles.levelUp}>
         <motion.img className={styles.cheer} src={art('cheer')} alt="" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 180, damping: 14 }} />
-        <motion.div className={styles.lvTitle} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}>Level Up!</motion.div>
-        <div className={styles.earnedLine}>You&rsquo;ve earned<b>{inr(crossed)}!</b></div>
+        <motion.div className={styles.lvTitle} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}>{tier.name}!</motion.div>
+        <div className={styles.earnedLine}>{r.slab ? `Every rupee this month now pays ${r.slab.rate}%` : 'Keep going to the first slab'}<b>{inr(r.earned)} earned</b></div>
         <motion.div initial={{ rotate: -12, scale: 0.6 }} animate={{ rotate: 0, scale: 1 }} transition={{ delay: 0.3, type: 'spring', stiffness: 200, damping: 12 }}>
-          <div className={styles.hex}><b>{level.n}</b></div>
-          <div className={styles.ribbon}>LEVEL {level.n}<small>{level.name.toUpperCase()}</small></div>
+          <div className={styles.hex}><b>{tier.n}</b></div>
+          <div className={styles.ribbon}>{tier.name.toUpperCase()}<small>{r.slab ? `${r.slab.rate}% SLAB` : 'NO SLAB YET'}</small></div>
         </motion.div>
-        <div className={styles.lvBar}><i style={{ width: `${Math.min(100, (earned / next) * 100)}%` }} /></div>
-        <div style={{ fontSize: 14, opacity: 0.85 }}>{inr(earned)} / {inr(next)}</div>
+        {next && <div style={{ fontSize: 14, opacity: 0.85, marginTop: 22 }}>Next: {TIERS[tier.n + 1]} at {amt(next.from)} · {amt(next.more)} to go</div>}
 
         <div className={styles.unlocked}>
-          <div style={{ fontWeight: 700 }}>Unlocked Rewards</div>
+          <div style={{ fontWeight: 700 }}>Unlocked</div>
           <div className={styles.unlocks}>
             <div className={styles.unlock}><div>{PERKS[1][0]}</div>{PERKS[1][1]}</div>
             <div className={styles.unlock}><div>{(perk ?? PERKS[2])[0]}</div>{(perk ?? PERKS[2])[1]}</div>
           </div>
+          <div style={{ fontSize: 12, opacity: 0.7, marginTop: 10 }}>Paid while the files stay clean — no OTC/PDD overdue, no bounce in the first 3 EMIs.</div>
         </div>
-        <button className={styles.go} style={{ marginTop: 18 }} onClick={() => { markLevelSeen(); navigate('/rewards', { replace: true }); }}>Keep Going <FiArrowRight size={18} /></button>
-        <div style={{ fontSize: 12, opacity: 0.6, margin: '10px 0 4px' }}>Next: Level {Math.min(level.n + 1, LEVELS.length)} · {LEVELS[Math.min(level.n, LEVELS.length - 1)]}</div>
+        <button className={styles.go} style={{ marginTop: 18 }} onClick={() => { markTierSeen(); navigate('/rewards', { replace: true }); }}>Keep Going <FiArrowRight size={18} /></button>
       </div>
+    </Page>
+  );
+}
+
+/** 4b · The statement (Kennect's idea): every file, the slab, the holds and the watch — and a way to question it. */
+export function RewardsStatement() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { roadmap: r, purse: w, queries, raiseQuery } = useRewards();
+  const [asking, setAsking] = useState(false);
+  const [text, setText] = useState('');
+  const [fileId, setFileId] = useState('');
+  const today = toISODate();
+  const now = new Date(today);
+  const payOn = toISODate(new Date(now.getFullYear(), now.getMonth() + 1, 7));
+  const month = now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  const upTo = r.slab ? PLAN.slabs[PLAN.slabs.indexOf(r.slab) + 1] : null;
+
+  return (
+    <Page mode="slide" className={`${styles.page} ${styles.light}`}>
+      <div className={styles.hubHead}>
+        <button className={styles.icon} onClick={() => navigate(-1)} aria-label="Back"><FiArrowLeft size={22} /></button>
+        <span className={styles.hubTitle}>Statement · {month}</span>
+      </div>
+
+      <div className={styles.stmtSum}>
+        <span><small>Disbursed</small><b>{amt(r.done)}</b></span>
+        <i>→</i>
+        <span><small>Slab</small><b>{r.slab ? `${r.slab.rate}%` : '—'}</b></span>
+        <i>→</i>
+        <span><small>Incentive</small><b>{inr(r.earned)}</b></span>
+      </div>
+      <p className={styles.stmtNote}>
+        {r.slab ? `${amt(r.slab.from)}${upTo ? ` – ${amt(upTo.from)}` : ' and above'} pays ${r.slab.rate}% on the whole month, not just the part above it.` : `Below the ${amt(PLAN.minDisbursement)} minimum nothing pays yet.`}
+        {' '}Paid on {formatDate(payOn)}{w.held ? ', once the hold below is cleared' : ''}.
+      </p>
+
+      <div className={styles.stmtHead}>Files disbursed this month</div>
+      {w.rows.length ? w.rows.map((f) => (
+        <div key={f.id} className={styles.row}>
+          <div className="grow" style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 700 }}>{f.borrower}</div>
+            <div style={{ fontSize: 12, color: '#64748b' }}>{f.id} · {amt(f.amount)} × {w.rate ?? 0}%</div>
+          </div>
+          <b>{inr(f.pays)}</b>
+        </div>
+      )) : <p className={styles.stmtEmpty}>No disbursal yet this month.</p>}
+
+      <div className={styles.stmtHead}>Holds</div>
+      {w.overdue.length ? w.overdue.map((d) => (
+        <button key={d.fileId + d.doc} className={`${styles.row} ${styles.rowBad}`} style={{ width: 'calc(100% - 32px)', textAlign: 'left' }} onClick={() => navigate('/files')}>
+          <FiAlertTriangle size={18} color="#dc2626" />
+          <div className="grow" style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 700 }}>{d.doc}</div>
+            <div style={{ fontSize: 12, color: '#64748b' }}>{d.borrower} · {d.days} day{d.days === 1 ? '' : 's'} overdue — holds the whole payout</div>
+          </div>
+          <FiChevronRight size={16} />
+        </button>
+      )) : <p className={styles.stmtEmpty}>Nothing held — every OTC/PDD document is in on time.</p>}
+
+      <div className={styles.stmtHead}>Clawback watch · first 3 EMIs</div>
+      {w.watch.length ? w.watch.map((f) => (
+        <div key={f.id} className={`${styles.row} ${f.bounced ? styles.rowBad : ''}`}>
+          <div className="grow" style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 700 }}>{f.borrower}</div>
+            <div style={{ fontSize: 12, color: '#64748b' }}>{f.emisDue} of 3 EMIs due so far</div>
+          </div>
+          <b style={{ color: f.bounced ? '#dc2626' : '#047857', fontSize: 13 }}>{f.bounced ? 'Bounced — clawed back' : 'Clean'}</b>
+        </div>
+      )) : <p className={styles.stmtEmpty}>No file inside its first 3 EMIs.</p>}
+
+      <ul className={styles.stmtRules}>{PLAN.rules.map((t) => <li key={t}>{t}</li>)}</ul>
+
+      <div className={styles.stmtHead}>Your questions</div>
+      {queries.filter((q) => q.month === today.slice(0, 7)).map((q) => (
+        <div key={q.id} className={styles.row}>
+          <div className="grow" style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 600 }}>{q.text}</div>
+            <div style={{ fontSize: 12, color: '#64748b' }}>{q.fileId ? `${q.fileId} · ` : ''}Sent {formatDate(q.at)} · with your Branch Head</div>
+          </div>
+        </div>
+      ))}
+      <div style={{ padding: '4px 16px 0' }}><Button full variant="secondary" onClick={() => setAsking(true)}>Something looks wrong? Raise a query</Button></div>
+
+      <BottomSheet open={asking} onClose={() => setAsking(false)} title="Raise a query">
+        <div className="stack" style={{ gap: 12 }}>
+          <select className="input" value={fileId} onChange={(e) => setFileId(e.target.value)} aria-label="Which file">
+            <option value="">The whole month</option>
+            {w.rows.map((f) => <option key={f.id} value={f.id}>{f.borrower} · {f.id}</option>)}
+          </select>
+          <textarea className="input" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g. Shah Traders was disbursed on the 28th but is not in this list" aria-label="Your question" />
+          <Button full disabled={text.trim().length < 10} onClick={() => { raiseQuery(text.trim(), fileId || null); setAsking(false); setText(''); setFileId(''); toast('Sent to your Branch Head', 'success'); }}>Send</Button>
+        </div>
+      </BottomSheet>
     </Page>
   );
 }
@@ -408,16 +545,16 @@ export function RewardsHub() {
       )) : <p style={{ textAlign: 'center', color: '#64748b', padding: 30 }}>Nothing redeemed yet — pick something on the Rewards tab.</p>)}
 
       {tab === 'payouts' && months.map((m) => (
-        <div key={m.label} className={styles.row}>
+        <button key={m.label} className={styles.row} style={{ width: 'calc(100% - 32px)', textAlign: 'left' }} disabled={m.paid} onClick={() => navigate('/rewards/statement')}>
           <div className="grow">
             <div style={{ fontWeight: 700 }}>{m.label}</div>
-            <div style={{ fontSize: 12, color: '#64748b' }}>{m.paid ? `Paid ${formatDate(m.payOn)}` : `Due ${formatDate(m.payOn)} · still counting`}</div>
+            <div style={{ fontSize: 12, color: '#64748b' }}>{m.paid ? `Paid ${formatDate(m.payOn)}` : `Due ${formatDate(m.payOn)} · still counting · see statement`}</div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontWeight: 800 }}>{inr(m.amount)}</div>
             <div style={{ fontSize: 12, fontWeight: 700, color: m.paid ? '#047857' : '#b45309' }}>{m.paid ? 'Paid' : 'Due'}</div>
           </div>
-        </div>
+        </button>
       ))}
 
       <BottomSheet open={!!confirm} onClose={() => setConfirm(null)} title={confirm?.name}>

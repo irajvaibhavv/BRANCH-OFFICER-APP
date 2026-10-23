@@ -197,16 +197,16 @@ export default function Dashboard() {
           <motion.div variants={listItem}>
             <Card padding={16} noChevron onClick={() => navigate('/rewards')}>
               <div className="row" style={{ gap: 16 }}>
-                <ProgressRing value={rw.target ? Math.min(100, (rw.earned / rw.target) * 100) : 0} size={84} stroke={7}>
+                <ProgressRing value={rw.roadmap.nextSlab ? Math.min(100, ((rw.roadmap.done - (rw.roadmap.slab?.from ?? 0)) / (rw.roadmap.nextSlab.from - (rw.roadmap.slab?.from ?? 0))) * 100) : 100} size={84} stroke={7}>
                   <span style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.1 }}>{formatINR(rw.earned)}</span>
-                  <span className="hint" style={{ fontSize: 10 }}>{rw.target ? `of ${formatINR(rw.target)}` : 'earned'}</span>
+                  <span className="hint" style={{ fontSize: 10 }}>{rw.purse.held ? 'on hold' : 'earned'}</span>
                 </ProgressRing>
                 <div className="grow" style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600 }}>Incentive</div>
-                  <div className="hint">{rw.target ? `Level ${rw.level.n} · ${rw.level.name}` : 'Set your target for this month'}</div>
+                  <div className="hint">{rw.tier.name}{rw.roadmap.slab ? ` · ${rw.roadmap.slab.rate}% slab` : ' · below the minimum'}</div>
                   <div className={styles.miniStats}>
                     <span>🔥 <b>{rw.streak}</b>-day streak</span>
-                    {rw.target && rw.roadmap.gap > 0 && <span><b style={{ color: 'var(--success)' }}>{formatINR(rw.roadmap.gap)}</b> disbursal to go</span>}
+                    {rw.roadmap.nextSlab && <span><b style={{ color: 'var(--success)' }}>{formatINR(rw.roadmap.nextSlab.more)}</b> to {rw.roadmap.nextSlab.rate}%</span>}
                   </div>
                 </div>
                 <FiChevronRight size={20} color="var(--text-3)" />

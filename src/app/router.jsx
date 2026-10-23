@@ -23,7 +23,7 @@ import CustomerPlan, { CustomerDetail } from '../screens/planning/CustomerPlan';
 import MarketingPlan from '../screens/marketing/MarketingPlan';
 import ActivityRun from '../screens/marketing/ActivityRun';
 import PayoutTracker from '../screens/payouts/PayoutTracker';
-import RewardsHome, { RewardsTarget, RewardsPlan, RewardsMissions, RewardsLevelUp, RewardsHub } from '../screens/rewards/Rewards';
+import RewardsHome, { RewardsTarget, RewardsPlan, RewardsMissions, RewardsLevelUp, RewardsHub, RewardsStatement } from '../screens/rewards/Rewards';
 import BranchPlan from '../screens/planning/BranchPlan';
 import AIHome, { AISession, AIReport } from '../screens/assistant/Assistant';
 import VisitLogger from '../screens/visits/VisitLogger';
@@ -139,6 +139,7 @@ export function AnimatedRoutes() {
           <Route path="/rewards/missions" element={<RewardsMissions />} />
           <Route path="/rewards/level-up" element={<RewardsLevelUp />} />
           <Route path="/rewards/store" element={<RewardsHub />} />
+          <Route path="/rewards/statement" element={<RewardsStatement />} />
           <Route path="/marketing" element={<MarketingPlan />} />
           <Route path="/marketing/:id" element={<ActivityRun />} />
           <Route path="/calendar" element={<CalendarView />} />

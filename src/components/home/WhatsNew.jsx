@@ -23,14 +23,15 @@ const MAX_SLIDES = 6;
 /** Live slides first (incentive standing, upcoming loan melas), then news.json. Shared by both styles. */
 function useSlides() {
   const { marketing } = useAppState();
-  const { target, roadmap } = useRewards();
+  const { roadmap, purse } = useRewards();
   const today = toISODate();
   return useMemo(() => {
     const live = [];
-    if (target && roadmap.nextSlab) {
-      live.push({ id: 'inc', kind: 'incentive', meta: `+${formatINR(roadmap.nextSlab.pays, { compact: false })} this month`, text: `${formatINR(roadmap.nextSlab.more)} more disbursal unlocks the ${roadmap.nextSlab.rate}% slab`, to: '/rewards/plan' });
-    } else if (!target) {
-      live.push({ id: 'inc', kind: 'incentive', meta: 'This month', text: 'Set your incentive target', cta: 'Set target', to: '/rewards/target' });
+    // The payout hold first: it is money already earned (loss framing), then the next slab.
+    if (purse.overdue.length) {
+      live.push({ id: 'inc', kind: 'incentive', meta: `${formatINR(purse.held, { compact: false })} on hold`, text: `${purse.overdue[0].doc} for ${purse.overdue[0].borrower} is overdue — clear it to release your payout`, to: '/rewards/statement' });
+    } else if (roadmap.nextSlab) {
+      live.push({ id: 'inc', kind: 'incentive', meta: `+${formatINR(roadmap.nextSlab.pays, { compact: false })} this month`, text: `${formatINR(roadmap.nextSlab.more)} more disbursal moves the whole month to the ${roadmap.nextSlab.rate}% slab`, to: '/rewards/plan' });
     }
     marketing.filter((m) => m.type === 'loan_mela' && m.date >= today).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 2)
       .forEach((m) => live.push({
@@ -38,7 +39,7 @@ function useSlides() {
         text: m.title, cta: m.assignedBy && !m.accepted ? 'Accept' : 'Open', to: `/marketing?open=${m.id}`,
       }));
     return [...live, ...news.map((x) => ({ ...x, meta: x.sub }))].slice(0, MAX_SLIDES);
-  }, [marketing, target, roadmap, today]);
+  }, [marketing, purse, roadmap, today]);
 }
 
 /** Home's "What's new": light promo banners, one soft colour per type. */

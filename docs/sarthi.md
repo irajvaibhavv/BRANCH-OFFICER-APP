@@ -236,6 +236,13 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   a high `photo_location` flag and a FRIENDLY RECHECK on the call ("kya yeh aapki hi dukaan hai?"; live mode only — the
   script has no queue). No pin on file → the report shows where it was taken, with a map link, for the officer to check.
   `npm run check:geo` asserts the parser and distance maths.
+- **Confirm before save** (2026-10-23, lead): a generated report goes to `bo_sarthi_pending` (`usePendingPds`), not
+  `bo_sarthi_reports`. The report screen shows it with "Not saved yet" and, at the end, a BO / CO picker, a name and an "I
+  have reviewed this PD" checkbox; "Save PD" (enabled only once ticked) moves it into the saved PDs with `confirmedBy`.
+  A separate store, not a flag, so history, outcomes, repeat PDs and cross-PD links never see an unconfirmed PD without
+  each checking. The brief shows "Report awaiting confirmation" until it is saved. A dropped call's draft still becomes an
+  incomplete PD at once (`takeDrafts`) — there is no generated report to confirm. The checker review (maker-checker) is
+  a second, later step on a saved PD.
 - **Findings, not questions** (2026-10-23, lead): the report never shows a question Sarthi asked, a task's wording, the
   order of topics or the applicant's quoted words — a BO who reads 100-200 reports would learn the interview and coach the
   next applicant. Every report (`REPORTER_SYSTEM`, `buildFallbackReport`, `mockReport`, the seeds in `pdHistory.json`) has

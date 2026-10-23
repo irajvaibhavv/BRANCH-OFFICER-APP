@@ -20,7 +20,7 @@ import FileLifecycle from '../../components/files/FileLifecycle';
 import CustomerPayout from '../../components/files/CustomerPayout';
 import { pdCaseStage } from '../../utils/fileStages';
 import { useToast } from '../../hooks/useToast';
-import { useSarthiReports } from '../../hooks/useSarthiReports';
+import { useSarthiReports, usePendingPds } from '../../hooks/useSarthiReports';
 import { formatINR } from '../../utils/formatters';
 import { pdEvents, pdOutcome } from '../../services/sarthi/repeat';
 import { getCase, lookupRiskPattern, bankIncome } from '../../services/sarthi/knowledge';
@@ -55,6 +55,7 @@ export default function SarthiBrief() {
   const [openWhy, setOpenWhy] = useState(null);
   const [tab, setTab] = useState('Overview');
   const [reports] = useSarthiReports();
+  const [pending] = usePendingPds();
   const [sheetFor, setSheetFor] = useState(null); // the PD a new one follows up
   const [face, setFace] = useState(() => loadFace(id)?.dataUrl ?? null);
   const { toast } = useToast();
@@ -117,6 +118,7 @@ export default function SarthiBrief() {
   // Every PD of this person, newest first. The first starts at once; after that the BO / CO picks why another is needed.
   const pds = reports.filter((r) => r.caseId === c.id);
   const report = pds[0];
+  const unsaved = pending.find((r) => r.caseId === c.id);
   const start = () => (report ? setSheetFor(report) : navigate(`/sarthi/interview/${c.id}`));
   const tabs = isNew ? TABS.filter((t) => t !== 'Questions') : TABS;
 
@@ -139,6 +141,11 @@ export default function SarthiBrief() {
           <button className={styles.actBtn} style={{ color: '#16a34a' }} onClick={() => toast('Opening WhatsApp…')}><IoLogoWhatsapp size={18} /> WhatsApp</button>
           <button className={styles.actBtn} style={{ color: 'var(--primary)' }} onClick={() => toast(`Opening maps for ${c.area}`)}><FiMapPin size={16} /> Location</button>
         </div>
+        {unsaved && (
+          <button className={`${styles.actBtn} ${styles.actAi}`} style={{ marginTop: 8, width: '100%' }} onClick={() => navigate(`/sarthi/report/${c.id}?pd=${unsaved.id}`)}>
+            <FiFileText size={16} /> Report awaiting confirmation — review and save
+          </button>
+        )}
         <div className={styles.actions} style={{ marginTop: 8 }}>
           <button className={`${styles.actBtn} ${styles.actAi}`} onClick={start}><IoSparkles size={16} /> {report ? 'New PD' : 'Sarthi AI'}</button>
           {report

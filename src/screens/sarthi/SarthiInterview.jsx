@@ -35,7 +35,7 @@ import { speakStreamed } from '../../services/sarthi/stream';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { sarthiVoice, prerendered, gendered, aboutSarthi } from '../../services/sarthi/voice';
 import voiceManifest from '../../data/sarthi/voiceManifest.json';
-import { useSarthiReports } from '../../hooks/useSarthiReports';
+import { useSarthiReports, usePendingPds } from '../../hooks/useSarthiReports';
 import { OFFICER } from '../../context/AuthContext';
 import { checkTradeMath, understanding } from '../../services/sarthi/probes';
 import { formatINR } from '../../utils/formatters';
@@ -74,7 +74,8 @@ export default function SarthiInterview() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isIntake = id === 'new';
-  const [reports, setReports] = useSarthiReports();
+  const [reports] = useSarthiReports();
+  const [, setPending] = usePendingPds();
   const [params] = useSearchParams();
   // Every earlier PD of this person, newest first; a repeat PD runs in the mode picked on the brief (repeat.js).
   const past = useMemo(() => reports.filter((r) => r.caseId === id), [reports, id]);
@@ -1103,11 +1104,11 @@ export default function SarthiInterview() {
       validation,
       turns: turns.length,
     };
-    setReports((prev) => [entry, ...prev]);
+    setPending((prev) => [entry, ...prev]); // saved as a PD only once a BO / CO confirms it on the report screen
     try { window.localStorage.removeItem(draftKey); } catch { /* nothing saved */ }
     navigate(`/sarthi/report/${subject.id}?pd=${pdId}`, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [caseData, navigate, setReports, teardown]);
+  }, [caseData, navigate, setPending, teardown]);
 
   /* ---------------------------------------------------------------- start */
   useEffect(() => {

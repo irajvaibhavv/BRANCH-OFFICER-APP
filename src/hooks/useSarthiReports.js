@@ -23,3 +23,7 @@ export function useSarthiReports() {
   }, [setReports]);
   return [reports, setReports];
 }
+
+// A generated report waits here until a BO or CO ticks "reviewed" on it; only then does it join the saved PDs above,
+// so history, outcomes and repeat PDs never see an unconfirmed one. Kept in storage so a closed app loses nothing.
+export const usePendingPds = () => useLocalStorage('bo_sarthi_pending', []);

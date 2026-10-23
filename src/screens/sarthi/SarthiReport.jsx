@@ -15,7 +15,8 @@ import { identitySummary } from '../../services/sarthi/idChecks';
 import { mapLink, inDistance } from '../../services/sarthi/geo';
 import { MODES, OUTCOMES, REVIEW_DECISIONS, pdOutcome, aiOutcome, makeReview } from '../../services/sarthi/repeat';
 import { loadFace, callFrameKey } from '../../services/sarthi/face';
-import { useSarthiReports } from '../../hooks/useSarthiReports';
+import { useSarthiReports, usePendingPds } from '../../hooks/useSarthiReports';
+import { OFFICER } from '../../context/AuthContext';
 import styles from './SarthiReport.module.css';
 
 // Colour classes per outcome (the stamp keeps its green / amber / red styles).
@@ -32,12 +33,20 @@ export default function SarthiReport() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [reports, setReports] = useSarthiReports();
+  const [pending, setPending] = usePendingPds();
   const caseData = getCase(id);
   const [params] = useSearchParams();
   const [sheet, setSheet] = useState(false);
-  // Every PD is kept; ?pd= opens one, otherwise the latest.
+  // Every PD is kept; ?pd= opens one, otherwise one awaiting confirmation, else the latest.
   const all = reports.filter((x) => x.caseId === id);
-  const r = all.find((x) => x.id === params.get('pd')) ?? all[0];
+  const waiting = pending.filter((x) => x.caseId === id);
+  const r = [...waiting, ...all].find((x) => x.id === params.get('pd')) ?? waiting[0] ?? all[0];
+  const unsaved = waiting.includes(r);
+  const confirm = (confirmedBy) => {
+    setReports((prev) => [{ ...r, confirmedBy }, ...prev]);
+    setPending((prev) => prev.filter((x) => x.id !== r.id));
+    toast('PD saved', 'success');
+  };
 
   const blocks = useMemo(() => parseMarkdown(r?.report ?? ''), [r?.report]);
   // Images live outside the report record so their weight can never break its write.
@@ -99,14 +108,21 @@ export default function SarthiReport() {
         <span className={styles.stampSub}>Sarthi AI — advisory</span>
       </motion.div>
       <p className={styles.verdictLine}>{verdict.line}</p>
-      <p className={styles.checkerLine}>
-        {r.review
-          ? `Checked by ${r.review.by} (${r.review.role}) — Sarthi said ${aiOutcome(r).label}`
-          : 'Sarthi\'s proposal — awaiting a checker (see the end of the report)'}
-      </p>
-      {/* a new PD that follows up THIS one — its flags, or the topics it did not reach */}
-      <button className={styles.newPd} onClick={() => setSheet(true)}><IoSparkles size={16} /> Sarthi AI — new PD after this one</button>
-      <NewPdSheet open={sheet} onClose={() => setSheet(false)} caseId={id} pd={r} />
+      {unsaved ? (
+        <p className={styles.incomplete}>Not saved yet — review the report, then confirm it at the end. Until a BO or CO confirms, this PD is not on the file.</p>
+      ) : (
+        <>
+          <p className={styles.checkerLine}>
+            {r.confirmedBy && `Reviewed by ${r.confirmedBy.name} (${r.confirmedBy.role}) · `}
+            {r.review
+              ? `Checked by ${r.review.by} (${r.review.role}) — Sarthi said ${aiOutcome(r).label}`
+              : 'Sarthi\'s proposal — awaiting a checker (see the end of the report)'}
+          </p>
+          {/* a new PD that follows up THIS one — its flags, or the topics it did not reach */}
+          <button className={styles.newPd} onClick={() => setSheet(true)}><IoSparkles size={16} /> Sarthi AI — new PD after this one</button>
+          <NewPdSheet open={sheet} onClose={() => setSheet(false)} caseId={id} pd={r} />
+        </>
+      )}
 
       <div className={styles.tally}>
         {counts.confirmed > 0 && <span className={styles.tallyClear}>{counts.confirmed} held up</span>}
@@ -381,7 +397,9 @@ export default function SarthiReport() {
         {r.eligibility?.formula && <p className={styles.formula}>{r.eligibility.formula}</p>}
       </section>}
 
-      <CheckerReview r={r} onSave={(review) => setReports((prev) => prev.map((x) => (x.id === r.id ? { ...x, review } : x)))} />
+      {unsaved
+        ? <ConfirmPd onConfirm={confirm} />
+        : <CheckerReview r={r} onSave={(review) => setReports((prev) => prev.map((x) => (x.id === r.id ? { ...x, review } : x)))} />}
 
       <div className={styles.actions}>
         <button className={styles.copy} onClick={copy}><FiCopy size={17} /> Copy the report</button>
@@ -493,6 +511,31 @@ function placeWords(place) {
   if (place.away) return `✕ Said they were at their ${place.claimed}, but the call was ${inDistance(place.away.distance)} from the ${place.claimed} on file.`;
   if (place.at) return `✓ At their ${place.at} — within ${inDistance(place.nearest.distance)} of the pin on file.`;
   return `Not at the shop or home on file — the nearest pin (${place.nearest.kind}) is ${inDistance(place.nearest.distance)} away.`;
+}
+
+// Human in the loop: the PD is saved only once a BO or CO ticks that they reviewed it.
+const CONFIRM_ROLES = ['Branch Officer', 'Credit Officer'];
+function ConfirmPd({ onConfirm }) {
+  const [role, setRole] = useState(CONFIRM_ROLES[0]);
+  const [name, setName] = useState(OFFICER.name);
+  const [checked, setChecked] = useState(false);
+  const pick = (x) => { setRole(x); setName(x === OFFICER.designation ? OFFICER.name : ''); };
+  return (
+    <>
+      <h2 className={styles.head}>Confirm and save</h2>
+      <div className={styles.review}>
+        <div className={styles.reviewChoices}>
+          {CONFIRM_ROLES.map((x) => <button type="button" key={x} className={role === x ? styles.choiceOn : styles.choice} onClick={() => pick(x)}>{x}</button>)}
+        </div>
+        <label className={styles.reviewField}>Name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" /></label>
+        <label className={styles.confirmCheck}>
+          <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
+          I have reviewed this PD — the red flags, what Sarthi checked and what is left to check.
+        </label>
+        <button className={styles.copy} disabled={!checked || !name.trim()} onClick={() => onConfirm({ name: name.trim(), role, at: new Date().toISOString() })}>Save PD</button>
+      </div>
+    </>
+  );
 }
 
 // Maker-checker: Sarthi and the officer who ran the PD propose; a second person agrees, changes or sends it back.

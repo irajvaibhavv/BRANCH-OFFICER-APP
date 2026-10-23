@@ -8,7 +8,7 @@ import { nextTradeProbe, nextTradeField, tradeProbes, purposeSignals } from './p
 import { formatINR } from '../../utils/formatters';
 import { planChallenges, CHALLENGES_PER_PD } from './challenges';
 import { priorClash } from './repeat';
-import { inWords } from './recheck';
+import { inWords, familyHisaab } from './recheck';
 
 const SECTIONS = pdSchema.sections;
 
@@ -746,7 +746,7 @@ export function checkInternalConsistency(memory, caseData) {
   if (income != null) {
     // Other earners' money feeds the same household.
     const household = income + (toNumber(c.other_household_income) ?? 0);
-    const outgo = (toNumber(c.household_expenses) ?? 0) + (toNumber(c.monthly_rent) ?? 0) + (toNumber(c.existing_emi) ?? 0);
+    const outgo = familyHisaab(c).outgo;
     if (outgo > 0 && outgo > household * 0.95) {
       flags.push({
         type: 'internal_consistency', field: 'expenses_vs_income', severity: 'medium',

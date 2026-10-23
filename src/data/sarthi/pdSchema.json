@@ -75,6 +75,14 @@
           "type": "number",
           "ask": "Inmein se kitne bachche ya buzurg aap par nirbhar hain?"
         },
+        {"key": "children_count", "label": "Children in the household", "type": "number", "condition": "dependents > 0", "ask": "Inmein bachche kitne hain aur buzurg kitne?"},
+        {"key": "elderly_count", "label": "Elderly in the household", "type": "number", "condition": "dependents > 0", "ask": "Aur ghar mein buzurg kitne hain?"},
+        {"key": "children_school", "label": "Children's class and school name (each child)", "type": "text", "condition": "children_count > 0", "ask": "Bachche kaunsi class mein padhte hain, aur kaunse school mein — school ka naam kya hai, kahan hai?"},
+        {"key": "school_fees", "label": "School fees a month, all children together", "type": "number", "condition": "children_count > 0", "ask": "School ki fees mahine ki kitni jaati hai — sab bachchon ki milakar? Van ya tuition ka alag?"},
+        {"key": "elderly_health", "label": "Elder's health", "type": "text", "condition": "elderly_count > 0", "ask": "Ghar ke buzurg ki tabiyat kaisi rehti hai?"},
+        {"key": "elderly_on_treatment", "label": "Elder on treatment or regular medicine", "type": "enum", "options": ["yes", "no"], "condition": "elderly_count > 0", "ask": "Unka koi ilaaj ya roz ki dawai chal rahi hai?"},
+        {"key": "treatment_place", "label": "Where the elder is treated", "type": "text", "condition": "elderly_on_treatment === 'yes'", "ask": "Ilaaj kahan chal raha hai — sarkari hospital, private doctor ya kisi clinic mein? Kaunsa?"},
+        {"key": "medicine_monthly", "label": "Medicine and doctor cost a month", "type": "number", "condition": "elderly_on_treatment === 'yes'", "ask": "Dawai aur doctor ka mahine ka kharcha kitna aa jaata hai?"},
         {
           "key": "earning_members",
           "label": "Earning members in the household",

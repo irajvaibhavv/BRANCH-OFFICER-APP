@@ -1,6 +1,7 @@
 // Agent 1 interviews, Agent 2 writes the report. Keys live server-side (api/, scripts/sarthi-proxy.mjs).
 import { lookupLocation, lookupBusiness, lookupRiskPattern, briefForCitation } from './knowledge';
 import { KEY_GUIDE, isSalaried } from './memory';
+import { familyHisaab, inWords } from './recheck';
 import { genderRule, SPOKEN_STYLE } from './voice';
 
 const BASE = import.meta.env.VITE_SARTHI_PROXY || '';
@@ -560,6 +561,13 @@ failed check or an identity_document flag as a high-severity finding — a forei
   UNRESOLVED DIFFERENCE for the officer to verify — never call it concealed or hidden debt.
 - A hisaab_residual recheck (sales − purchases − running costs) is indicative only, never verified net profit: unsold
   stock, udhaar, tax and household withdrawals change it. Report what they said when shown it.
+- FAMILY: children (class and school, Fact: children_school), school fees, and the elder's health, treatment and
+  medicine cost — then the code's monthly hisaab as given. Judge the school from your general knowledge of a school by
+  that name in that city (government, low-fee private, mid private, premium / international), say it is your judgement,
+  not a verification, and whether its usual fees fit the fees they gave and their income. A premium school on a small
+  income, fees far below what that school charges, or a private hospital with a small medicine bill is a question for
+  the officer, never a verdict. Read what is left each month against the savings they named (Fact: savings) and the
+  bank's average balance.
 - Repayment capacity gets its own lines: running EMIs, informal loans and supplier credit, guarantor / co-borrower
   (Fact: guarantor), money from relatives or other businesses (Fact: third_party_money), household withdrawals, the
   weakest months, and their plan if sales fall 25% for two months (Fact: stress_plan).
@@ -604,6 +612,9 @@ ${understanding?.total ? JSON.stringify(understanding, null, 2) : 'No trade dept
 ## PROFESSION / TRADE CHECKS (questions the interviewer wrote on the job — salaried — or the trade — one with no insider pack — they claim; answered verbatim)
 ${professionAnswers?.length ? JSON.stringify(professionAnswers, null, 2) : 'None asked.'}
 
+## FAMILY (their own answers; the hisaab is computed in code)
+${familyBlock(collected)}
+
 ## FACE CHECK (customer photo taken by the officer, against a frame from this call — an AI comparison, not biometrics)
 ${face ? (face.verdict ? `${face.verdict.toUpperCase()}${face.reason ? ` — ${face.reason}` : ''}` : 'Not compared (camera off or the vision service did not answer).') : 'No customer photo on file.'}
 
@@ -642,6 +653,16 @@ ${JSON.stringify(eligibility, null, 2)}`;
 }
 
 // The only call with thinking on; thought tokens share maxTokens, hence the high ceiling.
+function familyBlock(c) {
+  if (!c) return 'Not captured.';
+  const rows = [['Children', c.children_count], ['Class and school', c.children_school], ['School fees a month', c.school_fees && inWords(c.school_fees)],
+    ['Elderly', c.elderly_count], ["Elder's health", c.elderly_health], ['On treatment', c.elderly_on_treatment], ['Treated at', c.treatment_place],
+    ['Medicine and doctor a month', c.medicine_monthly && inWords(c.medicine_monthly)]].filter(([, v]) => v != null && v !== '');
+  const h = familyHisaab(c);
+  if (h.left != null) rows.push(['Left each month (income + other earners − house kharcha incl. fees and medicine − rent − EMIs)', inWords(h.left)]);
+  return rows.length ? rows.map(([k, v]) => `${k}: ${v}`).join('\n') : 'Not asked.';
+}
+
 export async function writeReport(input) {
   return askAgent({
     systemPrompt: REPORTER_SYSTEM,

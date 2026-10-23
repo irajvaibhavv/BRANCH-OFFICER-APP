@@ -258,11 +258,41 @@ export function findRechecks(memory, caseData, facts = {}) {
     });
   }
 
+  // School fees and the elder's medicine are fixed outgoings: they must fit inside the house kharcha they gave, and in
+  // what comes in. Said back with their own numbers.
+  const fam = familyHisaab(c);
+  const house = toNumber(c.household_expenses);
+  if (['school_fees', 'medicine_monthly', 'household_expenses'].some(got) && fam.fixed && house && fam.fixed > house) {
+    out.push({
+      field: 'household_expenses',
+      detail: `School fees and medicine alone (${inWords(fam.fixed)}) are more than the household expenses given (${inWords(house)})`,
+      say: `Aapne ghar ka mahine ka kharcha ${inWords(house)} bataya, lekin ${[fam.fees && `school ki fees ${inWords(fam.fees)}`, fam.medicine && `dawai ${inWords(fam.medicine)}`].filter(Boolean).join(' aur ')} milakar hi ${inWords(fam.fixed)} ho jaata hai. Toh ghar ka poora kharcha kitna banta hai?`,
+    });
+  } else if (['school_fees', 'medicine_monthly', 'monthly_income'].some(got) && fam.fixed && fam.inflow && fam.fixed > fam.inflow * 0.3) {
+    out.push({
+      field: fam.fees ? 'school_fees' : 'medicine_monthly',
+      detail: `School fees and medicine (${inWords(fam.fixed)}) are ${Math.round((fam.fixed / fam.inflow) * 100)}% of the household income given (${inWords(fam.inflow)})`,
+      say: `Fees aur dawai milakar mahine ka ${inWords(fam.fixed)} jaata hai, aur ghar ki kamai ${inWords(fam.inflow)} bataayi — yeh kaafi bada hissa hai. Isko kaise manage karte hain, koi aur madad karta hai?`,
+    });
+  }
+
   return out;
 }
 
+/** The household's month in their own words: in, fixed outgoings, and what is left — the closest the PD gets to savings. */
+export function familyHisaab(c) {
+  const fees = toNumber(c.school_fees) ?? 0;
+  const medicine = toNumber(c.medicine_monthly) ?? 0;
+  const income = toNumber(c.monthly_income);
+  const inflow = income == null ? null : income + (toNumber(c.other_household_income) ?? 0);
+  // The house kharcha they gave may or may not include fees and medicine, so take the larger, never the sum.
+  const house = Math.max(toNumber(c.household_expenses) ?? 0, fees + medicine);
+  const out = house + (toNumber(c.monthly_rent) ?? 0) + (toNumber(c.existing_emi) ?? 0);
+  return { fees, medicine, fixed: fees + medicine, inflow, outgo: out, left: inflow == null || !out ? null : inflow - out };
+}
+
 // Counts added up from several people, and yes/no-ish numbers: a different figure there is not a changed story.
-const NO_DRIFT = new Set(['family_size', 'dependents', 'earning_members', 'aadhaar_number', 'pan_number']);
+const NO_DRIFT = new Set(['family_size', 'dependents', 'earning_members', 'children_count', 'elderly_count', 'aadhaar_number', 'pan_number']);
 
 /**
  * Their own earlier figure, said differently in a later answer ("pehle 2 lakh bikri, ab 3 lakh"). acceptedFacts keeps

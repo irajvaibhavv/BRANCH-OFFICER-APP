@@ -360,6 +360,12 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   checker" until then. (8) **Trades with no insider pack** (35 of 44, e.g. machinery, cafe): the trade_depth section asks
   `TRADE_CHECKS` (3) model-written insider questions (`professionDirective`), stored with `professionAnswers` and judged in
   BUSINESS UNDERSTANDING as the writer's judgement, not a verification.
+- **Children and elders** (2026-10-23): dependents > 0 unlocks `children_count` / `elderly_count` (summed counts, never
+  reconciled or drift-checked); children → class + school name, monthly fees; elders → health, on treatment, and if yes
+  where and the monthly medicine cost. `familyHisaab` (recheck.js) is the household month in code — the house kharcha is
+  the larger of what they said and fees + medicine, never the sum — and rechecks fees + medicine above the house kharcha
+  or above 30% of income. The report's FAMILY block carries it; the writer judges the school's standard from its own
+  knowledge, labelled as judgement. Live mode only — the script has no family follow-ups.
 - **Living conditions** (`living.js`, 2026-10-22): at home, after the outside photo, Sarthi asks (skippably) for
   `home_inside`. Home photos use `livingPrompt`, which ends with a `LIVING:` JSON line — house kachha / semi_pucca / pucca,
   floors, vehicles, items — parsed by `splitNames`. **No scores or bands** (lead, 2026-10-22: "just write facts and what

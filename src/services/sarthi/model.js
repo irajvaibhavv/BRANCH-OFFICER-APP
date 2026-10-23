@@ -102,7 +102,7 @@ function readJson(reply) {
 }
 
 // Counts the model adds up ("biwi, teen bachche, maa" = 6) — the parser can only read the one number said.
-const SUMMED_COUNTS = new Set(['family_size', 'dependents', 'earning_members']);
+const SUMMED_COUNTS = new Set(['family_size', 'dependents', 'earning_members', 'children_count', 'elderly_count']);
 
 // The model picks WHICH field a number belongs to; the parser decides WHAT the number is.
 function reconcileNumbers(facts, answerText) {

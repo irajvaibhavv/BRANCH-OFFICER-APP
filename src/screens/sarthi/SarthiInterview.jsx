@@ -468,13 +468,13 @@ export default function SarthiInterview() {
           live.current.frames = [before, after];
           checkLiveness(before, after, task).then((r) => {
             live.current.result = r;
-            logEvent(`Liveness (${task.check}): ${r ? r.verdict.toUpperCase() : 'not compared, vision unreachable'}`, r?.verdict === 'yes' ? 'ok' : 'warn');
+            logEvent(`Liveness: ${r ? r.verdict.toUpperCase() : 'not compared, vision unreachable'}`, r?.verdict === 'yes' ? 'ok' : 'warn');
           });
         }, 2000);
         beginListening();
       },
     });
-    logEvent(`Liveness asked: ${task.check}`);
+    logEvent('Liveness: random action asked on camera'); // never which one — the log is read on the report
   };
 
   /* ---------------------------------------------------------------- one borrower answer */

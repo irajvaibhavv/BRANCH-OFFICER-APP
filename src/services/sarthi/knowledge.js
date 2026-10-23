@@ -19,7 +19,7 @@ export function customCases() {
 
 // One-time wipe of all Sarthi data on each device — walk-ins, reports, transcripts, photos — so a new set of
 // seeded applicants starts clean. Bump the stamp to wipe again.
-const SARTHI_RESET = '2026-10-22-pd-history-v6';
+const SARTHI_RESET = '2026-10-23-findings-report-v7';
 const RESET_KEY = 'bo_sarthi_reset';
 export function resetSarthiData() {
   try {

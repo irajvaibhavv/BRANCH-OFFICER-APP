@@ -193,7 +193,7 @@ export function claimFromAnswer(step, answer, turn) {
   };
 }
 
-// ---- offline report writer (same structure as Agent 2, built only from evidence) ----
+// ---- offline report writer (same sections as Agent 2, built only from evidence) ----
 
 const inr = (n) => (typeof n === 'number' ? n.toLocaleString('en-IN') : n);
 
@@ -218,44 +218,81 @@ const FLAG_HEADS = {
 
 const photoSource = (p) => (p.provenance?.source === 'live_camera' ? ' (live camera)' : p.provenance ? ' (uploaded file)' : '');
 
-// Business understanding and hisaab, as plain report lines; empty when the trade has no pack.
-function depthLines(understanding, tradeMath) {
-  const lines = [];
-  if (understanding?.total) {
-    const extra = [understanding.vague && `${understanding.vague} vague`, understanding.redFlag && `${understanding.redFlag} red flag`].filter(Boolean);
-    lines.push(`- Business understanding: ${understanding.clear} of ${understanding.total} insider answers clear${extra.length ? `, ${extra.join(', ')}` : ''}.`);
-    const mark = { clear: '✓', vague: '~', redFlag: '✕' };
-    understanding.items.forEach((i) => lines.push(`  - ${mark[i.status]} ${i.q} — "${i.answer}" (Turn ${i.turn})`));
-  }
-  if (tradeMath?.length) {
-    lines.push('- Hisaab:');
-    tradeMath.forEach((m) => lines.push(`  - ${m.pass ? '✓' : '✕'} ${m.detail}${m.pass ? '' : ` (Flag: math_${m.check})`}`));
-  }
-  return lines.join('\n');
-}
-
+// Findings only: no question, task wording or quote reaches the officer, so a BO who reads hundreds of these cannot
+// coach the next applicant. Each item lands in one of three lists — red flag, checked, BO / CO to check.
 export function buildFallbackReport({ caseData, transcript, evidence, flags, eligibility, observations, photos = [], identity, cameraOn, understanding = null, tradeMath = [], rechecks = [], hotAnswers = [], professionAnswers = [], challengeAnswers = [], challengeWhy = [], living = null, mode = 'Handover' }) {
   const c = caseData;
-  const rechecked = rechecks.length
-    ? `\n\n**Figures rechecked during the call**\n${rechecks.map((r) => `- ${r.detail}. Shown both figures, they said: "${r.answer}"${r.before == null ? '' : r.changed ? ` — revised from ${r.before} to ${r.after}` : ' — figure unchanged'} (Turn ${r.turn})`).join('\n')}`
-    : '';
-  const fileQs = hotAnswers.length
-    ? `\n\n**Sarthi's suggested questions (prepared from the file)**\n${hotAnswers.map((h) => `- ${h.q} — "${h.answer}" (Turn ${h.turn}). Why asked: ${h.why}`).join('\n')}`
-    : '';
-  // No model to judge them here: the officer reads each answer against the job claimed.
-  const profQs = professionAnswers.length
-    ? `\n\n**Profession / trade check (judge each answer against the job or trade they claim)**\n${professionAnswers.map((a) => `- ${a.q} — "${a.answer}" (Turn ${a.turn})`).join('\n')}`
-    : '';
-  const surprise = challengeAnswers.length
-    ? `\n\n**Surprise checks (picked at random during the call${challengeWhy.length ? `; more of them because of ${challengeWhy.join(', ')}` : ''})**\n${challengeAnswers.map((a) => `- ${a.asked} — ${a.sent === false ? 'photo NOT sent' : `"${a.answer}"`} (Turn ${a.turn}). Why: ${a.why}`).join('\n')}`
-    : '';
-  const homeLife = living ? `\n\n**Living conditions (from the home photos)**\n${living.facts.map((f) => `- ${f}`).join('\n')}${living.analysis ? `\n\n${living.analysis}` : ''}` : '';
   const pattern = c.riskPatternMatch ? lookupRiskPattern(c.riskPatternMatch.patternId) : null;
-  const biz = lookupBusiness(c.businessKey);
   const area = lookupLocation(c.areaKey || c.area);
   const contradicted = evidence.filter((e) => e.status === 'contradicted');
   const unverified = evidence.filter((e) => e.status === 'unverified' && !e.noRule);
   const date = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+  const red = [];
+  const ok = [];
+  const todo = [];
+
+  // identity and camera
+  ok.push(cameraOn ? '- ✓ Applicant on live camera for the interview.' : null);
+  if (!cameraOn) todo.push('- Camera was off (audio / text only) — meet the applicant in person.');
+  if (identity) (identity.ok ? ok : red).push(`- ${identity.ok ? '✓ ' : ''}${identitySummary(identity)}`);
+  else todo.push('- No identity document was captured — collect and check one.');
+
+  // claims against the file
+  evidence.filter((e) => e.status === 'confirmed').forEach((e) => ok.push(`- ✓ ${e.claim}: ${e.declared} — ${e.detail} (${e.source})`));
+  contradicted.forEach((e) => red.push(`- ${e.claim}: said ${e.declared}, file shows ${e.verified} — ${e.detail} (${e.source})`));
+  unverified.forEach((e) => todo.push(`- ${e.claim}: ${e.declared} could not be checked — ${e.detail} (${e.source})`));
+
+  // system flags and patterns
+  if (pattern) red.push(`- Pattern match: ${pattern.area} + ${pattern.businessType}. ${Math.round(pattern.failureRate * 100)}% of past cases failed. ${pattern.whatWentWrong} (Pattern: ${pattern.patternId})`);
+  flags.forEach((f) => {
+    // Verifier flags carry label + turns; controller flags carry type + field.
+    const head = f.label ?? FLAG_HEADS[f.type] ?? 'Flag';
+    const cite = f.turns?.length ? ` (Turn ${f.turns[0]})` : f.turn ? ` (Turn ${f.turn})` : f.field ? ` (Flag: ${f.field})` : '';
+    red.push(`- ${head}: ${f.detail}${cite}`);
+  });
+
+  // figures shown back to them during the call
+  rechecks.forEach((r) => {
+    if (r.before == null) todo.push(`- ${r.detail} — gap not settled on the call (Turn ${r.turn})`);
+    else if (r.changed) ok.push(`- ✓ ${r.detail} — revised from ${r.before} to ${r.after} when shown (Turn ${r.turn})`);
+    else red.push(`- ${r.detail} — figure unchanged when shown, gap still open (Turn ${r.turn})`);
+  });
+
+  // business / job knowledge, as a score only
+  if (understanding?.total) {
+    const line = `Insider trade knowledge: ${understanding.clear} of ${understanding.total} clear${understanding.vague ? `, ${understanding.vague} vague` : ''}${understanding.redFlag ? `, ${understanding.redFlag} red flag` : ''}`;
+    if (understanding.vague + understanding.redFlag >= 2) red.push(`- ${line} — may not run this business day to day.`);
+    else ok.push(`- ✓ ${line}.`);
+  }
+  if (professionAnswers.length) {
+    todo.push(`- ${isSalaried(c) ? 'Job' : 'Trade'} knowledge: ${professionAnswers.length} answer(s), not machine-judged offline — ${isSalaried(c) ? 'verify salary slips, Form 16 and the salary credits' : 'confirm on the shop visit'}.`);
+  }
+  tradeMath.forEach((m) => (m.pass ? ok : red).push(`- ${m.pass ? '✓ ' : ''}Hisaab: ${m.detail}${m.pass ? '' : ` (Flag: math_${m.check})`}`));
+
+  // random checks at the shop / home: a count, never the task
+  if (challengeAnswers.length) {
+    const missed = challengeAnswers.filter((a) => a.sent === false);
+    ok.push(`- Surprise checks: ${challengeAnswers.length} done${challengeWhy.length ? `, more of them because of ${challengeWhy.join(', ')}` : ''}; any the code caught are under red flags.`);
+    if (missed.length) red.push(`- ${missed.length} surprise-check photo(s) not sent (Turn ${missed[0].turn})`);
+  }
+  hotAnswers.forEach((h) => todo.push(`- From the file: ${h.why} — confirm the account they gave (Turn ${h.turn})`));
+
+  // photos
+  photos.forEach((p) => {
+    if (p.skipped) red.push(`- Declined to photograph ${p.label} (Photo: ${p.kind})`);
+    else if (p.observation) ok.push(`- ✓ ${p.label}${photoSource(p)}: ${p.observation} (Photo: ${p.kind})`);
+    else todo.push(`- ${p.label}${photoSource(p)}: not machine-read — look at the photo (Photo: ${p.kind})`);
+  });
+  (observations ?? []).forEach((o) => todo.push(`- Video: ${o.observation} (Vision: ${o.at})`));
+  if (living) todo.push(`- Living conditions vs income: ${living.facts.join('; ')}${living.analysis ? `. ${living.analysis}` : ''}`);
+
+  // area and file
+  if (area.source === 'specific') ok.push(`- ✓ Area knowledge checked against surveyed data for ${c.areaKey}.`);
+  else todo.push(`- No surveyed data for ${c.area || 'this location'}: rent was checked only against the ${area.label ?? 'small town'} range (${fmt(area.avgShopRent.min)}–${fmt(area.avgShopRent.max)}) — confirm on the ground.`);
+  if (c.brief.areaDefaultRate != null) todo.push(`- Area default rate: ${Math.round(c.brief.areaDefaultRate * 100)}% (Brief: areaDefaultRate)`);
+  (c.brief.missingDocs ?? []).forEach((d) => todo.push(`- Collect ${d} (Brief: missingDocs)`));
+  (c.brief.largeDeposits ?? []).forEach((d) => todo.push(`- Source of ${fmt(d.amount)} deposit in ${d.month} (Brief: largeDeposits)`));
+  if (pattern) todo.push(`- ${pattern.redFlags[0]} (Pattern: ${pattern.patternId})`);
 
   const rec = contradicted.length >= 2 || (contradicted.length >= 1 && (pattern?.failureRate ?? 0) >= 0.5)
     ? 'RED'
@@ -264,24 +301,9 @@ export function buildFallbackReport({ caseData, transcript, evidence, flags, eli
       : 'GREEN';
   const recLine = {
     RED: 'RED: Red flags — significant concerns. Recommend detailed field verification before proceeding.',
-    AMBER: 'AMBER: Human intervention — some concerns found. Officer should verify the items listed below before proceeding.',
+    AMBER: 'AMBER: Human intervention — some concerns found. Officer should verify the items in section 3 before proceeding.',
     GREEN: 'GREEN: Satisfactory — profile looks clean. Recommend for further processing.',
   }[rec];
-
-  const summary = evidence.length
-    ? evidence.slice(0, 5).map((e) => `- ${e.claim} stated as ${e.declared} — "${e.verbatim}" (Turn ${e.turn ?? '?'})`).join('\n')
-    : `- Interview completed with ${transcript.length} turns recorded. No numeric claims were captured. (Turn ${Math.max(1, transcript.length)})`;
-
-  const rows = evidence.length
-    ? evidence.map((e) => `| ${e.claim} | ${e.declared} | ${e.verified} | ${e.status} | (${e.source}) |`).join('\n')
-    : '| — | — | — | no claims captured | — |';
-
-  const verifyList = [
-    ...contradicted.map((e) => `- ${e.claim}: ${e.detail} (Turn ${e.turn ?? '?'})`),
-    ...(c.brief.missingDocs ?? []).map((d) => `- Collect ${d} (Brief: missingDocs)`),
-    ...(c.brief.largeDeposits ?? []).map((d) => `- Source of ${fmt(d.amount)} deposit in ${d.month} (Brief: largeDeposits)`),
-    ...(pattern ? [`- ${pattern.redFlags[0]} (Pattern: ${pattern.patternId})`] : []),
-  ];
 
   return `### SARTHI AI - PD REPORT
 **Applicant**: ${c.name}
@@ -289,54 +311,20 @@ export function buildFallbackReport({ caseData, transcript, evidence, flags, eli
 **Business**: ${c.business} — ${c.businessName}
 **Date**: ${date}
 **Interview Mode**: ${mode}
+**Turns recorded**: ${transcript.length}
 
 ---
 
-### 1. IDENTITY VERIFICATION
-${cameraOn ? 'Applicant present on live camera for the full interview.' : 'Camera was not available; interview conducted on audio or text only.'}
-${identity ? `- ${identitySummary(identity)}` : '- No identity document was captured.'}
-${photos.length
-      ? photos.map((p) => (p.skipped
-        ? `- Declined to photograph ${p.label} when asked (Photo: ${p.kind})`
-        : `- Sent as ${p.label}${photoSource(p)}: ${p.observation ?? 'on file, not machine-read — officer should view it'} (Photo: ${p.kind})`)).join('\n')
-      : '- No photographs were requested.'}
-${observations?.length
-      ? observations.map((o) => `- ${o.observation} (Vision: ${o.at})`).join('\n')
-      : '- Video analysis: No notable observations.'}
+### 1. RED FLAGS
+${red.length ? red.join('\n') : '- No red flags found.'}
 
-### 2. INTERVIEW SUMMARY
-${summary}${rechecked}${fileQs}${profQs}${surprise}${homeLife}
+### 2. WHAT SARTHI CHECKED
+${ok.filter(Boolean).length ? ok.filter(Boolean).join('\n') : '- Nothing could be confirmed in this interview.'}
 
-### 3. CLAIM VERIFICATION
+### 3. WHAT THE BO / CO MUST CHECK
+${todo.length ? todo.join('\n') : '- No specific items flagged for field verification.'}
 
-| Claim | Declared | Verified | Status | Source |
-|-------|----------|----------|--------|--------|
-${rows}
-
-### 4. RISK ALERTS
-${pattern
-      ? `- Pattern match: ${pattern.area} + ${pattern.businessType}. ${Math.round(pattern.failureRate * 100)}% of past cases failed. ${pattern.whatWentWrong} (Pattern: ${pattern.patternId})`
-      : '- No known risk patterns matched.'}
-${flags.length
-      ? flags.map((f) => {
-        // Verifier flags carry label + turns; controller flags carry type + field.
-        const head = f.label ?? FLAG_HEADS[f.type] ?? 'Flag';
-        const cite = f.turns?.length ? ` (Turn ${f.turns[0]})` : f.turn ? ` (Turn ${f.turn})` : f.field ? ` (Flag: ${f.field})` : '';
-        return `- ${head}: ${f.detail}${cite}`;
-      }).join('\n')
-      : '- No inconsistencies detected across the interview.'}
-${c.brief.areaDefaultRate != null
-      ? `- Area default rate for this location: ${Math.round(c.brief.areaDefaultRate * 100)}% (Brief: areaDefaultRate)`
-      : '- Area default rate: not on file for this location.'}
-
-### 5. KNOWLEDGE VERIFICATION
-${area.source === 'specific'
-      ? `- Area questions asked using ${c.areaKey} data (landmarks, metro, shop rent range ${fmt(area.avgShopRent.min)}–${fmt(area.avgShopRent.max)}). Officer should read the transcript for how they were answered.`
-      : `- No surveyed data for ${c.area || 'this location'}, so landmark questions were skipped. Rent was checked against the ${area.label ?? 'small town'} range (${fmt(area.avgShopRent.min)}–${fmt(area.avgShopRent.max)}), which is indicative only — the officer should confirm it on the ground.`}
-${depthLines(understanding, tradeMath)}
-${biz ? `- Trade-knowledge questions asked for ${biz.label}. Watch for: ${biz.knowledgeQuestions.map((q) => q.flag).slice(0, 2).join('; ')}.` : '- No trade-knowledge data on file for this business type; those questions were skipped.'}
-
-### 6. LOAN ELIGIBILITY
+### 4. LOAN ELIGIBILITY
 ${eligibility.assessable
       ? `- Assessed Monthly Income: ₹${inr(eligibility.assessedIncome)} ${eligibility.assessedIncomeMethod === 'calculated_from_answers'
         ? `— **rebuilt from the interview, not from a statement**. ${eligibility.assessedIncomeSource}${eligibility.assessedIncomeNote ? ` ${eligibility.assessedIncomeNote}` : ''}`
@@ -355,10 +343,8 @@ ${eligibility.assessable
 - Requested Amount: ₹${inr(eligibility.requested)} (Brief: loanAmountRequested), which would carry an EMI of ₹${inr(eligibility.emiOnRequested)}
 - Gap: cannot be calculated without verified income`}
 
-### 7. OFFICER RECOMMENDATION
+### 5. RECOMMENDATION
 ${recLine}
-
-${verifyList.length ? verifyList.join('\n') : '- No specific items flagged for field verification.'}
 
 ---
 *This report was generated by Sarthi AI. The final loan decision must be made by an authorized human officer. AI assessment is advisory only.*`;

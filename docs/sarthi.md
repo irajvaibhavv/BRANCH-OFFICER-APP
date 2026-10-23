@@ -236,6 +236,15 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   a high `photo_location` flag and a FRIENDLY RECHECK on the call ("kya yeh aapki hi dukaan hai?"; live mode only — the
   script has no queue). No pin on file → the report shows where it was taken, with a map link, for the officer to check.
   `npm run check:geo` asserts the parser and distance maths.
+- **Findings, not questions** (2026-10-23, lead): the report never shows a question Sarthi asked, a task's wording, the
+  order of topics or the applicant's quoted words — a BO who reads 100-200 reports would learn the interview and coach the
+  next applicant. Every report (`REPORTER_SYSTEM`, `buildFallbackReport`, `mockReport`, the seeds in `pdHistory.json`) has
+  five sections: **1. Red flags · 2. What Sarthi checked · 3. What the BO / CO must check · 4. Loan eligibility ·
+  5. Recommendation**. Topics and results only ("Insider trade knowledge: 2 of 5 vague", "Surprise checks: 3 of 4 held
+  up"); figures are fine, quotes are not. Citations stay — `(Turn X)` is unreadable without the transcript, which the
+  report screen no longer shows (call log = system events only; liveness logs "a random action", never which). The
+  validator finds the eligibility section by its heading, not its number. The DSA review (`dsa.js`) follows the same rule
+  and hides "Show full conversation" for `r.sarthi` reports; the scripted SAARTHI AI handover flows are fixed and keep it.
 - **Past photos** (`pastPhotos.js` + `components/sarthi/PastPhotos.jsx`, 2026-10-23): the report shows each pin on file
   through the years — Esri Wayback satellite (no key; one release per year, dated by the metadata layer's `SRC_DATE2`
   because a release can carry years-old imagery, repeats of the same photo dropped), Mapillary street photos within ~60 m
@@ -258,7 +267,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   "when, how much", the payment QR, today's opening; at home a utility bill. The point is the lead's worry: after 200-300
   PDs a BO knows every fixed question and can brief the applicant, stock the shop for the day or write up a bill book —
   random tasks with random details cannot be briefed. Each challenge photo kind has a `vision` description in
-  `PHOTO_ASKS`; answers land in `memory.challengeAnswers` → "Surprise checks" in the report. Live mode only.
+  `PHOTO_ASKS`; answers land in `memory.challengeAnswers` → a "Surprise checks: X of Y held up" count in the report, failures by subject only. Live mode only.
   `npm run check:challenges`.
 - **Surprise checks, hardened** (2026-10-23, for a BO who sits with the applicant): (1) **count by risk** —
   `challengeCount` adds one each for a re-check PD, the officer present (a CallSetup tick, also a low `officer_present`
@@ -314,7 +323,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   YES/NO/UNSURE; identical frames = frozen feed. (5) **Stock vs shop photo**: the shop vision prompt adds a `STOCK:` JSON
   (fullness + a wide retail range); `stockCheck` flags only beyond 3× either way and asks kindly about a godown.
   (6) **Call log**: every transcript entry carries `at`; system events (GPS, photos, liveness) go to `callLog`; the report
-  shows both in time order. (7) **Maker-checker**: `pdOutcome` is the checker's outcome once `review` exists (`aiOutcome`
+  shows only the events (see "Findings, not questions") — the transcript stays in storage for audit. (7) **Maker-checker**: `pdOutcome` is the checker's outcome once `review` exists (`aiOutcome`
   is Sarthi's); `makeReview` refuses the officer who ran the PD, needs a reason, and the History trail shows "Awaiting
   checker" until then. (8) **Trades with no insider pack** (35 of 44, e.g. machinery, cafe): the trade_depth section asks
   `TRADE_CHECKS` (3) model-written insider questions (`professionDirective`), stored with `professionAnswers` and judged in
@@ -346,7 +355,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   minutes from `startedAt`/`endedAt`; report verdict with flags and changed answers);
   Every PD is marked with one outcome (`pdOutcome`): **Satisfactory** (GREEN and complete), **Human intervention**
   (AMBER, or any PD that ended early), **Red flags** (RED) — shown on the report stamp, the History cards and the
-  customer list. Section 7 of a report still starts GREEN/AMBER/RED (`extractRecommendation` reads it), followed by the
+  customer list. The RECOMMENDATION section of a report still starts GREEN/AMBER/RED (`extractRecommendation` reads it), followed by the
   outcome label. "New PD from here" on any PD, the Sarthi AI button and the report's button all open `NewPdSheet`, whose options come
   from `pdOptions(pd)`. Mahesh Agarwal is seeded with 3 PDs (`data/sarthi/pdHistory.json`, `daysAgo` → dates) as the
   default of `useSarthiReports`; the Sarthi reset stamp was bumped so returning users get them.

@@ -381,8 +381,9 @@ export function AIReport() {
         <ul className={styles.list}>{r.todos.map((t, i) => <li key={i}><b>{t.owner}:</b> {t.text}</li>)}</ul>
       </Card>
 
-      <button className="link" style={{ marginTop: 14, color: 'var(--primary)', fontWeight: 600, fontSize: 14, minHeight: 36 }} onClick={() => setShowT((v) => !v)}>{showT ? 'Hide' : 'Show'} full conversation ({r.transcript?.length ?? 0} messages)</button>
-      {showT && <div className={styles.chat} style={{ marginTop: 4 }}>{r.transcript.map((m, i) => <div key={i} className={`${styles.bubble} ${m.from === 'ai' ? styles.ai : styles.user}`}>{m.text}</div>)}</div>}
+      {/* a Sarthi call's questions stay out of its report, so they cannot be learned and coached */}
+      {!r.sarthi && <button className="link" style={{ marginTop: 14, color: 'var(--primary)', fontWeight: 600, fontSize: 14, minHeight: 36 }} onClick={() => setShowT((v) => !v)}>{showT ? 'Hide' : 'Show'} full conversation ({r.transcript?.length ?? 0} messages)</button>}
+      {showT && !r.sarthi && <div className={styles.chat} style={{ marginTop: 4 }}>{r.transcript.map((m, i) => <div key={i} className={`${styles.bubble} ${m.from === 'ai' ? styles.ai : styles.user}`}>{m.text}</div>)}</div>}
 
       <div className="row" style={{ gap: 8, marginTop: 18 }}>
         {r.partyId && <Button style={{ flex: 1 }} icon={<FiMapPin size={16} />} onClick={() => navigate(`/visits/new?dsa=${r.partyId}`)}>Log visit</Button>}

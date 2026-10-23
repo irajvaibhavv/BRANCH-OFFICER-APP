@@ -100,35 +100,29 @@ export async function mockReport() {
 
 ---
 
-### 1. INTERVIEW SUMMARY
-- Applicant confirmed 2 years in the garment business with a partner (Turn 3)
-- Declared monthly income of 3,00,000 (Turn 7)
-- Partnership deed not available — said the partner holds it (Turn 9)
-- Income restated as 2,50,000 later in the same interview (Turn 15)
+### 1. RED FLAGS
+- Monthly income: said 3,00,000, bank credits show 1,65,000 — 82% above (Brief: avgMonthlyCredit)
+- Income changed between two askings, 3,00,000 then 2,50,000 (Flag: monthly_income)
+- Business vintage: said 2 years, GST shows 1.5 years (Brief: gstVintage)
+- Existing EMI: said 8,000, bureau shows 18,000 (Brief: existingEMIs)
 
-### 2. CLAIM VERIFICATION
-| Claim | Declared | Verified Data | Status | Source |
-|-------|----------|---------------|--------|--------|
-| Monthly Income | 3,00,000 | 1,65,000 bank credits | Contradicted | (Brief: avgMonthlyCredit) |
-| Business Vintage | 2 years | GST 1.5 years | Contradicted | (Brief: gstVintage) |
-| Existing EMI | 8,000 | 18,000 | Contradicted | (Brief: existingEMIs) |
+### 2. WHAT SARTHI CHECKED
+- ✓ 2 years in the garment business with a partner (Turn 3)
+- ✓ Area knowledge 2 of 3 (Fact: area_knowledge_score)
 
-### 3. RISK ALERTS
-- HIGH: Income stated 82% above bank credits (Turn 7)
-- HIGH: Income changed between two askings (Flag: monthly_income)
-- MEDIUM: Partnership deed not produced (Turn 9)
+### 3. WHAT THE BO / CO MUST CHECK
+- Partnership deed — not produced; said the partner holds it (Turn 9)
+- Source of the March deposit (Brief: largeDeposits)
+- Actual monthly income from the last 6 months of statements
 
-### 4. KNOWLEDGE VERIFICATION
-Area 2/3 · Business 1/2 (Fact: area_knowledge_score)
-
-### 5. LOAN ELIGIBILITY
+### 4. LOAN ELIGIBILITY
 - Assessed Monthly Income: 1,65,000
 - Existing EMIs: 18,000
 - Maximum Eligible Amount: 10,50,000
 - Requested Amount: 15,00,000
 
-### 6. RECOMMENDATION
-RED — multiple contradictions. Officer must verify the partnership deed, the March deposit and actual monthly income before proceeding.
+### 5. RECOMMENDATION
+RED: Red flags — significant concerns. Recommend detailed field verification before proceeding.
 
 ---
 *This is mock output (VITE_SARTHI_MOCKS=true). No model was called.*`;

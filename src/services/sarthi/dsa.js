@@ -445,7 +445,8 @@ The record's "intel" is what the branch knows beyond its files (other lenders, s
 complaints, a code another lender closed) — weigh their answers against it. "Flags raised on the call" are admissions in their own words.
 Red flags to look for: sub-agents they cannot name, not knowing their own customers, charging customers, someone else preparing
 statements/ITR, a code blocked by another lender, figures far from the record, most files going to other lenders.
-Use only what is in the input — never invent a figure. Quote their words when it matters.
+Use only what is in the input — never invent a figure. Never write a question that was asked or quote their words: name
+the topic and what it shows ("could not name the sub-agents on their code"), so a reader cannot learn the call.
 
 Reply with ONLY a JSON object:
 {"score": 0-100, "sentiment": "strong" | "positive" | "moderate" | "weak", "headline": "one line",
@@ -470,7 +471,7 @@ export function fallbackDsaReport({ file, qa, rechecks, flags: raised = [] }) {
   qa.forEach((x) => {
     let s = sections.find((y) => y.title === x.section);
     if (!s) { s = { title: x.section, items: [] }; sections.push(s); }
-    s.items.push(`${x.q} — "${x.a}"`);
+    s.items.push(`${x.id.replace(/_/g, ' ')}: ${x.a}`); // topic, never the question
   });
   const score = Math.round(file.approvalRate * 0.8 + (file.quality === 'high' ? 20 : file.quality === 'average' ? 10 : 0) - rechecks.length * 5 - raised.length * 8);
   return {
@@ -482,7 +483,7 @@ export function fallbackDsaReport({ file, qa, rechecks, flags: raised = [] }) {
     sections,
     todos: [
       ...file.stuck.map((f) => ({ owner: 'BO', text: `Clear pending docs on ${f.borrower}: ${f.pendingDocs.join(', ')}` })),
-      { owner: 'BO', text: 'Review the answers above; the AI was not reachable to write the assessment.' },
+      { owner: 'BO', text: 'The AI was not reachable to write the assessment — read the answers above against the record.' },
     ],
   };
 }

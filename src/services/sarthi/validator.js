@@ -62,7 +62,7 @@ export function validateReport(reportText, transcript = [], claims = [], brief =
   });
 
   // 4. Eligibility figures must be the ones the system calculated, not the model's own arithmetic.
-  const elig = cleanedReport.match(/###\s*6\.[\s\S]*?(?=###|$)/)?.[0];
+  const elig = cleanedReport.match(/###\s*\d+\.\s*LOAN ELIGIBILITY[\s\S]*?(?=###|$)/i)?.[0];
   if (elig) {
     const allowed = allowedNumbers(eligibility);
     const stated = (elig.match(/[\d][\d,]{4,}/g) || []).map(digits);
@@ -89,7 +89,7 @@ export function validateReport(reportText, transcript = [], claims = [], brief =
   };
 }
 
-/** Pull the officer recommendation out of section 7 → 'green' | 'amber' | 'red' | null. */
+/** Pull the officer recommendation out of the RECOMMENDATION section → 'green' | 'amber' | 'red' | null. */
 export function extractRecommendation(reportText = '') {
   const m = reportText.match(/\b(GREEN|AMBER|RED)\b\s*:/);
   return m ? m[1].toLowerCase() : null;

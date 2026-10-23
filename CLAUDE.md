@@ -75,6 +75,8 @@ rules that must never be broken:
 - **Models:** `'llm'` = Claude (`ANTHROPIC_API_KEY`), else Gemini; fact extraction goes to Groq (`'slm'`) when
   `GROQ_API_KEY` is set (`TASK_ROUTES` in `model.js`). Keys are server-side only (`api/*.js`, `scripts/sarthi-proxy.mjs`);
   `vercel.json`'s rewrite must exclude `/api/`. Unreachable model → per-turn fallback; no proxy → scripted `script.js`.
+- **Findings, not questions:** a report (PD or DSA) never shows a question, task wording or quote — only red flags,
+  what Sarthi checked and what the BO / CO must check, so BOs cannot learn the interview and coach applicants.
 - **Voice:** the TTS is fed Devanagari, captions are Hinglish. Re-run `npm run sarthi:voice` after editing any scripted line.
 - **State:** `bo_sarthi_*` keys, per PD id; bump `SARTHI_RESET` in `knowledge.js` when seeded applicants change.
 - **Checks:** `npm run check:geo`, `check:crosspd`, `check:challenges`; `VITE_SARTHI_MOCKS=true` (dev) runs with no API calls.

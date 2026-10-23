@@ -22,7 +22,6 @@ import styles from './SarthiReport.module.css';
 const STAMP = { satisfactory: 'green', human: 'amber', red: 'red' };
 
 const MARK = { confirmed: 'holds up', contradicted: 'contradicted', unverified: 'unsettled' };
-const DEPTH_MARK = { clear: '✓', vague: '~', redFlag: '✕' };
 const GST_WORD = { match: 'matches the file', mismatch: 'NOT the GSTIN on file', not_on_file: 'nothing on file to match' };
 const CHECKER_ROLES = ['Credit Manager', 'Branch Manager', 'Credit Officer', 'Risk / Fraud Control'];
 const readJson = (key) => { try { return JSON.parse(window.localStorage.getItem(key)); } catch { return null; } };
@@ -48,13 +47,9 @@ export default function SarthiReport() {
   }, [id, r?.id]);
   const callFrame = useMemo(() => readJson(callFrameKey(r?.id)), [r?.id]);
   const liveFrames = useMemo(() => readJson(`bo_sarthi_live_${r?.id}`), [r?.id]);
-  // Every exchange and every system event of the call, in time order (the transcript is kept per PD).
-  const log = useMemo(() => {
-    const turns = (readJson(`bo_sarthi_transcript_${r?.id}`) ?? []).map((t) => ({ at: t.at, who: t.role === 'user' ? 'Applicant' : 'Sarthi', text: t.content }));
-    const events = (r?.callLog ?? []).map((e) => ({ at: e.at, who: 'System', text: e.text, tone: e.tone }));
-    const all = [...turns, ...events];
-    return all.every((e) => e.at) ? all.sort((a, b) => a.at - b.at) : all;
-  }, [r?.id, r?.callLog]);
+  // System events only (GPS, photos, liveness): the transcript stays out of the report so a BO who reads hundreds
+  // of them never learns the questions (docs/sarthi.md, "Findings, not questions").
+  const log = useMemo(() => (r?.callLog ?? []).map((e) => ({ at: e.at, who: 'System', text: e.text, tone: e.tone })), [r?.callLog]);
 
   if (!r) {
     return (
@@ -152,14 +147,13 @@ export default function SarthiReport() {
                   <div className={styles.againstHeld}>{e.verified}</div>
                 </div>
               </div>
-              {e.verbatim && <p className={styles.quote}>{e.verbatim}</p>}
               <p className={styles.detail}>{e.detail} <span className={styles.src}>({e.source})</span></p>
             </article>
           ))}
         </div>
       )}
 
-      {/* insider questions — does this person actually run the business? */}
+      {/* insider knowledge — the score only, never the questions */}
       {r.understanding && (
         <>
           <h2 className={styles.head}>How well they know their business</h2>
@@ -169,18 +163,6 @@ export default function SarthiReport() {
               {r.understanding.vague ? ` · ${r.understanding.vague} vague` : ''}
               {r.understanding.redFlag ? ` · ${r.understanding.redFlag} red flag` : ''}
             </p>
-            <ul className={styles.depthList}>
-              {r.understanding.items.map((i) => (
-                <li key={i.key}>
-                  <span className={styles[`depth_${i.status}`]}>{DEPTH_MARK[i.status]}</span>
-                  <div>
-                    <div className={styles.depthQ}>{i.q}</div>
-                    <div className={styles.depthA}>"{i.answer}" <span className={styles.src}>(Turn {i.turn})</span></div>
-                    {i.followUp && <div className={styles.depthA}>↳ {i.followUp.q} — "{i.followUp.answer}"</div>}
-                  </div>
-                </li>
-              ))}
-            </ul>
           </div>
         </>
       )}
@@ -250,7 +232,7 @@ export default function SarthiReport() {
               </div>
             )}
             <p className={styles.idLine}>
-              Asked on camera: {r.liveness.check}.{' '}
+              A random action on camera.{' '}
               {r.liveness.verdict === 'yes' && 'They did it — the video was live.'}
               {r.liveness.verdict === 'no' && 'The frame after does not show it — the video may be recorded, replayed or not live.'}
               {r.liveness.verdict === 'unsure' && 'Could not tell — look at both frames yourself.'}
@@ -364,7 +346,7 @@ export default function SarthiReport() {
       {/* every exchange and system event with its time — the audit trail of this call */}
       {log.length > 0 && (
         <details className={styles.log}>
-          <summary>Call log — {log.length} entries, each with its time</summary>
+          <summary>Call log — {log.length} events, each with its time</summary>
           <ol>
             {log.map((e, i) => (
               <li key={i} className={e.who === 'System' ? `${styles.logSys} ${e.tone === 'warn' ? styles.logWarn : ''}` : ''}>

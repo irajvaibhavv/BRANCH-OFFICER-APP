@@ -16,7 +16,8 @@
     "check:geo": "node scripts/check-geo.mjs",
     "check:challenges": "node scripts/check-challenges.mjs",
     "check:crosspd": "node scripts/check-crosspd.mjs",
-    "check:pastphotos": "node scripts/check-pastphotos.mjs"
+    "check:pastphotos": "node scripts/check-pastphotos.mjs",
+    "check:retention": "node scripts/check-retention.mjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",

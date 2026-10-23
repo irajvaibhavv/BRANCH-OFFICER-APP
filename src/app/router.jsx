@@ -13,6 +13,7 @@ import DSADirectory from '../screens/dsa/DSADirectory';
 import RoutePlanner from '../screens/planning/RoutePlanner';
 import VisitHistory from '../screens/visits/VisitHistory';
 import MoreMenu from '../screens/more/MoreMenu';
+import DataRetention from '../screens/retention/DataRetention';
 // Deeper screens
 import DSADetail from '../screens/dsa/DSADetail';
 import DSAComparison from '../screens/dsa/DSAComparison';
@@ -101,6 +102,7 @@ export function AnimatedRoutes() {
           <Route path="/route" element={<RoutePlanner />} />
           <Route path="/activity" element={<VisitHistory />} />
           <Route path="/more" element={<MoreMenu />} />
+          <Route path="/retention" element={<DataRetention />} />
 
           <Route path="/dsas/compare" element={<DSAComparison />} />
           <Route path="/dsas/new" element={<AddDSA />} />

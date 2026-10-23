@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   FiCreditCard,
   FiTrendingUp, FiFolder, FiAward, FiCalendar,
-  FiBarChart2, FiClock, FiHelpCircle, FiUser, FiCheckSquare, FiMic,
+  FiBarChart2, FiClock, FiHelpCircle, FiUser, FiCheckSquare, FiMic, FiArchive,
 } from 'react-icons/fi';
 import Page, { listContainer, listItem } from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
@@ -23,6 +23,7 @@ const ITEMS = [
   { to: '/reports', label: 'Reports', icon: FiBarChart2, tone: '#7c3aed' },
   { to: '/scheduler', label: 'Meetings', icon: FiClock, tone: '#ea580c' },
   { to: '/recordings', label: 'Recordings', icon: FiMic, tone: '#dc2626' },
+  { to: '/retention', label: 'Data Retention', icon: FiArchive, tone: '#475569' },
   { to: '/help', label: 'Help & FAQ', icon: FiHelpCircle, tone: '#0d9488' },
   { to: '/profile', label: 'Profile & Settings', icon: FiUser, tone: '#6b7280' },
 ];

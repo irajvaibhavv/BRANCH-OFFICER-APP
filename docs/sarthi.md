@@ -240,9 +240,16 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   `bo_sarthi_reports`. The report screen shows it with "Not saved yet" and, at the end, a BO / CO picker, a name and an "I
   have reviewed this PD" checkbox; "Save PD" (enabled only once ticked) moves it into the saved PDs with `confirmedBy`.
   A separate store, not a flag, so history, outcomes, repeat PDs and cross-PD links never see an unconfirmed PD without
-  each checking. The brief shows "Report awaiting confirmation" until it is saved. A dropped call's draft still becomes an
-  incomplete PD at once (`takeDrafts`) — there is no generated report to confirm. The checker review (maker-checker) is
-  a second, later step on a saved PD.
+  each checking. The brief shows "Report awaiting confirmation" until it is saved. Every PD is confirmed: a dropped call's
+  draft stays in `bo_sarthi_draft_<pd>` and shows as a pending incomplete PD (`readDrafts`, removed on save, after which
+  "Finish last PD" can carry on); the officer-led PD (`SarthiOfficer`) stores `confirmedBy` on its summary and "Done" waits
+  for it. The box is `components/sarthi/ConfirmPd.jsx`. The checker review (maker-checker) is a second, later step.
+- **Retention** (`services/retention.js`, More → Data retention, 2026-10-23, lead): the organisation sets how long a PD
+  report stays valid (default 90 days from the interview) and how long call video is kept (default 30 days). The report
+  shows "PD valid till" / "PD expired — start a new PD" and the video's deletion date; an expired PD is marked, never
+  deleted. Video is not recorded yet: a recorder writes `bo_sarthi_video_<pd>` with `{ at }`, and `purgeExpiredVideos`
+  (run whenever a PD screen opens) deletes it once past the policy. In production the policy comes from the admin portal
+  and video lives in object storage with a lifecycle rule, not on the phone. `npm run check:retention`.
 - **Findings, not questions** (2026-10-23, lead): the report never shows a question Sarthi asked, a task's wording, the
   order of topics or the applicant's quoted words — a BO who reads 100-200 reports would learn the interview and coach the
   next applicant. Every report (`REPORTER_SYSTEM`, `buildFallbackReport`, `mockReport`, the seeds in `pdHistory.json`) has

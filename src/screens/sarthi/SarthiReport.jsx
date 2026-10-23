@@ -13,10 +13,11 @@ import { formatDate, formatINR } from '../../utils/formatters';
 import { getCase } from '../../services/sarthi/knowledge';
 import { identitySummary } from '../../services/sarthi/idChecks';
 import { mapLink, inDistance } from '../../services/sarthi/geo';
-import { MODES, OUTCOMES, REVIEW_DECISIONS, pdOutcome, aiOutcome, makeReview } from '../../services/sarthi/repeat';
+import { MODES, OUTCOMES, REVIEW_DECISIONS, pdOutcome, aiOutcome, makeReview, removeDraft } from '../../services/sarthi/repeat';
 import { loadFace, callFrameKey } from '../../services/sarthi/face';
 import { useSarthiReports, usePendingPds } from '../../hooks/useSarthiReports';
-import { OFFICER } from '../../context/AuthContext';
+import ConfirmPd from '../../components/sarthi/ConfirmPd';
+import { readRetention, expiry, VIDEO_PREFIX } from '../../services/retention';
 import styles from './SarthiReport.module.css';
 
 // Colour classes per outcome (the stamp keeps its green / amber / red styles).
@@ -42,11 +43,6 @@ export default function SarthiReport() {
   const waiting = pending.filter((x) => x.caseId === id);
   const r = [...waiting, ...all].find((x) => x.id === params.get('pd')) ?? waiting[0] ?? all[0];
   const unsaved = waiting.includes(r);
-  const confirm = (confirmedBy) => {
-    setReports((prev) => [{ ...r, confirmedBy }, ...prev]);
-    setPending((prev) => prev.filter((x) => x.id !== r.id));
-    toast('PD saved', 'success');
-  };
 
   const blocks = useMemo(() => parseMarkdown(r?.report ?? ''), [r?.report]);
   // Images live outside the report record so their weight can never break its write.
@@ -75,6 +71,12 @@ export default function SarthiReport() {
     );
   }
 
+  const confirm = (confirmedBy) => {
+    setReports((prev) => [{ ...r, confirmedBy }, ...prev]);
+    setPending((prev) => prev.filter((x) => x.id !== r.id));
+    removeDraft(r.id); // a dropped call's draft, now on file
+    toast('PD saved', 'success');
+  };
   const verdict = pdOutcome(r);
   const key = STAMP[verdict.key];
   const counts = r.evidence.reduce((a, e) => ({ ...a, [e.status]: (a[e.status] ?? 0) + 1 }), {});
@@ -123,6 +125,7 @@ export default function SarthiReport() {
           <NewPdSheet open={sheet} onClose={() => setSheet(false)} caseId={id} pd={r} />
         </>
       )}
+      <Retention r={r} />
 
       <div className={styles.tally}>
         {counts.confirmed > 0 && <span className={styles.tallyClear}>{counts.confirmed} held up</span>}
@@ -513,28 +516,25 @@ function placeWords(place) {
   return `Not at the shop or home on file — the nearest pin (${place.nearest.kind}) is ${inDistance(place.nearest.distance)} away.`;
 }
 
-// Human in the loop: the PD is saved only once a BO or CO ticks that they reviewed it.
-const CONFIRM_ROLES = ['Branch Officer', 'Credit Officer'];
-function ConfirmPd({ onConfirm }) {
-  const [role, setRole] = useState(CONFIRM_ROLES[0]);
-  const [name, setName] = useState(OFFICER.name);
-  const [checked, setChecked] = useState(false);
-  const pick = (x) => { setRole(x); setName(x === OFFICER.designation ? OFFICER.name : ''); };
+// The org's retention policy on this PD: until when the report can back a credit decision, and the call video's deletion date.
+function Retention({ r }) {
+  const policy = readRetention();
+  const valid = expiry(r.createdAt, policy.pdValidityDays);
+  const video = readJson(`${VIDEO_PREFIX}${r.id}`);
+  const on = (d) => formatDate(d, { day: 'numeric', month: 'short', year: 'numeric' });
   return (
-    <>
-      <h2 className={styles.head}>Confirm and save</h2>
-      <div className={styles.review}>
-        <div className={styles.reviewChoices}>
-          {CONFIRM_ROLES.map((x) => <button type="button" key={x} className={role === x ? styles.choiceOn : styles.choice} onClick={() => pick(x)}>{x}</button>)}
-        </div>
-        <label className={styles.reviewField}>Name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" /></label>
-        <label className={styles.confirmCheck}>
-          <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
-          I have reviewed this PD — the red flags, what Sarthi checked and what is left to check.
-        </label>
-        <button className={styles.copy} disabled={!checked || !name.trim()} onClick={() => onConfirm({ name: name.trim(), role, at: new Date().toISOString() })}>Save PD</button>
-      </div>
-    </>
+    <ul className={styles.retention}>
+      <li className={valid.expired ? styles.fail : valid.daysLeft <= 7 ? styles.warnLine : ''}>
+        {valid.expired
+          ? `PD expired on ${on(valid.until)} — start a new PD before any credit decision.`
+          : `PD valid till ${on(valid.until)} (${valid.daysLeft} day${valid.daysLeft === 1 ? '' : 's'} left · ${policy.pdValidityDays}-day policy)`}
+      </li>
+      <li>
+        {video
+          ? `Call video kept till ${on(expiry(video.at, policy.videoRetentionDays).until)}, then deleted (${policy.videoRetentionDays}-day policy)`
+          : `No video recorded on this call · recordings are kept ${policy.videoRetentionDays} days`}
+      </li>
+    </ul>
   );
 }
 

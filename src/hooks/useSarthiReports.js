@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useLocalStorage } from './useLocalStorage';
-import { takeDrafts } from '../services/sarthi/repeat';
+import { readDrafts } from '../services/sarthi/repeat';
+import { purgeExpiredVideos } from '../services/retention';
 import pdHistory from '../data/sarthi/pdHistory.json';
 
 // Seeded PD history (Mahesh Agarwal, three PDs), dated back from today so the trail always looks recent.
@@ -15,15 +16,15 @@ const SEED = pdHistory.map(({ daysAgo, minutes, review, ...r }) => ({
 
 export function useSarthiReports() {
   const [reports, setReports] = useLocalStorage('bo_sarthi_reports', SEED);
-  // A dropped call's draft becomes an incomplete PD on the first PD screen that opens (repeat.js takeDrafts).
-  // The drafts are taken outside the updater: StrictMode runs updaters twice and the second would find none.
-  useEffect(() => {
-    const found = takeDrafts();
-    if (found.length) setReports((prev) => [...found.filter((d) => !prev.some((p) => p.id === d.id)), ...prev]);
-  }, [setReports]);
+  useEffect(() => { purgeExpiredVideos(); }, []); // the org's video retention runs whenever a PD screen opens
   return [reports, setReports];
 }
 
-// A generated report waits here until a BO or CO ticks "reviewed" on it; only then does it join the saved PDs above,
-// so history, outcomes and repeat PDs never see an unconfirmed one. Kept in storage so a closed app loses nothing.
-export const usePendingPds = () => useLocalStorage('bo_sarthi_pending', []);
+// A generated report (and a dropped call's draft) waits here until a BO or CO ticks "reviewed" on it; only then does it
+// join the saved PDs above, so history, outcomes and repeat PDs never see an unconfirmed one. Drafts are read in place
+// (repeat.js readDrafts) and removed on confirm, so a closed app loses nothing.
+export function usePendingPds() {
+  const [pending, setPending] = useLocalStorage('bo_sarthi_pending', []);
+  const drafts = readDrafts().filter((d) => !pending.some((p) => p.id === d.id));
+  return [[...pending, ...drafts], setPending];
+}

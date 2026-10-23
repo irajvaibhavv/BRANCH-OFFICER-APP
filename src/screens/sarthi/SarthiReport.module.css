@@ -292,8 +292,9 @@
   border: 1px solid var(--s-line); border-radius: 10px; padding: 10px 12px; width: 100%; box-sizing: border-box;
 }
 .reviewChoices { display: flex; flex-wrap: wrap; gap: 8px; }
-.confirmCheck { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; line-height: 1.5; color: var(--s-ink); cursor: pointer; }
-.confirmCheck input { width: 20px; height: 20px; margin: 1px 0 0; flex: none; accent-color: var(--s-accent); }
-.copy:disabled { opacity: 0.4; cursor: not-allowed; }
 .choice, .choiceOn { font: inherit; font-size: 13px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--s-line); background: transparent; color: var(--s-ink); }
 .choiceOn { background: var(--s-accent); border-color: var(--s-accent); color: #fff; }
+
+/* ---------------------------------------------------------------- retention */
+.retention { list-style: none; margin: -6px 0 14px; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--s-ink-3); text-align: center; }
+.warnLine { color: var(--s-watch); font-weight: 600; }

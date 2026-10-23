@@ -89,6 +89,7 @@ export function pdEvents(pd, all = []) {
       text: [flagged.length ? `${flagged.length} flagged` : 'No flags', changed ? `${changed} answer${changed > 1 ? 's' : ''} changed since an earlier PD` : null].filter(Boolean).join(' · '),
       flags: flagged.map((f) => f.detail),
     },
+    pd.confirmedBy && { at: pd.confirmedBy.at, tone: 'ok', title: `Reviewed and saved by ${pd.confirmedBy.name} (${pd.confirmedBy.role})`, text: 'Confirmed the report before it went on file' },
     pd.review
       ? {
         at: pd.review.at,
@@ -97,7 +98,7 @@ export function pdEvents(pd, all = []) {
         text: `${REVIEW_DECISIONS[pd.review.decision]}${pd.review.outcome ? ` — ${OUTCOMES[pd.review.ai]?.label} → ${OUTCOMES[pd.review.outcome].label}` : ''}: "${pd.review.note}"`,
       }
       : { at: null, tone: 'warn', title: 'Awaiting checker', text: 'A second person must review this PD before the file moves on' },
-  ];
+  ].filter(Boolean);
 }
 
 // Where they are and who is speaking change between calls, so they are never carried over or compared.
@@ -183,22 +184,21 @@ export function crossSteps(prior, caseData, flagged = [], rand = Math.random) {
 }
 
 // A call that never reached finish (app closed, phone died, network gone) leaves the draft the interview saves after every
-// answer. Any PD screen that opens turns it into an incomplete PD, so "Finish last PD" can carry on from it.
+// answer. It shows as an incomplete PD awaiting confirmation; once a BO / CO saves it, "Finish last PD" can carry on.
 export const DRAFT_PREFIX = 'bo_sarthi_draft_';
 
-export function takeDrafts() {
+export function readDrafts() {
   const out = [];
   try {
-    for (let i = window.localStorage.length - 1; i >= 0; i--) {
-      const key = window.localStorage.key(i);
-      if (!key?.startsWith(DRAFT_PREFIX)) continue;
-      const d = JSON.parse(window.localStorage.getItem(key));
-      window.localStorage.removeItem(key);
+    Object.keys(window.localStorage).filter((k) => k.startsWith(DRAFT_PREFIX)).forEach((k) => {
+      const d = JSON.parse(window.localStorage.getItem(k));
       if (d?.id) out.push(droppedPd(d));
-    }
+    });
   } catch { /* storage blocked — nothing to recover */ }
   return out;
 }
+
+export const removeDraft = (id) => { try { window.localStorage.removeItem(`${DRAFT_PREFIX}${id}`); } catch { /* blocked */ } };
 
 const droppedPd = (d) => ({
   ...d,

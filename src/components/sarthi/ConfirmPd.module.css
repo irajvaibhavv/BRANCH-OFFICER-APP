@@ -1,0 +1,24 @@
+/* Used on Sarthi pages (--s-* tokens) and app pages (--text-* tokens), so each colour falls back to the app's. */
+.box {
+  display: flex; flex-direction: column; gap: 12px; margin-top: 18px; padding: 14px;
+  border: 1px solid var(--s-line, var(--border)); border-radius: 14px;
+}
+.head { margin: 0; font-size: 16px; font-weight: 700; color: var(--s-ink, var(--text-1)); }
+.roles { display: flex; flex-wrap: wrap; gap: 8px; }
+.role, .roleOn {
+  font: inherit; font-size: 13px; padding: 8px 12px; border-radius: 999px;
+  border: 1px solid var(--s-line, var(--border)); background: transparent; color: var(--s-ink, var(--text-1));
+}
+.roleOn { background: var(--s-accent, var(--primary)); border-color: var(--s-accent, var(--primary)); color: #fff; }
+.field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600; color: var(--s-ink-3, var(--text-3)); }
+.field input {
+  font: inherit; font-size: 14px; font-weight: 400; color: var(--s-ink, var(--text-1)); background: transparent;
+  border: 1px solid var(--s-line, var(--border)); border-radius: 10px; padding: 10px 12px; width: 100%; box-sizing: border-box;
+}
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; line-height: 1.5; color: var(--s-ink, var(--text-1)); cursor: pointer; }
+.check input { width: 20px; height: 20px; margin: 1px 0 0; flex: none; accent-color: var(--s-accent, var(--primary)); }
+.save {
+  font: inherit; font-size: 15px; font-weight: 600; min-height: 48px; border: 0; border-radius: 12px;
+  background: var(--s-accent, var(--primary)); color: #fff;
+}
+.save:disabled { opacity: 0.4; cursor: not-allowed; }

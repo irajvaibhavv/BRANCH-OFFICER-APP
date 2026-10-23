@@ -13,6 +13,8 @@ import { getCase } from '../../services/sarthi/knowledge';
 import { loadHot, prepareHotQuestions, officerQa, summariseOfficerPd } from '../../services/sarthi/prep';
 import { dsaFile, dsaOfficerQuestions, writeDsaReport, fallbackDsaReport } from '../../services/sarthi/dsa';
 import { useAppState } from '../../context/AppStateContext';
+import ConfirmPd from '../../components/sarthi/ConfirmPd';
+import { readRetention, expiry } from '../../services/retention';
 import styles from './SarthiOfficer.module.css';
 
 // The officer takes the PD themselves, one of Sarthi's file questions per slide (the DSA prompter's layout),
@@ -53,7 +55,7 @@ export default function SarthiOfficer() {
       name={c.name} kind="PD" questions={questions} notes={notes} setNotes={setNotes}
       sectionOf={(q) => SECTION[q?.section] ?? SECTION.loan_purpose}
       waitText={`Sarthi is reading ${c.name.split(' ')[0]}'s file…`}
-      finishLabel="Save & finish PD"
+      finishLabel="Finish PD"
       // Finishing shows what was said and a summary, like a recorded meeting; a fresh finish re-summarises the notes.
       onFinish={() => { setSummary(null); navigate(`/sarthi/officer/${id}?done=1`, { replace: true }); }}
       onSwitch={() => navigate(`/sarthi/interview/${c.id}`, { replace: true })}
@@ -212,6 +214,9 @@ function OfficerResult({ c, qa }) {
   const [summary, setSummary] = useLocalStorage(`bo_sarthi_officer_sum_${c.id}`, null);
   const [view, setView] = useState('Summary');
   const covered = qa.filter((x) => x.done).length;
+  const saved = summary?.confirmedBy; // human in the loop: the officer's PD is on file only once confirmed
+  const valid = saved ? expiry(saved.at, readRetention().pdValidityDays) : null;
+  const on = (d) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
   useEffect(() => {
     if (summary) return undefined;
@@ -225,6 +230,16 @@ function OfficerResult({ c, qa }) {
     <Page mode="slide">
       <TopBar back title="PD summary" subtitle={`${c.name} · by you`} hideBell />
       <div className="stack">
+        {saved ? (
+          <Card padding={14} status={valid.expired ? 'danger' : 'success'}>
+            <div style={{ fontWeight: 600 }}>Reviewed and saved by {saved.name} ({saved.role})</div>
+            <div className="hint" style={{ marginTop: 4 }}>
+              {valid.expired ? `Expired on ${on(valid.until)} — take a new PD before any credit decision.` : `Valid till ${on(valid.until)} (${readRetention().pdValidityDays}-day policy)`}
+            </div>
+          </Card>
+        ) : (
+          <Card padding={14} status="warning"><div style={{ fontWeight: 600 }}>Not saved yet — review the summary, then confirm it below.</div></Card>
+        )}
         <Card padding={14} status={covered === qa.length ? 'success' : 'warning'}>
           <div style={{ fontWeight: 600 }}>Covered {covered} of {qa.length} questions</div>
           {covered < qa.length && <div className="hint" style={{ marginTop: 4 }}>{qa.length - covered} not asked — they are listed under follow-ups.</div>}
@@ -273,7 +288,8 @@ function OfficerResult({ c, qa }) {
           </Card>
         )}
 
-        <Button full icon={<FiCheck size={18} />} onClick={() => navigate('/dsas?tab=customers', { replace: true })}>Done</Button>
+        {summary && !saved && <ConfirmPd what="your notes, the concerns and what is left to follow up" onConfirm={(confirmedBy) => setSummary({ ...summary, confirmedBy })} />}
+        <Button full icon={<FiCheck size={18} />} disabled={!saved} onClick={() => navigate('/dsas?tab=customers', { replace: true })}>Done</Button>
         <div className="row" style={{ gap: 8 }}>
           <Button style={{ flex: 1 }} variant="secondary" icon={<FiEdit2 size={16} />} onClick={() => navigate(`/sarthi/officer/${c.id}`, { replace: true })}>Edit notes</Button>
           <Button style={{ flex: 1 }} variant="secondary" icon={<FiFileText size={16} />} onClick={() => navigate(`/sarthi/brief/${c.id}`)}>View file</Button>

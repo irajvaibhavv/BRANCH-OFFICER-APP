@@ -470,7 +470,9 @@ function buildInstruction(memory, section, caseData, config, pick = null) {
       const def = section.fields?.find((f) => f.key === field) ?? { key: field, ...FIELD_DEFS_BY_KEY[field] };
       instruction.missingFields = [field];
       instruction.directive = `Ask about: ${def.label}. Plain-words example: "${def.ask}"`
-        + ' Ask ONE thing at a time, in your own words, as simply as the example.';
+        + ' Ask ONE thing at a time, in your own words, as simply as the example.'
+      // "Dono bachchon ki fees" after "ek hi school jaata hai": the example is a template, their answers are the truth.
+      + ' Fit it to what they have already told you — never assume more people, things or money than they said.';
     } else if (!probe) {
       instruction.professionCheck = (memory.professionAnswers?.length ?? 0) + 1;
       instruction.directive = professionDirective(memory, caseData);
@@ -503,7 +505,9 @@ function buildInstruction(memory, section, caseData, config, pick = null) {
     instruction.directive = `Ask about: ${first.label}. Plain-words example: "${ask}"`
       // Naming the next field made the model skip ahead to it; one topic only.
       + ` This turn's question is about ${first.label} only — no other topic.`
-      + ' Ask ONE thing at a time, in your own words, as simply as the example.';
+      + ' Ask ONE thing at a time, in your own words, as simply as the example.'
+      // "Dono bachchon ki fees" after "ek hi school jaata hai": the example is a template, their answers are the truth.
+      + ' Fit it to what they have already told you — never assume more people, things or money than they said.';
     if (section.id === 'documents') {
       instruction.directive += ' These are verbal cross-checks only — never say or imply the document is being verified.';
     }

@@ -292,7 +292,7 @@ export function familyHisaab(c) {
 }
 
 // Counts added up from several people, and yes/no-ish numbers: a different figure there is not a changed story.
-const NO_DRIFT = new Set(['family_size', 'dependents', 'earning_members', 'children_count', 'elderly_count', 'aadhaar_number', 'pan_number']);
+const NO_DRIFT = new Set(['family_size', 'dependents', 'earning_members', 'children_count', 'elderly_count', 'children_in_school', 'aadhaar_number', 'pan_number']);
 
 /**
  * Their own earlier figure, said differently in a later answer ("pehle 2 lakh bikri, ab 3 lakh"). acceptedFacts keeps

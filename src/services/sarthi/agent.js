@@ -655,7 +655,7 @@ ${JSON.stringify(eligibility, null, 2)}`;
 // The only call with thinking on; thought tokens share maxTokens, hence the high ceiling.
 function familyBlock(c) {
   if (!c) return 'Not captured.';
-  const rows = [['Children', c.children_count], ['Class and school', c.children_school], ['School fees a month', c.school_fees && inWords(c.school_fees)],
+  const rows = [['Children', c.children_count], ['Going to school', c.children_in_school], ['Class and school', c.children_school], ['School fees a month', c.school_fees && inWords(c.school_fees)],
     ['Elderly', c.elderly_count], ["Elder's health", c.elderly_health], ['On treatment', c.elderly_on_treatment], ['Treated at', c.treatment_place],
     ['Medicine and doctor a month', c.medicine_monthly && inWords(c.medicine_monthly)]].filter(([, v]) => v != null && v !== '');
   const h = familyHisaab(c);

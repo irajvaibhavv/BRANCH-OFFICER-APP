@@ -234,7 +234,6 @@ export default function SarthiReport() {
               {!r.face.verdict && 'Not compared — the camera was off or the AI could not be reached.'}
               {r.face.reason ? ` ${r.face.reason}` : ''}
             </p>
-            <p className={styles.shotFoot}>An AI comparison of two pictures, not biometric verification.</p>
           </div>
         </>
       )}
@@ -258,7 +257,6 @@ export default function SarthiReport() {
               {!r.liveness.verdict && 'Not compared — no frame, or the AI could not be reached.'}
               {r.liveness.reason ? ` ${r.liveness.reason}` : ''}
             </p>
-            <p className={styles.shotFoot}>A random action they could not know in advance. An AI read of two frames, not a certified liveness test.</p>
           </div>
         </>
       )}
@@ -349,9 +347,6 @@ export default function SarthiReport() {
               </figure>
             ))}
           </div>
-          <p className={styles.shotFoot}>
-            An image is evidence for you to weigh, not a verdict. Sarthi describes what is visible and nothing more.
-          </p>
         </>
       )}
 
@@ -409,11 +404,6 @@ export default function SarthiReport() {
         <button className={styles.back} onClick={() => navigate('/sarthi')}>Back to the queue</button>
       </div>
 
-      {caseData && (
-        <p className={styles.foot}>
-          Sarthi advises. The lending decision on {caseData.name} is yours to make and yours to sign.
-        </p>
-      )}
     </Page>
   );
 }

@@ -1,8 +1,7 @@
 .brand { display: inline-flex; align-items: center; gap: 6px; color: var(--primary); }
 
 /* AI orb */
-.orb, .orbSm, .orbLg { display: inline-flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; background: var(--primary-grad); box-shadow: 0 6px 18px rgba(76, 29, 149, 0.28); }
-.orb { width: 44px; height: 44px; border-radius: 14px; }
+.orbSm, .orbLg { display: inline-flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; background: var(--primary-grad); box-shadow: 0 6px 18px rgba(76, 29, 149, 0.28); }
 .orbSm { width: 30px; height: 30px; border-radius: 10px; }
 .orbLg { width: 84px; height: 84px; border-radius: 28px; }
 .pulse { animation: pulse 1.4s ease-in-out infinite; }

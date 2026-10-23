@@ -185,7 +185,6 @@ export default function ActivityRun() {
             {isToday ? 'Start activity' : `Can start on ${a.date.slice(8)}/${a.date.slice(5, 7)}`}
           </Button>
         )}
-        {!a.startedAt && !untracked && <div className="hint" style={{ marginTop: 8, textAlign: 'center' }}>Start it on site — that unlocks photos and leads, with time and location stamped.</div>}
         {untracked && <div className="hint" style={{ marginTop: 10 }}>This ran before it was tracked in the app — no check-ins, photos or leads.</div>}
         {running && <Button full variant="secondary" style={{ marginTop: 14 }} icon={<FiSquare size={16} />} loading={busy === 'end'} onClick={() => checkIn('end')}>End activity</Button>}
       </Card>

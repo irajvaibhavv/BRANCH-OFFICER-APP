@@ -20,7 +20,7 @@ function Row({ kind, title, amount, note }) {
       <Icon size={18} color={color} style={{ flexShrink: 0, marginTop: 2 }} />
       <div className="grow" style={{ minWidth: 0 }}>
         <div style={{ fontWeight: 600, fontSize: 14 }}>{title}</div>
-        <div className="hint">{note}</div>
+        {note && <div className="hint">{note}</div>}
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
         {amount != null && <div style={{ fontWeight: 700, fontSize: 14 }}>{formatINR(amount)}</div>}
@@ -42,8 +42,8 @@ export default function CustomerPayout({ amount, product = 'Business Loan', stag
   const loan = stage === 'rejected' ? ['none', 'File rejected — nothing to release']
     : disbursed ? ['paid', paidOn ? `Funds transferred ${formatDate(paidOn)}` : 'Funds transferred']
     : withOps ? ['due', `With operations · ${stageLabel(stage)}`]
-    : ['later', stage ? `Released after Fund Transfer · now at ${stageLabel(stage)}` : 'No application yet'];
-  const fee = !dsa ? ['none', 'Direct customer — no DSA payout']
+    : ['later', null];
+  const fee = !dsa ? null
     : disbursed && feePaidOn ? ['paid', `${rate}% to ${dsa.name} · paid ${formatDate(feePaidOn)}${feeUtr ? ` · UTR ${feeUtr}` : ''}`]
     : disbursed ? ['due', `${rate}% to ${dsa.name} · paid ${PAYOUT_CYCLE_DAYS} days after disbursal`]
     : ['later', `${rate}% to ${dsa.name} · earned on disbursal`];
@@ -53,7 +53,7 @@ export default function CustomerPayout({ amount, product = 'Business Loan', stag
       <div className="label" style={{ marginBottom: 12 }}>Payouts</div>
       <div className="stack" style={{ gap: 12 }}>
         <Row kind={loan[0]} title="Loan to customer" amount={stage === 'rejected' || !amount ? null : amount} note={loan[1]} />
-        <Row kind={fee[0]} title="DSA commission" amount={dsa && amount ? Math.round((amount * rate) / 100) : null} note={fee[1]} />
+        {fee && <Row kind={fee[0]} title="DSA commission" amount={amount ? Math.round((amount * rate) / 100) : null} note={fee[1]} />}
       </div>
     </Card>
   );

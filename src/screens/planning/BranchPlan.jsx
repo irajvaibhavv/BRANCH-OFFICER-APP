@@ -59,7 +59,7 @@ export default function BranchPlan() {
       <Card padding={14} noChevron className="tint-primary" style={{ marginBottom: 12 }}>
         <div className="row" style={{ gap: 12 }}>
           <span className="icon-tile" style={{ '--tile': '#d97706', width: 40, height: 40, borderRadius: 12 }}><FiHome size={18} /></span>
-          <div className="grow"><div style={{ fontWeight: 600 }}>No field visits today</div><div className="hint">These are the things that move files forward from your desk.</div></div>
+          <div className="grow"><div style={{ fontWeight: 600 }}>No field visits today</div></div>
         </div>
       </Card>
 

@@ -108,7 +108,6 @@ export default function Dashboard() {
                 <span className="icon-tile" style={{ '--tile': '#f59e0b', width: 44, height: 44, borderRadius: 14, flexShrink: 0 }}><FiZap size={20} /></span>
                 <div className="grow" style={{ minWidth: 0 }}>
                   <div className={styles.nextName}>Plan your day</div>
-                  <div className="hint">Visit DSAs & Connectors · Meet customers · Work from branch</div>
                 </div>
                 <FiChevronRight size={20} color="var(--primary)" />
               </div>

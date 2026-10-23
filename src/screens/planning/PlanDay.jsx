@@ -217,7 +217,7 @@ export default function PlanDay() {
             {!custOnly && otherCons.length > 0 && (
               <>
                 <div className={styles.secHead} style={{ marginTop: matches.length || (!only && otherDsas.length) ? 18 : 4 }}>
-                  <div><div className={styles.secTitle}>{criteria.length ? 'Other connectors' : 'Connectors'}</div><div className="hint">Shopkeepers, CAs and agents who refer customers</div></div>
+                  <div><div className={styles.secTitle}>{criteria.length ? 'Other connectors' : 'Connectors'}</div></div>
                 </div>
                 <Card padding={0} noChevron>{otherCons.map(partnerRow)}</Card>
               </>
@@ -225,7 +225,7 @@ export default function PlanDay() {
             {!only && mkPool.length > 0 && (
               <>
                 <div className={styles.secHead} style={{ marginTop: 18 }}>
-                  <div><div className={styles.secTitle}>Marketing activities today</div><div className="hint">Fixed-time stops — add the ones you will attend</div></div>
+                  <div><div className={styles.secTitle}>Marketing activities today</div></div>
                 </div>
                 <Card padding={0} noChevron>
                   {mkPool.map(({ m, mine }) => {

@@ -38,15 +38,6 @@ export default function AIHome() {
     <Page mode="slide">
       <TopBar back title={<span className={styles.brand}><IoSparkles size={18} /> SAARTHI AI</span>} subtitle="Hand the phone over — AI interviews, you get the report" hideBell />
 
-      <Card className={styles.heroCard} noChevron padding={16}>
-        <div className="row" style={{ gap: 12, alignItems: 'flex-start' }}>
-          <span className={styles.orb}><IoSparkles size={20} /></span>
-          <div className="grow">
-            <div style={{ fontWeight: 700, fontSize: 16 }}>Not sure what to ask?</div>
-            <div className="hint" style={{ marginTop: 2 }}>SAARTHI AI asks the right questions for a loan or a DSA review, follows up on what it hears, and writes you a report with flags and next steps.</div>
-          </div>
-        </div>
-      </Card>
 
       <div className={styles.seg} style={{ margin: '14px 0 10px' }}>
         <button className={`${styles.segBtn} ${kind === 'customer' ? styles.segOn : ''}`} onClick={() => setKind('customer')}><FiUser size={14} /> Customer</button>

@@ -60,7 +60,6 @@ export default function HelpFAQ() {
           <Button variant="secondary" full size="sm" icon={<FiPhone />} onClick={() => toast('Calling HR helpdesk')}>HR</Button>
         </div>
         <Button variant="danger" full icon={<FiAlertOctagon />} onClick={() => toast('Connecting to emergency support…', 'error', 4000)}>SOS · Emergency support</Button>
-        <p className="hint" style={{ textAlign: 'center' }}>In case of emergency, tap SOS to call support immediately</p>
       </div>
     </Page>
   );

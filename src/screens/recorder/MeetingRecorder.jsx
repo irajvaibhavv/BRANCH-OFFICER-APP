@@ -153,7 +153,6 @@ export default function MeetingRecorder() {
                 <button className={styles.stopBtn} onClick={stop} aria-label="Stop and summarise"><FiSquare size={26} /></button>
                 <div style={{ width: 56 }} />
               </div>
-              <span className="hint" style={{ marginTop: 6 }}>Tap ■ when the meeting is over</span>
             </div>
 
             <Card>
@@ -170,7 +169,7 @@ export default function MeetingRecorder() {
                   <h3>Live transcript</h3>
                   <span className="hint">{isOnline ? 'On-device' : 'Offline'} · {revealed}/{gen.lines.length}</span>
                 </div>
-                {revealed === 0 && <span className="hint">Listening… captions appear as people speak.</span>}
+                {revealed === 0 && <span className="hint">Listening…</span>}
                 {gen.lines.slice(0, revealed).map((l, i) => (
                   <TranscriptLine key={i} line={{ ...l, t: CAPTION_START + i * CAPTION_EVERY }} dsa={dsa} animate />
                 ))}
@@ -327,7 +326,6 @@ function RecordingResult({ rec, dsa, fresh = false, readOnly = false }) {
               <FiCheck size={20} color="var(--success)" />
               <div className="grow">
                 <div style={{ fontWeight: 600 }}>Recording saved · {fmtClock(rec.durationSecs)}</div>
-                <div className="hint">Transcript and summary are ready. Attach them to your visit log below.</div>
               </div>
             </div>
           </Card>
@@ -384,7 +382,6 @@ function RecordingResult({ rec, dsa, fresh = false, readOnly = false }) {
                 <FiCalendar size={20} color="var(--primary)" />
                 <div className="grow">
                   <div style={{ fontWeight: 600 }}>Next meeting · {formatDate(s.nextMeeting, { weekday: 'short', day: 'numeric', month: 'short' })}</div>
-                  <div className="hint">Tap to add it to your schedule</div>
                 </div>
               </div>
             </Card>

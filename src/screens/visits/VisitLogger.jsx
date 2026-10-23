@@ -152,7 +152,6 @@ export default function VisitLogger() {
             <div className={styles.photoEmpty}>
               <FiCamera size={28} />
               <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>Add a photo</span>
-              <span className="hint">Shop front, meeting, or signage</span>
             </div>
           )}
           <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={onFile} />
@@ -169,7 +168,6 @@ export default function VisitLogger() {
               <FiMic size={18} color="var(--success)" />
               <div className="grow">
                 <div style={{ fontWeight: 600 }}>Meeting recording attached · {fmtClock(recording.durationSecs)}</div>
-                <div className="hint">Transcript + AI summary · notes pre-filled below</div>
               </div>
             </div>
           </Card>

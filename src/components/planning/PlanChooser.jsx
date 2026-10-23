@@ -13,7 +13,6 @@ export default function PlanChooser({ open, onClose }) {
   const navigate = useNavigate();
   return (
     <BottomSheet open={open} onClose={onClose} title="Plan your day">
-      <p className="hint" style={{ marginBottom: 14 }}>Where are you heading today?</p>
       <div className={styles.modes}>
         {PLAN_MODES.map((m) => (
           <button key={m.id} className={styles.mode} onClick={() => { onClose(); navigate(m.to); }}>

@@ -49,7 +49,6 @@ export default function RoutePlanner() {
         <span className="icon-tile" style={{ '--tile': '#4c1d95', width: 40, height: 40, borderRadius: 12 }}><FiEdit2 size={18} /></span>
         <div className="grow">
           <div style={{ fontWeight: 600 }}>Edit today&rsquo;s plan</div>
-          <div className="hint">Rebuild with filters, or use + Add stop for a quick one</div>
         </div>
       </div>
     </Card>
@@ -59,7 +58,6 @@ export default function RoutePlanner() {
         <span className="icon-tile" style={{ '--tile': '#f59e0b', width: 40, height: 40, borderRadius: 12 }}><FiZap size={18} /></span>
         <div className="grow">
           <div style={{ fontWeight: 600 }}>Plan my day</div>
-          <div className="hint">DSAs · customers · branch — with route</div>
         </div>
       </div>
     </Card>
@@ -72,7 +70,6 @@ export default function RoutePlanner() {
         <div className={styles.center}>
           {planCard}
           <Button full variant="secondary" icon={<FiPlus size={16} />} onClick={() => setAdding(true)} style={{ marginBottom: 12 }}>Just add a stop</Button>
-          <p className="hint" style={{ textAlign: 'center' }}>Plan the whole day, or add stops one at a time as the day goes.</p>
         </div>
         <PlanChooser open={chooser} onClose={() => setChooser(false)} />
         <AddStopSheet open={adding} onClose={() => setAdding(false)} />

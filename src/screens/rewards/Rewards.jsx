@@ -166,7 +166,7 @@ export function RewardsTarget() {
         <button className={styles.icon} onClick={() => navigate('/notifications')} aria-label="Notifications"><FiBell size={20} /></button>
       </div>
       <h1 className={styles.title}>Set a personal goal</h1>
-      <p className={styles.sub}>Optional. Incentive is paid on your total disbursement — type an amount to see what it takes. Without a goal you aim at the next slab.</p>
+      <p className={styles.sub}>Optional — type an amount to see what it takes.</p>
 
       <label className={styles.amountBox}>
         <span>₹</span>

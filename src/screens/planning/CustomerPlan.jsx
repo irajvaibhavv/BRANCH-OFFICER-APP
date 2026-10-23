@@ -183,7 +183,6 @@ export function CustomerDetail() {
 
       {view === 'questions' && (
         <Card padding={16} noChevron>
-          <p className="hint" style={{ marginBottom: 4 }}>What a lender asks before quoting. Answers feed the calculator's eligibility.</p>
           {BASIC_QUESTIONS.map((q, i) => (
             <div key={q.id} className={styles.qRow}>
               <div className={styles.qText}>{i + 1}. {q.q}</div>

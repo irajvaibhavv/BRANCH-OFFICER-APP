@@ -104,7 +104,6 @@ function Photos({ p, kind, seen, onSeen, claimed }) {
             <button type="button" className={seen === 'never' ? styles.chipOn : styles.chip} onClick={() => onSeen(seen === 'never' ? null : 'never')}>Not in any</button>
           </div>
           {check && <p className={`${styles.verdict} ${styles[check.tone]}`}>{check.text}</p>}
-          {kind === 'shop' && <p className={styles.note}>From above you see the building, not the board — a building that was there does not prove this shop was.</p>}
         </>
       )}
       <p className={styles.credit}>Imagery © Esri, Maxar, Earthstar Geographics{street.length ? ' · © Mapillary' : ''}{hasGoogle ? ' · © Google' : ''}</p>

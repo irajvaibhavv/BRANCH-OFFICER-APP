@@ -332,11 +332,20 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
 - **Customer photo + face check** (`face.js`, 2026-10-22): the BO takes the customer's photo with the live camera
   (`CustomerPhotoField`: consent tick first, then `PhotoCapture` with `quiet` so Sarthi's voice stays silent) on the walk-in
   form, the Marketing "Customer" lead, or the brief's KYC tab (any customer, seeded ones too). Stored under
-  `bo_sarthi_face_<case>`, shown as the avatar. On the call, `checkFace` grabs a still (`grabFrame`) after the name
-  (turn 2, again at turn 8 if unsure) and `compareFace` asks the vision model SAME / DIFFERENT / UNSURE with both side by
-  side (`visionCompare` in crossPd.js, shared with the same-place check) — in the background, never holding a turn.
-  DIFFERENT is a high `face_check` flag, UNSURE low, camera off low; Sarthi never says anything about it on the call. The
-  report shows both pictures and always calls it "an AI comparison, not biometric verification".
+  `bo_sarthi_face_<case>`, shown as the avatar. On the call, `watchFace` grabs a still (`grabFrame`) while the greeting
+  plays, then every `FACE_EVERY_MS` (90s) or at a new section (≥30s apart), capped at `FACE_MAX` (8) per PD
+  (`VITE_SARTHI_FACE_MS` / `_MAX`); `compareFace` asks the vision model SAME / DIFFERENT / UNSURE plus `PEOPLE: n` with
+  both side by side (`visionCompare` in crossPd.js) — always in the background, never awaited in a turn (latency).
+  **Spoken on the call since 2026-10-26** (`faceTurn`, acted on at the next turn boundary, never mid-line): UNSURE (light,
+  framing, no face) → "chehra beech mein laaiye, roshni ki taraf" and an immediate recheck, at most twice, then carry on.
+  DIFFERENT once → rechecked at once; twice in a row → "kya aap khud X ji hain, ya aap kaun hain?" (presence `'face'`).
+  They say yes → the PD carries on with a high `face_claimed` flag (the BO must see them in person): **the model's
+  verdict only starts the question, it never ends a call** — a wrong AI match must not turn away a real applicant. They
+  say no → the name flow's own steps ("bula sakte hain?" → handover, whose first answer is face-checked again, or
+  `later`). Mid-call (applicant had been confirmed) `leaveForLater` keeps the draft, so "Finish last PD" resumes it.
+  Someone else in frame is never said aloud: a medium `face_others` flag (prompting). Every check is in the call log;
+  the report shows the mismatch frame if any (`faceSummary`) and always calls it "an AI comparison, not biometric
+  verification". Scripted mode (no proxy) has no vision, so no face checks.
 - **Gaps from the PD review meeting** (2026-10-22), all decided in code, the model only reads pictures:
   (1) **Dropped calls**: the PD id is fixed at mount; after every answer the interview saves a draft
   (`bo_sarthi_draft_<pd>`, plus its transcript and photos under the PD id). `useSarthiReports` turns any leftover draft into

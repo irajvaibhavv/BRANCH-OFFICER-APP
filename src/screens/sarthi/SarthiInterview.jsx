@@ -24,7 +24,7 @@ import { validateReport, extractRecommendation } from '../../services/sarthi/val
 import { validateAadhaar, validatePan, detectForeignId, detectForeignResidence, pickIdentity, identitySummary, nameVerdict, confirmReply, nameFromWords, relationOf, applicantComing, presenceLines, speakerIsSomeoneElse } from '../../services/sarthi/idChecks';
 import PhotoCapture from '../../components/sarthi/PhotoCapture';
 import { startFrameCapture, stopCamera, pauseCamera, resumeCamera, getObservations, resetObservations, grabFrame } from '../../services/sarthi/video';
-import { loadFace, compareFace, faceFlag, callFrameKey, LIVENESS, checkLiveness, livenessFlag } from '../../services/sarthi/face';
+import { loadFace, compareFace, faceFlags, faceSummary, faceLines, FACE_EVERY_MS, FACE_MAX, callFrameKey, LIVENESS, checkLiveness, livenessFlag } from '../../services/sarthi/face';
 import { downscale, analysePhoto, stockCheck, PHOTO_ASKS } from '../../services/sarthi/photo';
 import { checkUpload, liveProvenance } from '../../services/sarthi/photoCheck';
 import { getFix, checkPlace, inDistance, callPlace } from '../../services/sarthi/geo';
@@ -126,8 +126,9 @@ export default function SarthiInterview() {
   const assistedStart = useRef(false); // declared on CallSetup: the one who runs the business is here too
   const lastChallengePhoto = useRef(null); // the photo kind a challenge's follow-up asks about
   const endReason = useRef(null); // why a call ended before the schema did — shown in the PD audit trail
-  const faceCheck = useRef(null); // { verdict, reason, frame, at } — the call's face against the customer photo on file
-  const faceTries = useRef(0);
+  // The call's face against the customer photo on file, all through the call. checks: [{ verdict, reason, people, frame, at }];
+  // act: the latest check still to be acted on at the next turn; again: check on the next answer, not after the interval.
+  const faceWatch = useRef({ checks: [], inFlight: false, lastAt: 0, lastSection: null, act: null, again: false, reframes: 0, prev: null, retried: false });
   // Every PD has its id from the start: the draft saved after each answer and the final report share it.
   const [pdId] = useState(() => `sarthi_report_${Date.now()}`);
   const draftKey = `${DRAFT_PREFIX}${pdId}`;
@@ -337,23 +338,90 @@ export default function SarthiInterview() {
     say(line.text, { speech: line.speech, ...opts });
   };
 
-  // The customer photo the BO took, against a still from this call — in the background, never holding up a turn. First
-  // after the name (turn 2); once more at turn 8 if the first read was unsure or the vision service was down.
-  const checkFace = () => {
+  // The customer photo the BO took, against a still from this call: at the start, then every FACE_EVERY_MS or at a new
+  // section (30s apart at least). In the background — the result is acted on at the next turn (faceTurn), never mid-line.
+  const watchFace = () => {
+    const w = faceWatch.current;
+    if (isIntake || doneRef.current || !cameraRef.current || w.inFlight || w.checks.length >= FACE_MAX) return;
     const file = loadFace(caseData.id);
-    if (!file?.dataUrl || !cameraRef.current || faceTries.current >= 2) return;
-    if (faceCheck.current && faceCheck.current.verdict !== 'unsure') return;
-    if (memory.current.turnCount < (faceTries.current === 0 ? 2 : 8)) return;
+    if (!file?.dataUrl) return;
+    const since = Date.now() - w.lastAt;
+    const section = memory.current.currentSection;
+    if (w.checks.length && !w.again && since < FACE_EVERY_MS && (section === w.lastSection || since < 30000)) return;
     const frame = grabFrame();
-    if (!frame) return;
-    faceTries.current += 1;
-    compareFace(file.dataUrl, frame).then((r) => { if (r) faceCheck.current = { ...r, frame, at: new Date().toISOString() }; });
+    if (!frame) return; // camera paused for a photo: the next answer tries again
+    Object.assign(w, { inFlight: true, again: false, lastAt: Date.now(), lastSection: section });
+    compareFace(file.dataUrl, frame).then((r) => {
+      w.inFlight = false;
+      if (!r || doneRef.current) return;
+      const check = { ...r, frame, at: new Date().toISOString() };
+      w.checks.push(check);
+      w.act = r.verdict === 'same' ? null : check;
+      logEvent(`Face check: ${r.verdict.toUpperCase()}${r.people > 1 ? ` · ${r.people} people in frame` : ''}`, r.verdict === 'same' ? 'ok' : 'warn');
+    });
   };
 
-  // The applicant is not on the call: no PD, no report — back to the case list until they can talk.
+  // A check that did not match takes this turn. One DIFFERENT frame is checked again first; two in a row, Sarthi asks who
+  // they are. The model's verdict only starts the question — only their answer can end the call.
+  const faceTurn = (turn) => {
+    const w = faceWatch.current;
+    const c = w.act;
+    if (!c || (presence.current && presence.current !== 'done')) return false;
+    w.act = null;
+    if (c.verdict === 'different') {
+      if (w.checks.at(-2)?.verdict !== 'different') { w.again = true; watchFace(); return false; }
+      w.prev = presence.current;
+      w.retried = false;
+      presence.current = 'face';
+      logEvent('Face check: did not match twice — asked who is on the call', 'warn');
+      sayFixed(faceLines(caseData)[w.checks.some((x) => x.verdict === 'same') ? 'changed' : 'who'], { topic: `face:${turn}` });
+      return true;
+    }
+    if (w.reframes >= 2) return false; // still unclear after two asks: carry on, the report says so
+    w.reframes += 1;
+    lastAction.current = { action: 'ask_question', face: true }; // no section: an "ok" to this is never read as the name answer
+    sayFixed(faceLines(caseData).reframe, {
+      topic: `reframe:${w.reframes}`,
+      then: () => { setTimeout(() => { w.again = true; watchFace(); }, 2500); beginListening(); },
+    });
+    return true;
+  };
+
+  /** Their reply to "kya aap khud X ji hain?". true = the turn is handled; false = they are the applicant, carry on. */
+  const handleFaceReply = (text, turn) => {
+    const w = faceWatch.current;
+    const lines = presenceLines(caseData);
+    const reply = confirmReply(text, caseData.name);
+    if (reply === null && !w.retried) { w.retried = true; sayFixed(lines.confirmAgain); return true; }
+    if (reply === 'yes') {
+      presence.current = w.prev;
+      memory.current = addFlags(memory.current, [{
+        type: 'face_check', field: 'face_claimed', severity: 'high', turn,
+        detail: `The face on the call did not match the customer photo on file, but the person said they are ${caseData.name} ("${text}") — the officer must see the applicant in person before this file moves`,
+      }]);
+      return false;
+    }
+    memory.current = addFlags(memory.current, [{
+      type: 'identity_mismatch', field: 'stated_name', severity: 'high', known: caseData.name, turn,
+      detail: `The face on the call did not match the customer photo on file, and the person said they are not ${caseData.name}: "${text}"`,
+    }]);
+    // Who they are, then ask for the applicant — the name flow's own steps from here.
+    memory.current = updateMemory(memory.current, { speaker_relation: relationOf(text) });
+    if (speakerIsSomeoneElse(text, caseData.name)?.away) {
+      presence.current = 'done';
+      sayFixed(lines.later, { then: leaveForLater });
+    } else {
+      presence.current = 'call';
+      sayFixed(lines.call);
+    }
+    return true;
+  };
+
+  // The applicant is not on the call: no PD, no report — back to the case list until they can talk. Mid-call (the
+  // applicant had answered, then someone else took the phone), the draft is kept so "Finish last PD" picks it up.
   const leaveForLater = () => {
     doneRef.current = true;
-    try { window.localStorage.removeItem(draftKey); } catch { /* nothing saved */ }
+    if (faceWatch.current.prev !== 'done') try { window.localStorage.removeItem(draftKey); } catch { /* nothing saved */ }
     teardown();
     navigate('/sarthi', { replace: true });
   };
@@ -406,6 +474,7 @@ export default function SarthiInterview() {
     if (applicantComing(text)) {
       // The applicant takes the phone and is asked their own name; that answer runs through the normal loop.
       presence.current = 'handover';
+      faceWatch.current.again = true; // the face of whoever takes the phone is checked on their first answer
       memory.current = { ...memory.current, collected: { ...memory.current.collected, stated_name: null, applicant_name: null } };
       sayFixed(lines.handover);
       return;
@@ -542,7 +611,7 @@ export default function SarthiInterview() {
     }
 
     memory.current = recordTurn(memory.current, 'user', text);
-    checkFace();
+    watchFace();
     // What the reply MEANS is read by the model (any wording); the code decides what to do. Fact extraction starts at the
     // same moment: awaited one after the other they added up to ~5s before the question call even began. On a turn that
     // turns out to be a stop or a handover the extraction is simply not used.
@@ -563,7 +632,7 @@ export default function SarthiInterview() {
       return;
     }
     // Someone else on the phone, however they put it: the code's presence flow takes over.
-    if (intent === 'someone_else' && !isIntake && !caseData.isNew && presence.current !== 'done' && presence.current !== 'relation' && presence.current !== 'call') {
+    if (intent === 'someone_else' && !isIntake && !caseData.isNew && !['done', 'relation', 'call', 'face'].includes(presence.current)) {
       if (!stopForRelative(text, borrowerTurn)) startPresence(nameFromWords(text) ?? text, borrowerTurn);
       return;
     }
@@ -571,7 +640,7 @@ export default function SarthiInterview() {
     // softer once; the second time the field is left for the officer and noted.
     const field = lastAction.current?.missingFields?.[0] ?? lastAction.current?.section ?? 'turn';
     // Only on turns the model speaks: the fixed identity lines ("aap X ji hi hain?") are answered by the presence flow.
-    const fixedStep = ['confirm', 'relation', 'call', 'handover'].includes(presence.current);
+    const fixedStep = ['confirm', 'relation', 'call', 'handover', 'face'].includes(presence.current);
     if (!fixedStep && (intent === 'question' || intent === 'upset')) {
       const k = `${intent}:${field}`;
       replies.current[k] = (replies.current[k] ?? 0) + 1;
@@ -592,6 +661,7 @@ export default function SarthiInterview() {
     // A yes carries on as the answer to the name question (stated_name is now the file's name, so the controller moves on).
     if (presence.current === 'confirm' && handleConfirm(text, borrowerTurn)) return;
     if (presence.current === 'relation' || presence.current === 'call') { handlePresence(text); return; }
+    if (presence.current === 'face' && handleFaceReply(text, borrowerTurn)) return;
     if (stopForRelative(text, borrowerTurn)) return;
 
     try {
@@ -695,7 +765,8 @@ export default function SarthiInterview() {
       const subject = caseRef.current ?? caseData;
       // The hisaab is done now, on this answer, so a figure that does not add up is asked about in the very next turn.
       memory.current = queueRechecks(memory.current, subject, facts, { drift, flags: runChecks(before, facts, subject, answered) });
-      // The liveness action takes this turn; whatever is queued is asked on the next.
+      // A face that did not match, then the liveness action, take this turn; whatever is queued is asked on the next.
+      if (faceTurn(borrowerTurn)) { setCovered(completeness(memory.current)); return; }
       if (livenessDue()) { setCovered(completeness(memory.current)); askLiveness(); return; }
 
       const action = getNextAction(memory.current, subject);
@@ -988,8 +1059,8 @@ export default function SarthiInterview() {
     });
     const linkFlags = crossPdFlags(links);
     const hasFace = !!loadFace(subject.id)?.dataUrl;
-    const faceResult = faceCheck.current;
-    const faceFlags = hasFace ? [faceFlag(faceResult, cameraRef.current)].filter(Boolean) : [];
+    const faceResult = faceSummary(faceWatch.current.checks);
+    const faceChecks = hasFace ? faceFlags(faceWatch.current.checks, cameraRef.current) : [];
     // Living conditions: the facts from the home photos, and the model's few sentences on them (no scores).
     const homeFacts = livingFacts(photos.current, subject, memory.current.collected);
     if (homeFacts) setProgress('Reading the home photos…');
@@ -1025,7 +1096,7 @@ export default function SarthiInterview() {
     const settled = new Set(claimFlags.map((f) => f.claimType).filter(Boolean));
     const math = checkTradeMath(memory.current);
     const depth = understanding(memory.current);
-    const flags = [...claimFlags, ...memory.current.flags, ...consistency, ...math.flags, ...photoFlags, ...placeFlags, ...linkFlags, ...faceFlags, ...nameFlags(nameChecks, subject), ...stockFlags, ...callFlags, ...liveFlags, ...assistedFlags(memory.current.collected, depth, subject.name)]
+    const flags = [...claimFlags, ...memory.current.flags, ...consistency, ...math.flags, ...photoFlags, ...placeFlags, ...linkFlags, ...faceChecks, ...nameFlags(nameChecks, subject), ...stockFlags, ...callFlags, ...liveFlags, ...assistedFlags(memory.current.collected, depth, subject.name)]
       .filter((f) => !(f.type === 'contradiction' && settled.has(CLAIM_FIELD[f.field])))
       .filter((f, i, all) => all.findIndex((o) => o.detail === f.detail) === i);
 
@@ -1162,6 +1233,7 @@ export default function SarthiInterview() {
       history.current.push({ role: 'assistant', content: `\`\`\`speech\n${first.speech}\n\`\`\`\n${first.text}` });
       transcript.current.push({ role: 'assistant', content: first.text, at: Date.now() });
       say(first.text, { speech: first.speech, topic: topicKey(opening) });
+      setTimeout(watchFace, 1500); // the first face check runs while the greeting plays; its result is acted on after their reply
     }, 0);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -24,6 +24,8 @@
     "check:age": "node scripts/check-age.mjs"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "1.1.0",
+    "@vladmandic/face-api": "1.7.15",
     "canvas-confetti": "^1.9.4",
     "framer-motion": "^13.4.0",
     "leaflet": "^1.9.4",

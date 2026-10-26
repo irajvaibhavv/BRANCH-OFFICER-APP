@@ -509,7 +509,7 @@ confirm, gaps between living conditions and income, documents to collect, places
   salary, bonus and increment (Fact: key) go under WHAT SARTHI CHECKED; the PROFESSION CHECKS become one line — "Job
   knowledge: X of Y fit the role" — said to be your judgement of that job, not a verification. Two or more vague or
   not-fitting is a RED FLAG: they may not do the job they claim. Salary slips, Form 16 and the salary credits are a BO / CO check.
-- FACE CHECK: one line, always as "an AI comparison, not biometric verification". SAME → WHAT SARTHI CHECKED. DIFFERENT
+- FACE CHECK: one line, always as "on-device face recognition, not certified biometric verification". SAME → WHAT SARTHI CHECKED. DIFFERENT
   is a high RED FLAG — the officer should confirm in person who took the call (Flag: face). UNSURE or not compared → a
   BO / CO check to look at both pictures; never treat it as a mismatch.
 - LIVENESS: "a random action on camera" — never which action.
@@ -611,7 +611,7 @@ ${professionAnswers?.length ? JSON.stringify(professionAnswers, null, 2) : 'None
 ## FAMILY (their own answers; the hisaab is computed in code)
 ${familyBlock(collected)}
 
-## FACE CHECK (customer photo taken by the officer, against a frame from this call — an AI comparison, not biometrics)
+## FACE CHECK (customer photo taken by the officer, against a frame from this call — on-device face recognition, not certified biometrics)
 ${face ? (face.verdict ? `${face.verdict.toUpperCase()}${face.reason ? ` — ${face.reason}` : ''}` : 'Not compared (camera off or the vision service did not answer).') : 'No customer photo on file.'}
 
 ## LIVING CONDITIONS (facts from the home photos and the file, with the analysis already written from them)

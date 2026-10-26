@@ -33,6 +33,7 @@ import { checkAgainstEarlierPds, crossPdFlags, fileNameCheck, nameFlags, nameRec
 import { livingFacts, factLines, analyseLiving } from '../../services/sarthi/living';
 import { stopSpeaking, listen, canListen, canSpeak, setSilent, ANSWER_PAUSE_MS } from '../../services/voice';
 import { speakStreamed } from '../../services/sarthi/stream';
+import { loadFaceDetector, faceInFrame, AWAY_LINES } from '../../services/sarthi/away';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { sarthiVoice, prerendered, gendered, aboutSarthi } from '../../services/sarthi/voice';
 import voiceManifest from '../../data/sarthi/voiceManifest.json';
@@ -56,6 +57,10 @@ const save = (key, value) => {
 };
 
 const CAPTION_FALLBACK_MS = 3000;
+// Knobs for "aap kahan chale gaye": no face this long with the mic open, asked again this often, this many times.
+const AWAY_AFTER_MS = 4000;
+const AWAY_REASK_MS = 20000;
+const AWAY_MAX_ASKS = 3;
 const PLAIN_COUNTS = new Set(['age', 'family_size', 'dependents', 'children_count', 'elderly_count', 'children_in_school', 'earning_members', 'employees', 'customers_per_day']);
 // What a "finish last PD" needs to skip what this one already asked (repeat.js seedResume).
 const pdState = (m) => ({
@@ -175,6 +180,10 @@ export default function SarthiInterview() {
   const cameraRef = useRef(false);
   const liveRef = useRef(false); // proxy reachable → vision frames are worth sending
 
+  const avatarRef = useRef('idle');
+  const heardAt = useRef(0); // last time a word of theirs came in — someone talking is not away
+  const away = useRef({ goneAt: null, waiting: false, asks: 0, askedAt: 0, resume: null, quietUntilSeen: false });
+  useEffect(() => { avatarRef.current = avatar; }, [avatar]);
   useEffect(() => { mutedRef.current = muted; }, [muted]);
   // The mute lives in the shared voice module — never let it leak into the rest of the app.
   useEffect(() => () => setSilent(false), []);
@@ -204,7 +213,7 @@ export default function SarthiInterview() {
       let cancelled = false;
       let answered = false;
       const stop = listen({
-        onInterim: (t) => setCaption({ who: 'borrower', text: t }),
+        onInterim: (t) => { heardAt.current = Date.now(); setCaption({ who: 'borrower', text: t }); },
         // A session stopped on purpose (Sarthi speaking, mic muted, answer typed) must not submit a half-heard line.
         onFinal: (t) => { if (t.trim() && !cancelled) { answered = true; handleAnswer(t.trim()); } },
         onError: (err) => {
@@ -357,7 +366,7 @@ export default function SarthiInterview() {
     Object.assign(w, { inFlight: true, again: false, lastAt: Date.now(), lastSection: section });
     compareFace(file.dataUrl, frame).then((r) => {
       w.inFlight = false;
-      if (!r) logEvent('Face check: the vision service did not answer', 'warn');
+      if (!r) logEvent('Face check: face recognition did not run', 'warn');
       if (!r || doneRef.current) return;
       const check = { ...r, frame, at: new Date().toISOString() };
       w.checks.push(check);
@@ -1259,6 +1268,54 @@ export default function SarthiInterview() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startCase, ready]);
+
+  // Nobody in front of the camera while the mic is open: Sarthi stops listening and asks where they went, then repeats
+  // its question when a face is back. Only from 'listening', so a line, a photo ask or a model turn is never cut off.
+  const calls = useRef(null);
+  calls.current = { say, sayFixed, beginListening }; // the interval below always calls this render's versions
+  useEffect(() => {
+    if (phase !== 'live' || !cameraOn || isIntake) return undefined;
+    loadFaceDetector();
+    const ask = () => {
+      const a = away.current;
+      stopListen.current?.();
+      if (!a.waiting) { a.resume = lastLine.current; logEvent('Applicant left the camera — Sarthi asked where they went', 'warn'); }
+      Object.assign(a, { waiting: true, asks: a.asks + 1, askedAt: Date.now() });
+      calls.current.sayFixed(AWAY_LINES.where, { topic: `away:${a.asks}`, then: () => setAvatar('idle') });
+    };
+    const tick = setInterval(() => {
+      if (doneRef.current) return;
+      const seen = faceInFrame();
+      if (seen === null) return;
+      const a = away.current;
+      const now = Date.now();
+      if (seen) {
+        const gone = a.goneAt;
+        Object.assign(a, { goneAt: null, quietUntilSeen: false });
+        if (!a.waiting) return;
+        Object.assign(a, { waiting: false, asks: 0 });
+        logEvent(`Applicant back in front of the camera after ${Math.round((now - gone) / 1000)}s`);
+        const q = a.resume;
+        calls.current.sayFixed(AWAY_LINES.back, { topic: 'away:back', then: () => (q?.text ? calls.current.say(q.text, { speech: q.speech, again: true }) : calls.current.beginListening()) });
+        return;
+      }
+      a.goneAt ??= now;
+      if (a.waiting) {
+        if (now - a.askedAt < AWAY_REASK_MS) return;
+        if (a.asks < AWAY_MAX_ASKS) { ask(); return; }
+        // Bad light or a camera at the ceiling looks the same as an empty room: never hold the call hostage to it.
+        Object.assign(a, { waiting: false, asks: 0, quietUntilSeen: true });
+        logEvent('No face in the camera for a minute — the interview carried on', 'warn');
+        const q = a.resume;
+        if (q?.text) calls.current.say(q.text, { speech: q.speech, again: true }); else calls.current.beginListening();
+        return;
+      }
+      if (a.quietUntilSeen || avatarRef.current !== 'listening' || now - a.goneAt < AWAY_AFTER_MS || now - heardAt.current < 3000) return;
+      ask();
+    }, 700);
+    return () => clearInterval(tick);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, cameraOn, isIntake]);
 
   // Saved after every answer, so a call that drops (app closed, phone or network gone) can be finished later.
   useEffect(() => {

@@ -1,5 +1,5 @@
 // The customer's photo, taken by the BO when the customer is added, against a frame from the video call: is the person
-// on the call the person the officer met? An AI comparison for the officer to look at — not biometric verification.
+// on the call the person the officer met? On-device face recognition for the officer to look at — not certified biometrics.
 import { visionCompare } from './crossPd.js'; // extension so check:face runs in plain node
 
 export const faceKey = (caseId) => `bo_sarthi_face_${caseId}`;
@@ -19,22 +19,65 @@ export function saveFace(caseId, dataUrl) {
   }
 }
 
-// Checked all through the call: at the start, then every FACE_EVERY_MS or at a new section, capped per PD so a long call
-// cannot drain the vision budget. Always in the background — a check never holds up a turn.
-export const FACE_EVERY_MS = Math.max(30000, Number(import.meta.env?.VITE_SARTHI_FACE_MS) || 90000);
-export const FACE_MAX = Math.max(1, Number(import.meta.env?.VITE_SARTHI_FACE_MAX) || 8);
+// Checked all through the call: at the start, then every FACE_EVERY_MS or at a new section, capped per PD. On the phone
+// and free, so far more often than the old vision-model check. Always in the background — never holds up a turn.
+export const FACE_EVERY_MS = Math.max(15000, Number(import.meta.env?.VITE_SARTHI_FACE_MS) || 30000);
+export const FACE_MAX = Math.max(1, Number(import.meta.env?.VITE_SARTHI_FACE_MAX) || 20);
 
-/** 'same' | 'different' | 'unsure' with a reason and `people` in the call frame; null when vision is down. */
-export const compareFace = (filePhoto, callFrame) => visionCompare(filePhoto, callFrame,
-  'LEFT: the photo a loan officer took of a loan applicant when the file was opened. RIGHT: a frame from a video call with'
-  + ' whoever is answering the loan interview now. Is it the same person? Light, angle, camera quality, glasses, beard or'
-  + ' hair may differ — judge the face (shape, features) only. If no face is clearly visible on either side, say UNSURE.'
-  + ' Never comment on appearance, caste, religion or anything except whether the face matches.'
-  + ' After that sentence add a last line: PEOPLE: <how many people are visible on the RIGHT>.').then((r) => {
-  if (!r) return r;
-  const people = r.reason.match(/PEOPLE:\s*(\d+)/i);
-  return { ...r, reason: r.reason.replace(/\s*PEOPLE:[\s\S]*$/i, '').trim(), people: people ? Number(people[1]) : null };
-});
+// Face recognition, not a chat model's opinion: face-api (tiny face detector, 68 landmarks, the dlib ResNet 128-number
+// face descriptor) runs on the phone, and the code decides on the distance between the two descriptors. A chat model
+// called the officer himself "different" over a hand on the face and another angle; the descriptor barely moves for those.
+const FACE_API = '1.7.15'; // must match package.json — the weights are fetched for this exact build
+const MODELS = `https://cdn.jsdelivr.net/npm/@vladmandic/face-api@${FACE_API}/model`;
+// Knobs: dlib's own cut-off is 0.6; webcam shots of one person sit around 0.3-0.5. Between the two is unsure.
+export const SAME_BELOW = 0.55;
+export const DIFFERENT_ABOVE = 0.65;
+
+/** The verdict for a descriptor distance — pure, so check:face can pin the thresholds. */
+export function matchVerdict(distance) {
+  const d = Math.round(distance * 100) / 100;
+  if (d < SAME_BELOW) return { verdict: 'same', reason: `Face recognition: match (distance ${d}, same person under ${SAME_BELOW})` };
+  if (d > DIFFERENT_ABOVE) return { verdict: 'different', reason: `Face recognition: no match (distance ${d}, a different person over ${DIFFERENT_ABOVE})` };
+  return { verdict: 'unsure', reason: `Face recognition: borderline (distance ${d}) — light or angle may be the cause` };
+}
+
+let faceApi = null;
+const loadFaceApi = () => (faceApi ??= import('@vladmandic/face-api').then(async (f) => {
+  await f.tf.ready();
+  await Promise.all([
+    f.nets.tinyFaceDetector.loadFromUri(MODELS),
+    f.nets.faceLandmark68Net.loadFromUri(MODELS),
+    f.nets.faceRecognitionNet.loadFromUri(MODELS),
+  ]);
+  return f;
+}).catch((e) => { faceApi = null; throw e; }));
+
+const toImage = (dataUrl) => new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => fail(new Error('image did not load')); i.src = dataUrl; });
+const faces = async (f, dataUrl) => f.detectAllFaces(await toImage(dataUrl), new f.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.4 }))
+  .withFaceLandmarks().withFaceDescriptors();
+const fileDescriptors = new Map(); // the photo on file is read once per call, not at every check
+
+/** 'same' | 'different' | 'unsure' with a reason, `people` in the call frame and `distance`; null when it cannot run. */
+export async function compareFace(filePhoto, callFrame) {
+  try {
+    const f = await loadFaceApi();
+    let file = fileDescriptors.get(filePhoto);
+    if (!file) {
+      const found = await faces(f, filePhoto);
+      if (!found.length) throw new Error('no face found in the photo on file');
+      file = found.reduce((a, b) => (b.detection.box.area > a.detection.box.area ? b : a)).descriptor;
+      fileDescriptors.set(filePhoto, file);
+    }
+    const onCall = await faces(f, callFrame);
+    if (!onCall.length) return { verdict: 'unsure', reason: 'No face clearly visible on the call', people: 0, distance: null };
+    // With two people in frame, the applicant is the closer match; the other person is reported as `people`.
+    const distance = Math.min(...onCall.map((x) => f.euclideanDistance(file, x.descriptor)));
+    return { ...matchVerdict(distance), people: onCall.length, distance: Math.round(distance * 100) / 100 };
+  } catch (e) {
+    console.warn(`[sarthi] face recognition did not run: ${e?.message}`);
+    return null;
+  }
+}
 
 /** What Sarthi says when a check does not match. Fixed lines, said by the code — the model never raises it. */
 export function faceLines(c) {
@@ -64,10 +107,14 @@ export function faceFlags(checks, cameraOn) {
   }
   const of = (n) => `${n} of ${checks.length} checks during the call`;
   const diff = checks.filter((c) => c.verdict === 'different');
+  const same = checks.filter((c) => c.verdict === 'same').length;
   const flags = [];
-  if (diff.length) {
-    flags.push({ type: 'face_check', field: 'face', severity: 'high', detail: `The person on the video call did not look like the customer photo taken when the file was opened (${of(diff.length)})${diff[0].reason ? ` — ${diff[0].reason}` : ''}` });
-  } else if (!checks.some((c) => c.verdict === 'same')) {
+  // One noisy "different" among matches is the model, not an impostor: high needs most checks, and at least two.
+  if (diff.length > same) {
+    flags.push({ type: 'face_check', field: 'face', severity: diff.length >= 2 ? 'high' : 'medium', detail: `The person on the video call did not look like the customer photo taken when the file was opened (${of(diff.length)})${diff[0].reason ? ` — ${diff[0].reason}` : ''}` });
+  } else if (diff.length) {
+    flags.push({ type: 'face_check', field: 'face', severity: 'low', detail: `Face checks were mixed: ${same} matched the photo on file, ${diff.length} did not — look at the photos yourself` });
+  } else if (!same) {
     const last = checks.at(-1);
     flags.push({ type: 'face_check', field: 'face', severity: 'low', detail: `Could not tell if the person on the call is the customer in the photo on file${last.reason ? ` — ${last.reason}` : ''}` });
   }
@@ -78,9 +125,12 @@ export function faceFlags(checks, cameraOn) {
   return flags;
 }
 
-/** The one check the report shows beside the file photo: a mismatch if there was one, else the last match. */
-export const faceSummary = (checks) => checks.find((c) => c.verdict === 'different')
-  ?? checks.findLast((c) => c.verdict === 'same') ?? checks.at(-1) ?? null;
+/** The one check the report shows beside the file photo: a mismatch if most checks were, else the last match. */
+export function faceSummary(checks) {
+  const count = (v) => checks.filter((c) => c.verdict === v).length;
+  return (count('different') > count('same') ? checks.find((c) => c.verdict === 'different') : null)
+    ?? checks.findLast((c) => c.verdict === 'same') ?? checks.at(-1) ?? null;
+}
 
 // Liveness: once per PD, at a random turn, Sarthi asks for one small action on camera. A frame before and one after go
 // to the vision model side by side; a replayed or pre-recorded video, or a photo held up, cannot follow a random request.

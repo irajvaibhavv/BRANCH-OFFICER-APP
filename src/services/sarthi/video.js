@@ -120,6 +120,9 @@ export function grabFrame(width = 480) {
   }
 }
 
+/** The call's live <video>, or null while the camera is off or lent to the photo capture. */
+export const liveVideo = () => (stream && videoEl && videoEl.readyState >= 2 ? videoEl : null);
+
 export function getObservations() {
   return observations;
 }

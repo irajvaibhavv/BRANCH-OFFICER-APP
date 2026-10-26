@@ -215,7 +215,7 @@ export default function SarthiReport() {
         </>
       )}
 
-      {/* the customer photo on file against a still from the call — an AI comparison, shown so the officer can look */}
+      {/* the customer photo on file against a still from the call — on-device face recognition, shown so the officer can look */}
       {r.face && (
         <>
           <h2 className={styles.head}>Face check</h2>

@@ -52,6 +52,20 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   next turn. English speech recognition writes "sau" as "so" — read as 100 before "saal"/"log"/"rupaye" or after a
   number. A plain count the model misses (age, family, employees, customers a day) is filled from the answer when it
   holds exactly one number; money never is ("pachees" rent is 25,000). `npm run check:age`, `check:numbers`.
+- **Face check is face recognition, not a chat model** (2026-10-26): Haiku called the officer himself a different person
+  (hand on the face, another angle, "cheekbones and jawline differ"). `compareFace` now runs face-api on the phone (tiny
+  face detector, 68 landmarks, dlib ResNet 128-number descriptor; a lazy 330 kB chunk + ~7 MB weights from jsDelivr,
+  cached) and the code decides on the descriptor distance (`matchVerdict`): under `SAME_BELOW` 0.55 same, over
+  `DIFFERENT_ABOVE` 0.65 different, between unsure. Free, so every 30s, up to 20 per PD. The report flags high only when
+  most checks, and at least two, were different; one among matches is a low "mixed, look yourself". Not certified
+  liveness or Aadhaar face match — that needs a KYC vendor.
+- **"Aap kahan chale gaye?"** (2026-10-26, `away.js`): on-device face detection (MediaPipe BlazeFace short-range, wasm
+  and model fetched at call start, a 45 kB lazy chunk) checks the camera every 0.7s — no API cost, unlike the 90s
+  vision face check. With the mic open and no face for 4s (and no words heard in the last 3s), Sarthi stops listening,
+  asks where they went, waits, and repeats its question when a face is back. Only from `listening`, so a line, a photo
+  ask or a model turn is never cut off. Re-asked every 20s, three times; then the call carries on and the check stays
+  quiet until a face is seen again — bad light looks the same as an empty room. Each leave and return is in the call
+  log. Detector fails to load → no check, the call is unchanged.
 - **Turn latency** (2026-10-26): each live turn logs `[sarthi] turn N latency` when the voice starts — ms after the answer
   was submitted for `intent`, `extract`, `firstToken`, `speechText` (speech fence closed) and `voice`, on top of the
   `ANSWER_PAUSE_MS` silence wait. `listen()` submits the moment the silence timer fires when every result is already
@@ -344,9 +358,9 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   (`CustomerPhotoField`: consent tick first, then `PhotoCapture` with `quiet` so Sarthi's voice stays silent) on the walk-in
   form, the Marketing "Customer" lead, or the brief's KYC tab (any customer, seeded ones too). Stored under
   `bo_sarthi_face_<case>`, shown as the avatar. On the call, `watchFace` grabs a still (`grabFrame`) while the greeting
-  plays, then every `FACE_EVERY_MS` (90s) or at a new section (≥30s apart), capped at `FACE_MAX` (8) per PD
-  (`VITE_SARTHI_FACE_MS` / `_MAX`); `compareFace` asks the vision model SAME / DIFFERENT / UNSURE plus `PEOPLE: n` with
-  both side by side (`visionCompare` in crossPd.js) — always in the background, never awaited in a turn (latency).
+  plays, then every `FACE_EVERY_MS` (30s) or at a new section (≥30s apart), capped at `FACE_MAX` (20) per PD
+  (`VITE_SARTHI_FACE_MS` / `_MAX`); `compareFace` is on-device face recognition (see "Face check is face recognition")
+  — always in the background, never awaited in a turn (latency).
   **Spoken on the call since 2026-10-26** (`faceTurn`, acted on at the next turn boundary, never mid-line): UNSURE (light,
   framing, no face) → "chehra beech mein laaiye, roshni ki taraf" and an immediate recheck, at most twice, then carry on.
   DIFFERENT once → rechecked at once; twice in a row → "kya aap khud X ji hain, ya aap kaun hain?" (presence `'face'`).
@@ -355,8 +369,8 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   say no → the name flow's own steps ("bula sakte hain?" → handover, whose first answer is face-checked again, or
   `later`). Mid-call (applicant had been confirmed) `leaveForLater` keeps the draft, so "Finish last PD" resumes it.
   Someone else in frame is never said aloud: a medium `face_others` flag (prompting). Every check is in the call log;
-  the report shows the mismatch frame if any (`faceSummary`) and always calls it "an AI comparison, not biometric
-  verification". Scripted mode (no proxy) has no vision, so no face checks.
+  the report shows the mismatch frame when most checks were one (`faceSummary`) and calls it "on-device face recognition,
+  not certified biometric verification". It needs no proxy, so scripted mode is face-checked too.
 - **Gaps from the PD review meeting** (2026-10-22), all decided in code, the model only reads pictures:
   (1) **Dropped calls**: the PD id is fixed at mount; after every answer the interview saves a draft
   (`bo_sarthi_draft_<pd>`, plus its transcript and photos under the PD id). `useSarthiReports` turns any leftover draft into

@@ -1,7 +1,7 @@
 // Asserts the live face check's rules (src/services/sarthi/face.js) and how replies to "kya aap khud X ji hain?" are read
 // (idChecks.js), since only their answer — never the model's verdict — can end a call. Run: npm run check:face
 import assert from 'node:assert/strict';
-import { faceFlags, faceSummary, faceLines } from '../src/services/sarthi/face.js';
+import { faceFlags, faceSummary, faceLines, matchVerdict } from '../src/services/sarthi/face.js';
 import { confirmReply, speakerIsSomeoneElse } from '../src/services/sarthi/idChecks.js';
 
 const same = { verdict: 'same', reason: 'match', people: 1 };
@@ -23,8 +23,19 @@ assert.equal(crowd.length, 1);
 assert.equal(crowd[0].field, 'face_others');
 assert.equal(crowd[0].severity, 'medium');
 
-// Summary: a mismatch wins, else the last match, else the last check
-assert.equal(faceSummary([same, diff, same]), diff);
+// Face recognition thresholds: the code decides on the descriptor distance
+assert.equal(matchVerdict(0.38).verdict, 'same');
+assert.equal(matchVerdict(0.6).verdict, 'unsure');
+assert.equal(matchVerdict(0.72).verdict, 'different');
+assert.match(matchVerdict(0.38).reason, /distance 0\.38/);
+
+// One "different" among matches is noise, not an impostor
+assert.equal(faceFlags([same, diff, same], true)[0].severity, 'low');
+assert.equal(faceFlags([diff], true)[0].severity, 'medium');
+
+// Summary: a mismatch only when most checks were, else the last match, else the last check
+assert.equal(faceSummary([same, diff, same]).verdict, 'same');
+assert.equal(faceSummary([same, diff, diff]), diff);
 assert.equal(faceSummary([unsure, same, unsure]).verdict, 'same');
 assert.equal(faceSummary([unsure]), unsure);
 assert.equal(faceSummary([]), null);

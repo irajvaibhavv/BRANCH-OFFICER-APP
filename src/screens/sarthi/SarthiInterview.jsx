@@ -33,7 +33,7 @@ import { checkAgainstEarlierPds, crossPdFlags, fileNameCheck, nameFlags, nameRec
 import { livingFacts, factLines, analyseLiving } from '../../services/sarthi/living';
 import { stopSpeaking, listen, canListen, canSpeak, setSilent, ANSWER_PAUSE_MS } from '../../services/voice';
 import { speakStreamed } from '../../services/sarthi/stream';
-import { loadFaceDetector, faceInFrame, AWAY_LINES } from '../../services/sarthi/away';
+import { loadFaceDetector, faceInFrame, faceScore, AWAY_LINES } from '../../services/sarthi/away';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { sarthiVoice, prerendered, gendered, aboutSarthi } from '../../services/sarthi/voice';
 import voiceManifest from '../../data/sarthi/voiceManifest.json';
@@ -181,7 +181,6 @@ export default function SarthiInterview() {
   const liveRef = useRef(false); // proxy reachable → vision frames are worth sending
 
   const avatarRef = useRef('idle');
-  const heardAt = useRef(0); // last time a word of theirs came in — someone talking is not away
   const away = useRef({ goneAt: null, waiting: false, asks: 0, askedAt: 0, resume: null, quietUntilSeen: false });
   useEffect(() => { avatarRef.current = avatar; }, [avatar]);
   useEffect(() => { mutedRef.current = muted; }, [muted]);
@@ -213,7 +212,7 @@ export default function SarthiInterview() {
       let cancelled = false;
       let answered = false;
       const stop = listen({
-        onInterim: (t) => { heardAt.current = Date.now(); setCaption({ who: 'borrower', text: t }); },
+        onInterim: (t) => { setCaption({ who: 'borrower', text: t }); },
         // A session stopped on purpose (Sarthi speaking, mic muted, answer typed) must not submit a half-heard line.
         onFinal: (t) => { if (t.trim() && !cancelled) { answered = true; handleAnswer(t.trim()); } },
         onError: (err) => {
@@ -1275,11 +1274,11 @@ export default function SarthiInterview() {
   calls.current = { say, sayFixed, beginListening }; // the interval below always calls this render's versions
   useEffect(() => {
     if (phase !== 'live' || !cameraOn || isIntake) return undefined;
-    loadFaceDetector();
+    loadFaceDetector().then((ok) => { if (!ok) logEvent('Presence check off — the face detector did not load', 'warn'); });
     const ask = () => {
       const a = away.current;
       stopListen.current?.();
-      if (!a.waiting) { a.resume = lastLine.current; logEvent('Applicant left the camera — Sarthi asked where they went', 'warn'); }
+      if (!a.waiting) { a.resume = lastLine.current; logEvent(`Face not visible on camera (score ${faceScore().toFixed(2)}) — Sarthi asked where they went`, 'warn'); }
       Object.assign(a, { waiting: true, asks: a.asks + 1, askedAt: Date.now() });
       calls.current.sayFixed(AWAY_LINES.where, { topic: `away:${a.asks}`, then: () => setAvatar('idle') });
     };
@@ -1289,6 +1288,7 @@ export default function SarthiInterview() {
       if (seen === null) return;
       const a = away.current;
       const now = Date.now();
+      if (seen !== a.lastSeen) { a.lastSeen = seen; console.info(`[sarthi] camera: face ${seen ? 'visible' : 'not visible'} (score ${faceScore().toFixed(2)})`); }
       if (seen) {
         const gone = a.goneAt;
         Object.assign(a, { goneAt: null, quietUntilSeen: false });
@@ -1310,7 +1310,7 @@ export default function SarthiInterview() {
         if (q?.text) calls.current.say(q.text, { speech: q.speech, again: true }); else calls.current.beginListening();
         return;
       }
-      if (a.quietUntilSeen || avatarRef.current !== 'listening' || now - a.goneAt < AWAY_AFTER_MS || now - heardAt.current < 3000) return;
+      if (a.quietUntilSeen || avatarRef.current !== 'listening' || now - a.goneAt < AWAY_AFTER_MS) return;
       ask();
     }, 700);
     return () => clearInterval(tick);

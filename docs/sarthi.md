@@ -61,9 +61,12 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   liveness or Aadhaar face match — that needs a KYC vendor.
 - **"Aap kahan chale gaye?"** (2026-10-26, `away.js`): on-device face detection (MediaPipe BlazeFace short-range, wasm
   and model fetched at call start, a 45 kB lazy chunk) checks the camera every 0.7s — no API cost, unlike the 90s
-  vision face check. With the mic open and no face for 4s (and no words heard in the last 3s), Sarthi stops listening,
+  vision face check. A face counts only at score ≥ 0.75 (`MIN_SCORE`): BlazeFace still found a face behind a hand at
+  0.5, so a covered face never triggered the ask; the score is logged with each ask for tuning. With no face for 4s, Sarthi stops listening,
   asks where they went, waits, and repeats its question when a face is back. Only from `listening`, so a line, a photo
-  ask or a model turn is never cut off. Re-asked every 20s, three times; then the call carries on and the check stays
+  ask or a model turn is never cut off — time away while Sarthi speaks counts, so it asks the moment the mic opens. No
+  "words heard" guard: room noise kept resetting it (or was taken as an answer) and the ask never came; talking off
+  camera is still away. Face visible / not visible changes go to the console with the score. Re-asked every 20s, three times; then the call carries on and the check stays
   quiet until a face is seen again — bad light looks the same as an empty room. Each leave and return is in the call
   log. Detector fails to load → no check, the call is unchanged.
 - **Turn latency** (2026-10-26): each live turn logs `[sarthi] turn N latency` when the voice starts — ms after the answer

@@ -375,7 +375,8 @@ export async function analysePhoto({ dataUrl, kind, caseData, provenance = null 
     const flag = visionFlag(observation);
     const withFlag = flag && provenance ? { ...provenance, flags: [...provenance.flags, flag] } : provenance;
     return { ...base, provenance: withFlag, aiChecked: true, observation, names, ...(living ? { living } : {}), ...(stock ? { stock } : {}) };
-  } catch {
+  } catch (e) {
+    console.warn(`[sarthi] photo not machine-read (${kind}): ${e?.message}`);
     return {
       ...base,
       aiChecked: false,

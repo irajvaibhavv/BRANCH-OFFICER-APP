@@ -19,7 +19,9 @@
     "check:pastphotos": "node scripts/check-pastphotos.mjs",
     "check:retention": "node scripts/check-retention.mjs",
     "check:assisted": "node scripts/check-assisted.mjs",
-    "check:face": "node scripts/check-face.mjs"
+    "check:face": "node scripts/check-face.mjs",
+    "check:numbers": "node scripts/check-numbers.mjs",
+    "check:age": "node scripts/check-age.mjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",

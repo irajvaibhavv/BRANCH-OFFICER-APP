@@ -56,6 +56,7 @@ const save = (key, value) => {
 };
 
 const CAPTION_FALLBACK_MS = 3000;
+const PLAIN_COUNTS = new Set(['age', 'family_size', 'dependents', 'children_count', 'elderly_count', 'children_in_school', 'earning_members', 'employees', 'customers_per_day']);
 // What a "finish last PD" needs to skip what this one already asked (repeat.js seedResume).
 const pdState = (m) => ({
   hotAsked: m.hotAsked ?? [],
@@ -344,7 +345,10 @@ export default function SarthiInterview() {
     const w = faceWatch.current;
     if (isIntake || doneRef.current || !cameraRef.current || w.inFlight || w.checks.length >= FACE_MAX) return;
     const file = loadFace(caseData.id);
-    if (!file?.dataUrl) return;
+    if (!file?.dataUrl) {
+      if (!w.noPhoto) { w.noPhoto = true; console.info('[sarthi] face check off: no customer photo on the brief'); logEvent('Face check not run — no customer photo on the file', 'warn'); }
+      return;
+    }
     const since = Date.now() - w.lastAt;
     const section = memory.current.currentSection;
     if (w.checks.length && !w.again && since < FACE_EVERY_MS && (section === w.lastSection || since < 30000)) return;
@@ -353,6 +357,7 @@ export default function SarthiInterview() {
     Object.assign(w, { inFlight: true, again: false, lastAt: Date.now(), lastSection: section });
     compareFace(file.dataUrl, frame).then((r) => {
       w.inFlight = false;
+      if (!r) logEvent('Face check: the vision service did not answer', 'warn');
       if (!r || doneRef.current) return;
       const check = { ...r, frame, at: new Date().toISOString() };
       w.checks.push(check);
@@ -737,6 +742,10 @@ export default function SarthiInterview() {
       // Not fatal: the question call's facts fence is the backstop. Never abandon the turn.
       if (extracted.e) console.warn(`[sarthi] fact extraction failed (${extracted.e?.message}) — relying on the facts fence`);
       let facts = extracted.f ?? {};
+      // A plain count the model missed ("so saal" for age) is read from their words — money is left out: "pachees" rent is 25,000.
+      const askedField = answered?.missingFields?.[0];
+      const spoken = readNumbers(text);
+      if (PLAIN_COUNTS.has(askedField) && facts[askedField] == null && spoken.length === 1) facts = { ...facts, [askedField]: spoken[0].value };
       // A filled figure said differently in this answer is dropped by acceptedFacts — but asked about first.
       const drift = driftRechecks(memory.current, facts, text);
       facts = acceptedFacts(memory.current, facts, answered);

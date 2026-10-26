@@ -597,6 +597,19 @@ export function getHyperLocalInstruction(memory, caseData) {
 const DENIAL = /^\s*(no|none|false|nahi|nahin|nhi|na|nope|koi nahi|kahin nahi|kuch nahi|never)\b/i;
 
 // Compares new facts with the brief. Pass memory as it was BEFORE this turn's facts were merged.
+/** { age, source } from the KYC date of birth, else the file's age; null when the file has neither. */
+export function ageOnFile(caseData, today = new Date()) {
+  const dob = caseData?.brief?.kyc?.dob ?? caseData?.dob;
+  if (dob) {
+    const d = new Date(dob);
+    if (!Number.isNaN(d.getTime())) {
+      const age = today.getFullYear() - d.getFullYear() - (today < new Date(today.getFullYear(), d.getMonth(), d.getDate()) ? 1 : 0);
+      return { age, source: 'KYC date of birth' };
+    }
+  }
+  return caseData?.age ? { age: caseData.age, source: 'application' } : null;
+}
+
 export function checkContradictions(memory, facts, caseData, { recheck = null } = {}) {
   const flags = [];
   const brief = caseData?.brief ?? {};
@@ -649,6 +662,18 @@ export function checkContradictions(memory, facts, caseData, { recheck = null } 
       type: 'identity_mismatch', field: 'stated_name', severity: 'high',
       declared: statedName, known: caseData.name,
       detail: `Application is in the name of ${caseData.name}, but the person on the call gave their name as "${statedName}"`,
+      turn: memory.turnCount,
+    });
+  }
+
+  // Age against the KYC date of birth (else the file's age). Two years either side is rounding and "lagbhag".
+  const ageSaid = toNumber(facts.age);
+  const fileAge = ageOnFile(caseData);
+  if (ageSaid && fileAge && Math.abs(ageSaid - fileAge.age) > 2) {
+    flags.push({
+      type: 'contradiction', field: 'age', declared: ageSaid, known: fileAge.age,
+      severity: Math.abs(ageSaid - fileAge.age) > 5 ? 'high' : 'medium',
+      detail: `Said age ${ageSaid}, but the ${fileAge.source} puts them at ${fileAge.age}`,
       turn: memory.turnCount,
     });
   }

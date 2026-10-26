@@ -47,6 +47,11 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   backoff retries (plus its bad-JSON retry) held the question for 5-10s. Both proxies now send `reasoning_effort: 'none'`
   and strip `<think>`; `extractFacts` has no backoff retries and a 2.5s budget (`VITE_SARTHI_EXTRACT_MS`), after which
   the question call goes ahead and the facts fence backfills.
+- **Age is checked in code** (2026-10-26, `ageOnFile` / `checkContradictions`): the stated age against the KYC date of
+  birth, else the application's age; more than 2 years apart is a contradiction (over 5 high) and Sarthi asks about it
+  next turn. English speech recognition writes "sau" as "so" — read as 100 before "saal"/"log"/"rupaye" or after a
+  number. A plain count the model misses (age, family, employees, customers a day) is filled from the answer when it
+  holds exactly one number; money never is ("pachees" rent is 25,000). `npm run check:age`, `check:numbers`.
 - **Turn latency** (2026-10-26): each live turn logs `[sarthi] turn N latency` when the voice starts — ms after the answer
   was submitted for `intent`, `extract`, `firstToken`, `speechText` (speech fence closed) and `voice`, on top of the
   `ANSWER_PAUSE_MS` silence wait. `listen()` submits the moment the silence timer fires when every result is already

@@ -82,12 +82,14 @@ export async function visionCompare(dataUrlA, dataUrlB, prompt, words = ['SAME',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image: image.split(',')[1], prompt: `${prompt} Reply with exactly one word first: ${words.join(', ')}. Then one short sentence naming what matches or differs.` }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) throw new Error(`vision ${res.status} ${(await res.json().catch(() => ({}))).error ?? ''}`);
     const text = String((await res.json()).observation ?? '').trim();
     const alt = words.join('|');
     const word = text.match(new RegExp(`\\b(${alt})\\b`, 'i'))?.[1]?.toLowerCase();
-    return word ? { verdict: word, reason: text.replace(new RegExp(`^\\W*(${alt})\\W*`, 'i'), '').trim() } : null;
-  } catch {
+    if (!word) throw new Error(`no ${words.join('/')} in "${text.slice(0, 80)}"`);
+    return { verdict: word, reason: text.replace(new RegExp(`^\\W*(${alt})\\W*`, 'i'), '').trim() };
+  } catch (e) {
+    console.warn(`[sarthi] vision compare failed: ${e?.message}`);
     return null;
   }
 }

@@ -276,9 +276,10 @@ export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN', end
   };
   const stopNow = () => {
     stopping = true;
+    // Every word is already final: waiting on onend added 0.3-1.5s to each turn for no new text. abort(), not stop():
+    // a stop() Chrome never finishes keeps the speech service, and the next answer's session hears nothing.
+    if (allFinal) { try { r?.abort(); } catch { /* ignore */ } settle(); return; }
     try { r?.stop(); } catch { /* ignore */ }
-    // Every word is already final: waiting on onend added 0.3-1.5s to each turn for no new text.
-    if (allFinal) { settle(); return; }
     watchdog = setTimeout(() => { try { r?.abort(); } catch { /* ignore */ } settle(); }, 1500);
   };
   const begin = () => {

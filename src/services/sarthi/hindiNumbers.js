@@ -52,6 +52,8 @@ const SCALES = {
 // "saath" is 60 (साठ) or "with" (साथ); only read it as 60 before a scale word or countable noun.
 const COUNTABLE_AFTER = /^(customer|customers|grahak|log|logo|logon|saal|sal|din|ghante|rupaye|rupay|rs|hazaar|hazar|lakh|crore|se|ke|ka|ki)\b/;
 
+const SO_COUNTABLE = /^(saal|sal|log|logo|logon|customer|customers|grahak|din|rupaye|rupay|rs|hazaar|hazar)$/;
+
 function plainDigits(token) {
   const n = Number(token.replace(/[,\s₹]/g, ''));
   return Number.isFinite(n) ? n : null;
@@ -68,6 +70,13 @@ export function readNumbers(text) {
   while ((m = re.exec(lower)) !== null) {
     tokens.push({ raw: m[0], isDigit: !!m[1], index: m.index, end: m.index + m[0].length });
   }
+  // English speech recognition writes "sau" as "so": "so saal" = 100, "paanch so" = 500. A bare "so" stays English.
+  tokens.forEach((t, k) => {
+    if (!/^(so|sow|sao)$/.test(t.raw)) return;
+    const prev = tokens[k - 1];
+    const next = tokens[k + 1];
+    if ((next && SO_COUNTABLE.test(next.raw)) || (prev && (prev.isDigit || unitOf(prev.raw) !== undefined || fractionOf(prev.raw)))) t.raw = 'sau';
+  });
 
   const out = [];
   let i = 0;

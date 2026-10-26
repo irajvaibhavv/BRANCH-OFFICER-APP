@@ -19,8 +19,8 @@ export function buildScript(c) {
   const steps = [
     // The name is asked, never said: "Aap Mahesh ji hain na?" is answered "haan" by anyone holding the phone.
     {
-      text: 'Namaste ji. Main Sarthi hoon, branch se. Kuch aasaan sawaal poochhunga — bas 5 minute. Pehle apna poora naam bataiye?',
-      speech: 'नमस्ते जी। मैं सारथी हूँ, ब्रांच से। कुछ आसान सवाल पूछूँगा, बस पाँच मिनट। पहले अपना पूरा नाम बताइए?',
+      text: 'Namaste ji. Main Sarthi hoon, bank se. Kuch aasaan sawaal poochhunga — bas 5 minute. Pehle apna poora naam bataiye?',
+      speech: 'नमस्ते जी। मैं सारथी हूँ, बैंक से। कुछ आसान सवाल पूछूँगा, बस पाँच मिनट। पहले अपना पूरा नाम बताइए?',
       collect: 'stated_name',
     },
     // No model in scripted mode, so a salaried applicant gets fixed job questions; the role-specific ones need live mode.
@@ -117,8 +117,8 @@ export function buildScript(c) {
 export function buildIntakeScript() {
   return [
     {
-      text: 'Namaste! Main Sarthi hoon, branch se. Aapka poora naam kya hai?',
-      speech: 'नमस्ते! मैं सारथी हूँ, ब्रांच से। आपका पूरा नाम क्या है?',
+      text: 'Namaste! Main Sarthi hoon, bank se. Aapka poora naam kya hai?',
+      speech: 'नमस्ते! मैं सारथी हूँ, बैंक से। आपका पूरा नाम क्या है?',
       collect: 'name',
     },
     { text: 'Shukriya. Aapki umar kitni hai?', speech: 'शुक्रिया। आपकी उम्र कितनी है?', collect: 'age' },

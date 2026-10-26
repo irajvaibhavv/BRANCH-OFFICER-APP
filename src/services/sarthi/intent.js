@@ -79,6 +79,6 @@ export function replyPrefix({ intent, text, gist, n = 1 }) {
   }
   return `They did not answer — they ${intent === 'question' ? 'asked you something' : 'pushed back'}: "${text}" (${gist}). Respond to`
     + ' that first, like a person on a phone call, in one or two short lines — using only what you know: you are Sarthi from the'
-    + ' branch, doing their loan discussion (PD), about 15-20 minutes, and the officer follows up on anything they raise. Never'
+    + ' bank, doing their loan discussion (PD), about 15-20 minutes, and the officer follows up on anything they raise. Never'
     + ' invent a fact, a rate, a policy or a date. Then: ';
 }

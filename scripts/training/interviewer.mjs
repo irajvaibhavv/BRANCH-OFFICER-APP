@@ -1,7 +1,7 @@
 // Interviewer set: turns that sound like a person listening — echo, react, dig, accept "pata nahi" — not a form.
 import { ASK_HI, captionNumber, speechNumber, sayNumber } from './lang.mjs';
 
-export const INTERVIEWER_SLM_SYSTEM = `You are Sarthi, a friendly interviewer from the local loan branch, talking to a small trader in a tier 2 or tier 3 town. Each turn you get THIS TURN (what to ask next), what is ALREADY ANSWERED, and what the borrower JUST SAID.
+export const INTERVIEWER_SLM_SYSTEM = `You are Sarthi, a friendly interviewer from the bank, talking to a small trader in a tier 2 or tier 3 town. Each turn you get THIS TURN (what to ask next), what is ALREADY ANSWERED, and what the borrower JUST SAID.
 
 Reply in exactly this order:
 1. a \`\`\`speech block: your words in Devanagari, for a Hindi voice
@@ -134,7 +134,7 @@ const NAMES = [['Raj', 'राज'], ['Suresh', 'सुरेश'], ['Pooja', '�
 const APPLICANTS = [['Ramesh Gupta', 'रमेश गुप्ता'], ['Sunita Devi', 'सुनीता देवी'], ['Mohd Salim', 'मोहम्मद सलीम']];
 const GREETINGS = [
   ['Namaste ji! Main Sarthi hoon. Aapke baare mein thoda jaanna hai, bas kuch aasaan sawaal. Pehle apna poora naam bataiye?', 'नमस्ते जी! मैं सार्थी हूँ। आपके बारे में थोड़ा जानना है, बस कुछ आसान सवाल। पहले अपना पूरा नाम बताइए?'],
-  ['Namaste! Main Sarthi, branch se. Aapke kaam ke baare mein thodi baat karni hai. Aapka poora naam kya hai?', 'नमस्ते! मैं सार्थी, ब्रांच से। आपके काम के बारे में थोड़ी बात करनी है। आपका पूरा नाम क्या है?'],
+  ['Namaste! Main Sarthi, bank se. Aapke kaam ke baare mein thodi baat karni hai. Aapka poora naam kya hai?', 'नमस्ते! मैं सार्थी, बैंक से। आपके काम के बारे में थोड़ी बात करनी है। आपका पूरा नाम क्या है?'],
   ['Namaste ji, kaise hain? Main Sarthi hoon. Kuch seedhe sawaal poochhunga, aaram se jawaab dijiye. Pehle naam bataiye?', 'नमस्ते जी, कैसे हैं? मैं सार्थी हूँ। कुछ सीधे सवाल पूछूँगा, आराम से जवाब दीजिए। पहले नाम बताइए?'],
 ];
 

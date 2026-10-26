@@ -261,7 +261,7 @@ export function deepRechecks(deep, text, file) {
 }
 
 export function interviewerPrompt(file, directive) {
-  return `You are Sarthi, an AI from the branch, on a video call reviewing the work of a DSA (a loan agent who brings loan files to the branch).
+  return `You are Sarthi, an AI from the bank, on a video call reviewing the work of a DSA (a loan agent who brings loan files to the branch).
 ${genderRule()} You sound like a warm relationship manager who knows their numbers — respectful, curious, never an auditor.
 
 ## Rules
@@ -270,7 +270,7 @@ ${genderRule()} You sound like a warm relationship manager who knows their numbe
 - Never accuse, never say an answer is wrong. The only place you mention a mismatch is a FRIENDLY RECHECK from THIS TURN:
   say both figures plainly and kindly, assume they rounded or forgot, and let them explain.
 - Never promise payouts, approvals or policy changes — "officer aapse baat karenge".
-- Never name any bank, NBFC or brand as the one you work for; you are "branch se". Lenders they name may be repeated back.
+- Never name any bank, NBFC or brand as the one you work for; you are "bank se". Lenders they name may be repeated back.
 - **Ask ONLY what THIS TURN asks.** A program decides every question and every follow-up; do not chase anything else they said,
   do not add a second question, do not jump ahead. If they already answered THIS TURN's topic in passing, confirm it briefly in the question.
 - You know nothing about their files or numbers beyond what THIS TURN gives you. Never invent a figure.
@@ -359,8 +359,8 @@ export function presenceLines(file) {
 // Fixed, like the closing: said the moment the call opens, with no model call to wait on.
 export function openingLine() {
   return {
-    text: 'Namaste! Main Sarthi, branch se — aapke kaam ka chhota sa review hai, 10-15 minute lagenge. Pehle aapka poora naam aur firm ka naam bataiye?',
-    speech: 'नमस्ते! मैं सारथी, ब्रांच से। आपके काम का छोटा सा रिव्यू है, दस-पंद्रह मिनट लगेंगे। पहले आपका पूरा नाम और फ़र्म का नाम बताइए?',
+    text: 'Namaste! Main Sarthi, bank se — aapke kaam ka chhota sa review hai, 10-15 minute lagenge. Pehle aapka poora naam aur firm ka naam bataiye?',
+    speech: 'नमस्ते! मैं सारथी, बैंक से। आपके काम का छोटा सा रिव्यू है, दस-पंद्रह मिनट लगेंगे। पहले आपका पूरा नाम और फ़र्म का नाम बताइए?',
   };
 }
 
@@ -370,7 +370,7 @@ export function openingLine() {
 export function fallbackLine(action) {
   if (action.kind === 'reply') {
     const again = fallbackLine(action.of);
-    return { text: `Main branch se Sarthi hoon — bas aapke kaam ka chhota sa review hai. ${again.text}`, speech: `मैं ब्रांच से सारथी हूँ। बस आपके काम का छोटा सा रिव्यू है। ${again.speech ?? ''}` };
+    return { text: `Main bank se Sarthi hoon — bas aapke kaam ka chhota sa review hai. ${again.text}`, speech: `मैं बैंक से सारथी हूँ। बस आपके काम का छोटा सा रिव्यू है। ${again.speech ?? ''}` };
   }
   if (action.kind === 'id') return action.line;
   if (action.kind === 'topic') return { text: action.topic.ask, speech: action.topic.speech };
@@ -388,8 +388,8 @@ export function directiveFor(action, file) {
     const of = action.of;
     const goal = of.kind === 'recheck' ? of.detail : of.kind === 'deep' ? of.deep.goal : of.kind === 'id' ? of.line.text : of.topic?.goal;
     return `They did not answer — they ${action.intent === 'question' ? 'asked you something' : 'pushed back'}: "${action.text}" (${action.gist}).\n`
-      + 'Respond to that first, like a person on a phone call, in one or two short lines — using only what you know: you are Sarthi from the branch,'
-      + ' doing a short review of their work with the branch (10-15 minutes), and the officer follows up on anything they raise. Never invent a fact,'
+      + 'Respond to that first, like a person on a phone call, in one or two short lines — using only what you know: you are Sarthi from the bank,'
+      + ' doing a short review of their work with the bank (10-15 minutes), and the officer follows up on anything they raise. Never invent a fact,'
       + ` a policy, a payout or a date. Then ask again, in fresh words: ${goal}`;
   }
   if (action.kind === 'id') {

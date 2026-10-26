@@ -61,6 +61,7 @@ const CAPTION_FALLBACK_MS = 3000;
 const AWAY_AFTER_MS = 4000;
 const AWAY_REASK_MS = 20000;
 const AWAY_MAX_ASKS = 3;
+const BACK_TICKS = 3; // a face this many ticks in a row (~2s) to count as back: one 0.78 frame mid-walk reset the 4s timer
 const PLAIN_COUNTS = new Set(['age', 'family_size', 'dependents', 'children_count', 'elderly_count', 'children_in_school', 'earning_members', 'employees', 'customers_per_day']);
 // What a "finish last PD" needs to skip what this one already asked (repeat.js seedResume).
 const pdState = (m) => ({
@@ -1289,6 +1290,8 @@ export default function SarthiInterview() {
       const a = away.current;
       const now = Date.now();
       if (seen !== a.lastSeen) { a.lastSeen = seen; console.info(`[sarthi] camera: face ${seen ? 'visible' : 'not visible'} (score ${faceScore().toFixed(2)})`); }
+      a.streak = seen ? (a.streak || 0) + 1 : 0;
+      if (seen && a.goneAt && a.streak < BACK_TICKS) return;
       if (seen) {
         const gone = a.goneAt;
         Object.assign(a, { goneAt: null, quietUntilSeen: false });

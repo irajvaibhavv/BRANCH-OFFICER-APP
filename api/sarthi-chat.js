@@ -123,6 +123,7 @@ async function streamGemini({ systemPrompt, messages, temperature, maxTokens, th
 }
 
 export default async function handler(req, res) {
+  if (req.method === 'OPTIONS') return res.status(204).end(); // the call-start warm-up ping
   if (req.method !== 'POST') return res.status(405).end();
 
   const {

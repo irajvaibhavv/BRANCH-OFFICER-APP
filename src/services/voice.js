@@ -262,7 +262,8 @@ export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN', end
   let settled = false;
   let stopping = false; // we ended it (silence or the caller), so onend settles instead of restarting
   let restarts = 0;
-  const all = () => `${prefix} ${heard}`.replace(/\s+/g, ' ').trim();
+  let allFinal = false; // the current session's results are all isFinal
+  const all =() => `${prefix} ${heard}`.replace(/\s+/g, ' ').trim();
   // Chrome sometimes never fires onend after stop() (the speech service stalls). Whichever comes first — onend or the
   // watchdog — settles the turn, once.
   const settle = () => {
@@ -276,6 +277,8 @@ export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN', end
   const stopNow = () => {
     stopping = true;
     try { r?.stop(); } catch { /* ignore */ }
+    // Every word is already final: waiting on onend added 0.3-1.5s to each turn for no new text.
+    if (allFinal) { settle(); return; }
     watchdog = setTimeout(() => { try { r?.abort(); } catch { /* ignore */ } settle(); }, 1500);
   };
   const begin = () => {
@@ -286,7 +289,9 @@ export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN', end
       // Rebuilt from every result each time, and a result that only extends the one before replaces it: Android Chrome
       // in continuous mode repeats the phrase so far as a new result ("main", "main Raj", "main Raj hoon").
       const parts = [];
+      allFinal = true;
       for (let i = 0; i < e.results.length; i++) {
+        if (!e.results[i].isFinal) allFinal = false;
         const t = e.results[i][0].transcript.trim();
         if (!t) continue;
         if (parts.length && t.toLowerCase().startsWith(parts.at(-1).toLowerCase())) parts[parts.length - 1] = t;

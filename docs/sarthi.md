@@ -47,6 +47,12 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   backoff retries (plus its bad-JSON retry) held the question for 5-10s. Both proxies now send `reasoning_effort: 'none'`
   and strip `<think>`; `extractFacts` has no backoff retries and a 2.5s budget (`VITE_SARTHI_EXTRACT_MS`), after which
   the question call goes ahead and the facts fence backfills.
+- **Turn latency** (2026-10-26): each live turn logs `[sarthi] turn N latency` when the voice starts — ms after the answer
+  was submitted for `intent`, `extract`, `firstToken`, `speechText` (speech fence closed) and `voice`, on top of the
+  `ANSWER_PAUSE_MS` silence wait. `listen()` submits the moment the silence timer fires when every result is already
+  final, instead of waiting 0.3-1.5s for Chrome's `onend`. The greeting sends an `OPTIONS` to `/api/sarthi-chat` so the
+  first live turn does not pay a cold start. If `intent` is the slowest lap, `VITE_SARTHI_INTENT_PROVIDER=slm` moves the
+  intent read to Groq (watch its per-minute token limit — extraction is already there).
 - **Numbers are parsed in code, never trusted to the model** (`hindiNumbers.js`). Every figure in a
   PD is load-bearing — it feeds contradiction flags, the walk-in income rebuild and eligibility — so
   a misread number does not look like an error, it looks like a *finding*, cited, in a report an

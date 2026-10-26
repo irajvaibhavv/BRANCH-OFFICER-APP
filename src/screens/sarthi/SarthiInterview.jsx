@@ -8,7 +8,7 @@ import CallSetup from '../../components/sarthi/CallSetup';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { getCase, briefForCitation, buildNewCase, CUSTOM_CASES_KEY, tradeOf } from '../../services/sarthi/knowledge';
 import { checkChallenge } from '../../services/sarthi/challenges';
-import { parseClaims, peekSpeech, peekDisplay, writeReport, VISION_URL, COMPLETE_TAG } from '../../services/sarthi/agent';
+import { parseClaims, peekSpeech, peekDisplay, writeReport, CHAT_URL, VISION_URL, COMPLETE_TAG } from '../../services/sarthi/agent';
 import { extractFacts, askTurn } from '../../services/sarthi/model';
 import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../services/sarthi/script';
 import { verifyClaims, computeEligibility, toNumber } from '../../services/sarthi/verifier';
@@ -615,11 +615,15 @@ export default function SarthiInterview() {
     // What the reply MEANS is read by the model (any wording); the code decides what to do. Fact extraction starts at the
     // same moment: awaited one after the other they added up to ~5s before the question call even began. On a turn that
     // turns out to be a stop or a handover the extraction is simply not used.
-    const reading = readIntent({ question: lastLine.current.text, answer: text, name: caseData.name });
+    // Where a turn's wait goes, logged when the voice starts: ms after their answer was submitted.
+    const t0 = performance.now();
+    const lap = {};
+    const mark = (k) => { lap[k] ??= Math.round(performance.now() - t0); };
+    const reading = readIntent({ question: lastLine.current.text, answer: text, name: caseData.name }).finally(() => mark('intent'));
     const extracting = extractFacts(text, {
       section: memory.current.currentSection,
       recent: transcript.current.filter((t) => t.role === 'assistant').slice(-1).map((t) => t.content),
-    }).then((f) => ({ f }), (e) => ({ e }));
+    }).then((f) => ({ f }), (e) => ({ e })).finally(() => mark('extract'));
     if (stopForForeignResidence(text, borrowerTurn)) return;
     const { intent, gist } = await reading;
     if (doneRef.current) return;
@@ -801,19 +805,25 @@ export default function SarthiInterview() {
         messages: history.current,
         turn: borrowerTurn,
         onChunk: (full) => {
+          mark('firstToken');
           const caption = peekDisplay(full);
           if (caption) showCaption(caption);
           if (spokenYet) return;
           const early = peekSpeech(full);
           if (!early) return;
           spokenYet = true;
+          mark('speechText');
           setTimeout(() => { if (!voiceOn) { voiceOn = true; showCaption(pending); } }, CAPTION_FALLBACK_MS);
           lastLine.current = { text: caption, speech: early };
           countTopic(topicKey(action));
           speakStreamed(gendered(early), {
             voice: sarthiVoice(),
             src: prerendered() ? voiceManifest[early] : undefined,
-            onStart: () => { voiceOn = true; setAvatar('speaking'); showCaption(pending); },
+            onStart: () => {
+              voiceOn = true; setAvatar('speaking'); showCaption(pending);
+              mark('voice');
+              console.info(`[sarthi] turn ${borrowerTurn} latency (ms after answer, +${ANSWER_PAUSE_MS} silence wait):`, lap);
+            },
             onEnd: () => { voiceOn = true; showCaption(pending); audioDone = true; advance(); },
           });
         },
@@ -1224,6 +1234,8 @@ export default function SarthiInterview() {
       demoRef.current = false;
       liveRef.current = true;
       stepRef.current = 1; // scripted fallback continues past the greeting
+      // Wakes a cold serverless function while the greeting plays, so the first live turn does not pay its start-up.
+      fetch(CHAT_URL, { method: 'OPTIONS' }).catch(() => {});
       if (cameraRef.current) startFrameCapture(VISION_URL, () => {});
       getFix().then((f) => {
         callGeo.current.start = f;

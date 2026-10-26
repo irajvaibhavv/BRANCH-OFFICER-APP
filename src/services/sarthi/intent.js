@@ -52,7 +52,7 @@ export async function readIntent({ question, answer, name = '' }) {
       askAgent({
         systemPrompt: SYSTEM,
         messages: [{ role: 'user', content: `Person being called: ${name || 'the applicant'}\nQuestion asked: "${question}"\nTheir reply: "${answer}"` }],
-        maxTokens: 60, temperature: 0, retries: 0,
+        maxTokens: 60, temperature: 0, retries: 0, provider: import.meta.env.VITE_SARTHI_INTENT_PROVIDER || 'llm',
       }),
       new Promise((_, fail) => { setTimeout(() => fail(new Error(`over ${BUDGET_MS}ms`)), BUDGET_MS); }),
     ]);

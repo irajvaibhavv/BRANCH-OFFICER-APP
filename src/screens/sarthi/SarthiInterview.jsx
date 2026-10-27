@@ -61,6 +61,7 @@ const CAPTION_FALLBACK_MS = 3000;
 const AWAY_AFTER_MS = 4000;
 const AWAY_REASK_MS = 20000;
 const AWAY_MAX_ASKS = 3;
+const GONE_MS = 1000; // misses in a row this long (~1s) start the away timer, so a lone dip below MIN_SCORE does not
 const BACK_TICKS = 3; // a face this many ticks in a row (~2s) to count as back: one 0.78 frame mid-walk reset the 4s timer
 const PLAIN_COUNTS = new Set(['age', 'family_size', 'dependents', 'children_count', 'elderly_count', 'children_in_school', 'earning_members', 'employees', 'customers_per_day']);
 // What a "finish last PD" needs to skip what this one already asked (repeat.js seedResume).
@@ -1291,6 +1292,7 @@ export default function SarthiInterview() {
       const now = Date.now();
       if (seen !== a.lastSeen) { a.lastSeen = seen; console.info(`[sarthi] camera: face ${seen ? 'visible' : 'not visible'} (score ${faceScore().toFixed(2)})`); }
       a.streak = seen ? (a.streak || 0) + 1 : 0;
+      a.missedAt = seen ? null : a.missedAt ?? now;
       if (seen && a.goneAt && a.streak < BACK_TICKS) return;
       if (seen) {
         const gone = a.goneAt;
@@ -1302,7 +1304,10 @@ export default function SarthiInterview() {
         calls.current.sayFixed(AWAY_LINES.back, { topic: 'away:back', then: () => (q?.text ? calls.current.say(q.text, { speech: q.speech, again: true }) : calls.current.beginListening()) });
         return;
       }
-      a.goneAt ??= now;
+      // One missed frame is not "gone": a face at ~0.75 dips every second or two, and with BACK_TICKS a lone miss kept
+      // the timer running for good — Sarthi looped "dikh nahi rahe" / "aap aa gaye" at someone sitting right there.
+      if (!a.goneAt && now - a.missedAt < GONE_MS) return;
+      a.goneAt ??= a.missedAt;
       if (a.waiting) {
         if (now - a.askedAt < AWAY_REASK_MS) return;
         if (a.asks < AWAY_MAX_ASKS) { ask(); return; }

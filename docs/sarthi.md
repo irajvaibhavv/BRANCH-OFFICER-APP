@@ -68,7 +68,9 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   "words heard" guard: room noise kept resetting it (or was taken as an answer) and the ask never came; talking off
   camera is still away. Face visible / not visible changes go to the console with the score.
   Back only after a face on 3 ticks in a row (`BACK_TICKS`, ~2s): scores flickered 0.70 → 0.78 → 0.54 while walking
-  off, and each single "visible" frame reset the 4s timer, so the ask never came. Re-asked every 20s, three times; then the call carries on and the check stays
+  off, and each single "visible" frame reset the 4s timer, so the ask never came. The other side (2026-10-27): the 4s timer starts only after ~1s of misses in a row (`GONE_MS`) —
+  with `BACK_TICKS` alone, a seated face dipping below 0.75 once every second or two never cleared the timer, and Sarthi
+  looped "dikh nahi rahe" / "aap aa gaye" + the greeting at someone in frame. Re-asked every 20s, three times; then the call carries on and the check stays
   quiet until a face is seen again — bad light looks the same as an empty room. Each leave and return is in the call
   log. Detector fails to load → no check, the call is unchanged.
 - **Turn latency** (2026-10-26): each live turn logs `[sarthi] turn N latency` when the voice starts — ms after the answer

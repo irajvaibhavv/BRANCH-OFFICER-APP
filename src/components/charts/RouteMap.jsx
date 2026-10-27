@@ -7,12 +7,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { START } from '../../utils/route';
 import styles from './RouteMap.module.css';
 
-// Leaflet + CARTO tiles; falls back to the SVG preview when offline.
-
-const TILES = {
-  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-};
+// Leaflet + Google road tiles (CARTO now watermarks keyless use); falls back to the SVG preview when offline.
+// ponytail: unofficial Google tile endpoint, fine for a demo; production needs the Maps JS API with a key.
+const TILES = 'https://mt{s}.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}';
 
 const pinIcon = (n, kind) => L.divIcon({ className: '', html: `<div class="${styles.pin} ${kind === 'start' ? styles.pinStart : ''}">${n}</div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
 const youIcon = L.divIcon({ className: '', html: `<div class="${styles.you}"><span></span></div>`, iconSize: [18, 18], iconAnchor: [9, 9] });
@@ -43,7 +40,7 @@ export default function RouteMap({ stops = [], origin = null, height = 200, labe
   return (
     <div className={`${styles.map} ${className}`} style={{ height }}>
       <MapContainer center={[from.lat, from.lng]} zoom={12} zoomControl={false} attributionControl={false} scrollWheelZoom={false} className={styles.leaflet}>
-        <TileLayer url={theme === 'dark' ? TILES.dark : TILES.light} />
+        <TileLayer url={TILES} subdomains="0123" maxZoom={20} className={theme === 'dark' ? styles.darkTiles : ''} />
         {points.length > 1 && <Polyline positions={points} pathOptions={{ color: '#4c1d95', weight: 4, opacity: 0.85, dashArray: '8 8', lineCap: 'round', lineJoin: 'round' }} />}
         {all.map((p, i) => (
           <Marker key={p.id} position={[p.lat, p.lng]} icon={i === 0 ? (origin ? youIcon : pinIcon('🏢', 'start')) : pinIcon(i)} zIndexOffset={i === 0 ? 1000 : i} />

@@ -1,5 +1,7 @@
 .map { position: relative; border-radius: 16px; overflow: hidden; border: var(--card-border); box-shadow: var(--card-shadow); background: #e8e4f3; }
 .leaflet { width: 100%; height: 100%; background: #e8e4f3; font-family: inherit; }
+/* Google has no dark raster tiles, so invert the light ones */
+.darkTiles { filter: invert(0.92) hue-rotate(180deg) brightness(0.9) contrast(0.9); }
 
 /* Offline fallback */
 .flat { background: linear-gradient(135deg, #f3effb, #ede9fb 50%, #e9e0fb); color: #4c1d95; }

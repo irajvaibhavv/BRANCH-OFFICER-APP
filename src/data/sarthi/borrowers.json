@@ -404,11 +404,10 @@
     "riskPatternMatch": null,
     "quickPd": [
       { "field": "children_count", "ask": "Aapke ghar mein bachche hain? Kitne hain?" },
-      { "field": "children_school", "when": "children_count > 0", "ask": "Woh kaunse school mein padhte hain, aur kaunsi class mein?" },
-      { "field": "school_fees", "when": "children_count > 0", "ask": "School ki fees mahine ki kitni jaati hai?" },
-      { "field": "top_sellers", "ask": "Aapki dukaan pe sabse zyada bikri kis cheez ki hoti hai?" },
-      { "key": "shelf_mrp", "label": "Item on the top shelf, third from the left, and its MRP", "ask": "Aapke peeche upar wale shelf pe, left se teesre number pe jo saamaan rakha hai — woh kya hai, aur uski MRP kitni hai?", "why": "Someone who runs the shop answers without walking to the rack" },
-      { "field": "supplier_names", "ask": "Yeh saamaan aap kis vendor ya distributor se lete hain? Unka naam kya hai?" }
+      { "field": "school_fees", "when": "children_count > 0", "ask": "Woh kaunse school mein padhte hain, aur mahine ki fees kitni jaati hai?" },
+      { "key": "shelf_mrp", "label": "Item on the top shelf, third from the left, and its MRP — said without turning round", "ask": "Bina peeche mude bataiye — aapke peeche upar wale shelf pe, left se teesre number pe kya rakha hai, aur uski MRP kitni hai?", "why": "Someone who runs the shop knows the rack by heart" },
+      { "key": "milk_packets", "label": "Milk packets ordered a day and how many are left over", "ask": "Roz doodh ke kitne packet mangwaate hain, aur kitne bach jaate hain?", "why": "The loan is for a dairy fridge — the owner knows the daily milk count" },
+      { "key": "area_nearby", "label": "What is opposite the shop and the nearest big landmark", "ask": "Dukaan ke saamne kya hai, aur sabse paas kaunsa bada landmark hai?", "why": "Someone who sits at the shop answers instantly", "scores": "area_knowledge_score" }
     ],
     "hi": {
       "name": "राज वैभव",

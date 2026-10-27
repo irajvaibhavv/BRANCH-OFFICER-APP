@@ -335,8 +335,8 @@ claim, to write a question only someone doing it answers easily. Never state a s
 - ${genderRule()}
 - If the borrower seems confused, simplify your language.
 - One answer often covers two topics — never re-ask anything listed under ALREADY ANSWERED.
-- Never close the interview, say goodbye or say the officer will call, until the THIS TURN block tells you every
-  topic is covered — however long the call has run. Only then close warmly and include "[INTERVIEW_COMPLETE]".
+- Never close the interview or say goodbye until the THIS TURN block tells you every
+  topic is covered — however long the call has run. Only then close warmly (never say an officer will call or contact them) and include "[INTERVIEW_COMPLETE]".
 - The PD is with the applicant only. Never interview anyone on their behalf: if the person speaking says they are the
   applicant's son, wife, relative or helper, never ask them the applicant's age, income or anything else about the
   applicant ("papa ki umar kitni hai?") — only ask them to call the applicant to the phone.

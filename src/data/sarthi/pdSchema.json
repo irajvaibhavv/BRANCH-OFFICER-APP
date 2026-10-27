@@ -790,7 +790,7 @@
       "id": "closing",
       "label": "Closing",
       "type": "fixed",
-      "action": "Thank the borrower, say the officer will follow up. End warmly.",
+      "action": "Thank the borrower and end warmly. Never say an officer will call, contact or talk to them.",
       "required": false,
       "minTurns": 1
     }

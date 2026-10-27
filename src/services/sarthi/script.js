@@ -105,8 +105,8 @@ export function buildScript(c) {
     speech: 'अगर बिज़नेस में, दो-तीन महीने स्लो चला। तो ईएमआई, कैसे मैनेज करेंगे?',
   });
   steps.push({
-    text: `Bas ${c.name} ji, itna hi. Dhanyawaad — hamare officer aapse jaldi baat karenge. [INTERVIEW_COMPLETE]`,
-    speech: `बस ${hi.name ?? ''} जी, इतना ही। धन्यवाद। हमारे ऑफिसर आपसे जल्दी बात करेंगे।`,
+    text: `Bas ${c.name} ji, itna hi. Aapka bahut dhanyawaad, aapka din shubh ho. [INTERVIEW_COMPLETE]`,
+    speech: `बस ${hi.name ?? ''} जी, इतना ही। आपका बहुत धन्यवाद, आपका दिन शुभ हो।`,
     end: true,
   });
 
@@ -164,8 +164,8 @@ export function buildIntakeScript() {
       typed: true,
     },
     {
-      text: 'Bas, itna hi. Dhanyawaad — hamare officer aapse jaldi baat karenge. [INTERVIEW_COMPLETE]',
-      speech: 'बस, इतना ही। धन्यवाद। हमारे ऑफिसर आपसे जल्दी बात करेंगे।',
+      text: 'Bas, itna hi. Aapka bahut dhanyawaad, aapka din shubh ho. [INTERVIEW_COMPLETE]',
+      speech: 'बस, इतना ही। आपका बहुत धन्यवाद, आपका दिन शुभ हो।',
       end: true,
     },
   ];

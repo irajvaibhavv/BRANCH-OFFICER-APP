@@ -1,7 +1,7 @@
 // Decides WHAT to ask by walking pdSchema.json; the model only decides how to phrase it. No model calls here.
 import pdSchema from '../../data/sarthi/pdSchema.json';
 import { lookupLocation, tradeOf, hasAreaDetail, bankIncome, ventureArea } from './knowledge';
-import { getMissingFields, knownFacts, enterSection, gaveUp, isSalaried, PROFESSION_CHECKS, TRADE_CHECKS, OPERATOR_KEYS, FIELD_DEFS as FIELD_DEFS_BY_KEY } from './memory';
+import { getMissingFields, knownFacts, enterSection, gaveUp, conditionMet, isSalaried, PROFESSION_CHECKS, TRADE_CHECKS, OPERATOR_KEYS, FIELD_DEFS as FIELD_DEFS_BY_KEY } from './memory';
 import { toNumber, toYears } from './verifier';
 import { namesMatch } from './idChecks';
 import { nextTradeProbe, nextTradeField, tradeProbes, purposeSignals } from './probes';
@@ -134,7 +134,8 @@ export function quickAction(memory, caseData) {
   if (!asked.includes('greeting')) {
     return { ...base, section: 'greeting', directive: greeting.action, memory: { ...enterSection(memory, 'greeting'), quickAsked: [...asked, 'greeting'] } };
   }
-  const due = steps.find((st) => (st.field
+  // A step's `when` is a schema-style condition ("children_count > 0"), so a "no" skips its follow-ups.
+  const due = steps.find((st) => (!st.when || conditionMet({ condition: st.when }, memory)) && (st.field
     ? memory.collected[st.field] == null && !gaveUp(memory, st.field)
     : !asked.includes(st.key)));
   if (due) {

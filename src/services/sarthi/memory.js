@@ -192,7 +192,7 @@ export function enterSection(memory, sectionId) {
 }
 
 // Schema conditions are parsed from two literal shapes, never evaluated: "key === 'value'" and "key > n".
-function conditionMet(field, memory) {
+export function conditionMet(field, memory) {
   if (field.employment && (field.employment === 'salaried') !== isSalaried(memory.caseData)) return false;
   if (field.optional && !(memory.unlocked ?? []).includes(field.key)) return false;
   if (!field.condition) return true;

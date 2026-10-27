@@ -333,6 +333,92 @@
     }
   },
   {
+    "id": "sarthi_kirana_4",
+    "name": "Raj Vaibhav",
+    "age": 29,
+    "area": "Kothrud, Pune",
+    "areaKey": null,
+    "business": "Kirana store",
+    "businessKey": "kirana_store",
+    "businessName": "Vaibhav Kirana Stores",
+    "businessVintage": "6 years",
+    "loanPurpose": "Festive stock and a second fridge for dairy",
+    "loanAmountRequested": 400000,
+    "declaredIncome": 50000,
+    "employment": "Self-employed",
+    "riskLevel": "low",
+    "brief": {
+      "avgMonthlyCredit": 320000,
+      "bureauScore": 741,
+      "existingEMIs": 4200,
+      "runningLoans": [
+        { "type": "Consumer durable loan", "emi": 4200, "remaining": 7 }
+      ],
+      "gstRegistered": false,
+      "gstVintage": null,
+      "itrFiled": true,
+      "itrIncome": 420000,
+      "bankStatementMonths": 12,
+      "largeDeposits": [],
+      "missingDocs": [],
+      "areaDefaultRate": 0.07,
+      "kyc": {
+        "aadhaarLast4": "5318",
+        "aadhaarCheck": "OTP eKYC done",
+        "pan": "DKRPV6142H",
+        "nameOnPan": "RAJ VAIBHAV",
+        "dob": "1997-06-11",
+        "address": "Flat 4, Shivtirth Nagar, Kothrud, Pune"
+      },
+      "bureau": {
+        "bureau": "CIBIL",
+        "pulledOn": "2026-09-21",
+        "enquiries6m": 1,
+        "worstDpd": "None in 36 months",
+        "activeAccounts": 1,
+        "oldestAccountYears": 5
+      },
+      "bank": {
+        "name": "Bank of Maharashtra",
+        "type": "Current",
+        "source": "Account Aggregator (Finvu), 12 months",
+        "avgBalance": 31000,
+        "bounces": 0,
+        "cashCreditPct": 30,
+        "upiCreditPct": 65
+      },
+      "docsSubmitted": [
+        "Aadhaar (eKYC)",
+        "PAN",
+        "Bank statement via AA — 12 months",
+        "ITR FY 2025-26",
+        "Udyam registration",
+        "Shop rent agreement"
+      ],
+      "digInto": [
+        "Clean file — confirm household costs (school fees) leave room for the new kisht",
+        "Check he knows his own shelf and supplier — a quick test that he runs the shop himself"
+      ],
+      "creditsAre": "turnover"
+    },
+    "riskPatternMatch": null,
+    "quickPd": [
+      { "field": "children_count", "ask": "Aapke ghar mein bachche hain? Kitne hain?" },
+      { "field": "children_school", "when": "children_count > 0", "ask": "Woh kaunse school mein padhte hain, aur kaunsi class mein?" },
+      { "field": "school_fees", "when": "children_count > 0", "ask": "School ki fees mahine ki kitni jaati hai?" },
+      { "field": "top_sellers", "ask": "Aapki dukaan pe sabse zyada bikri kis cheez ki hoti hai?" },
+      { "key": "shelf_mrp", "label": "Item on the top shelf, third from the left, and its MRP", "ask": "Aapke peeche upar wale shelf pe, left se teesre number pe jo saamaan rakha hai — woh kya hai, aur uski MRP kitni hai?", "why": "Someone who runs the shop answers without walking to the rack" },
+      { "field": "supplier_names", "ask": "Yeh saamaan aap kis vendor ya distributor se lete hain? Unka naam kya hai?" }
+    ],
+    "hi": {
+      "name": "राज वैभव",
+      "firstName": "राज",
+      "area": "कोथरुड, पुणे",
+      "businessName": "वैभव किराना स्टोर्स",
+      "loanAmount": "चार लाख"
+    }
+  },
+  {
     "id": "sarthi_electrical_1",
     "name": "Imran Qureshi",
     "age": 41,

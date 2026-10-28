@@ -58,7 +58,8 @@ function exifDate(s) {
   return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) : null;
 }
 
-// `quality` is the in-camera check (photo.js checkQuality); a shot sent despite failing it is flagged for the officer.
+// `quality` is the in-camera check (photoAnalysis.js checkQuality); a shot sent despite failing it
+// is flagged for the officer.
 export function liveProvenance(facing, { quality = null, attempts = 1, pan = null } = {}) {
   const checks = [{ label: 'Source', pass: true, detail: 'Taken with the live camera during the interview' }];
   if (quality) {
@@ -67,7 +68,7 @@ export function liveProvenance(facing, { quality = null, attempts = 1, pan = nul
   const flags = quality && !quality.ok
     ? [{ severity: 'low', detail: `Photo sent after ${attempts} tries without passing the quality check (${quality.issues.map((x) => x.key).join(', ')}) — it may be hard to read` }]
     : [];
-  // A live turn (challenges.js `pan`): the second frame must differ, from the same camera session.
+  // A live turn (liveChallenges.js `pan`): the second frame must differ, from the same camera session.
   if (pan) {
     checks.push({ label: 'Live turn', pass: pan.moved && pan.sameStream, detail: `Turned the camera as asked, ${pan.seconds}s later${pan.moved ? '' : ' — but the view hardly changed'}` });
     if (!pan.moved) flags.push({ severity: 'medium', detail: 'Asked to turn the camera to the shop door without closing it, the view hardly changed — it may have been pointed at a picture or a screen' });

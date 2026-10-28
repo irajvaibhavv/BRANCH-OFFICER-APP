@@ -59,7 +59,7 @@ Code comments are kept to one-liners on non-obvious *why* — the long-form reas
 
 **Simulated AI** (`src/services/`, pure JS, no React):
 - `assistant/flows.js` — scripted SAARTHI AI handover interview flows (nodes with `say/options/input/next/key`, keyword-based branching), producing a report for the officer.
-- `meeting/transcript.js` — deterministic per-DSA transcript + summary generation for the meeting recorder; `meeting/prep.js` — rule-based meeting questions.
+- `meeting/transcript.js` — deterministic per-DSA transcript + summary generation for the meeting recorder; `meeting/questions.js` — rule-based meeting questions.
 - `voice.js` — shared TTS via ElevenLabs (`VITE_ELEVENLABS_API_KEY`) or Murf AI (`VITE_MURF_API_KEY`) when set (`.env.local`, see `.env.example`; on Vercel add it as an env var), else browser Web Speech API; STT is always browser. Lines queue and play in order; `prefetch(lines)` warms Murf before a multi-bubble turn. Everything must still work as typed text when unsupported.
 - `src/utils/loanCalc.js` (EMI/eligibility/FOIR), `src/utils/commission.js` — business logic shared across screens.
 
@@ -70,11 +70,11 @@ rules that must never be broken:
 - **The controller decides what to ask; the model only phrases it.** `controller.js` walks `pdSchema.json`; new
   questions = new schema fields (each with a plain-Hinglish `ask`), never prompt text. Key lists in prompts are generated
   from the schema — never hand-type keys. Each field is roughly one more turn and one more model request.
-- **Grounding:** facts live only in the JSON knowledge files, verdicts in `verifier.js`, every number in code
-  (`loanCalc.js`, `hindiNumbers.js` — never trust a model's number), and `validator.js` strips uncited findings.
+- **Grounding:** facts live only in the JSON knowledge files, verdicts in `claimVerifier.js`, every number in code
+  (`loanCalc.js`, `hindiNumbers.js` — never trust a model's number), and `reportValidator.js` strips uncited findings.
 - **Models:** `'llm'` = Claude (`ANTHROPIC_API_KEY`), else Gemini; fact extraction goes to Groq (`'slm'`) when
-  `GROQ_API_KEY` is set (`TASK_ROUTES` in `model.js`). Keys are server-side only (`api/*.js`, `scripts/sarthi-proxy.mjs`);
-  `vercel.json`'s rewrite must exclude `/api/`. Unreachable model → per-turn fallback; no proxy → scripted `script.js`.
+  `GROQ_API_KEY` is set (`TASK_ROUTES` in `modelRouting.js`). Keys are server-side only (`api/*.js`, `scripts/sarthi-proxy.mjs`);
+  `vercel.json`'s rewrite must exclude `/api/`. Unreachable model → per-turn fallback; no proxy → scripted `scriptedMode.js`.
 - **Findings, not questions:** a report (PD or DSA) never shows a question, task wording or quote — only red flags,
   what Sarthi checked and what the BO / CO must check, so BOs cannot learn the interview and coach applicants.
 - **Voice:** the TTS is fed Devanagari, captions are Hinglish. Re-run `npm run sarthi:voice` after editing any scripted line.
@@ -87,5 +87,5 @@ rules that must never be broken:
 - Several related screens can live in one file and be exported as named exports (e.g. `MeetingRecorder.jsx` exports `RecordingDetail`, `RecordingsList`, `EngagementDetail`).
 - New screen: add folder under `screens/` → register route in `app/router.jsx` → map its path in `BottomTabBar.jsx` `activeTab()`.
 - Screens never import from other screens. A hook several screens share goes in `src/hooks/` (e.g. `useSarthiReports`); a shared component goes in `src/components/<area>/`.
-- Files inside a feature folder drop the feature prefix (`services/sarthi/model.js`, not `sarthiModel.js`).
+- Files inside a feature folder drop the feature prefix (`services/sarthi/modelRouting.js`, not `sarthiModel.js`).
 - Page transitions use framer-motion via `components/layout/Page.jsx` with `AnimatePresence` in the router.

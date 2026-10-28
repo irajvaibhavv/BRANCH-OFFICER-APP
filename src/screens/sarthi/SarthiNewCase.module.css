@@ -53,7 +53,7 @@
 .hintFlat { color: var(--s-ink-3); border-left: 2px solid var(--s-line); }
 .patternHit { color: var(--s-stamp); border-left: 2px solid var(--s-stamp); font-weight: 500; }
 
-/* ---------------------------------------------------------------- id toggle */
+/* Id toggle */
 .toggle { display: flex; gap: 0; margin-top: 14px; }
 .toggleOn, .toggleOff {
   flex: 1;
@@ -69,7 +69,7 @@
 .toggle > :last-child { border-radius: 0 2px 2px 0; border-left: none; }
 [data-theme='dark'] .toggleOn { background: var(--s-accent); color: #121022; border-color: var(--s-accent); }
 
-/* ---------------------------------------------------------------- id result */
+/* Id result */
 .idOk, .idBad {
   margin-top: 14px;
   padding: 14px 15px;
@@ -120,7 +120,7 @@
   border-top: 1px solid rgba(0, 0, 0, 0.07);
 }
 
-/* ---------------------------------------------------------------- submit */
+/* Submit */
 .start {
   display: flex;
   align-items: center;

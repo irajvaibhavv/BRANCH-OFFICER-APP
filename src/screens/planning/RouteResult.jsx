@@ -8,7 +8,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Avatar from '../../components/ui/Avatar';
 import RouteMap from '../../components/charts/RouteMap';
-import { START, km, optimise } from '../../utils/route';
+import { START, km, optimise } from '../../utils/routePlanning';
 import { useAppState } from '../../context/AppStateContext';
 import { useToast } from '../../hooks/useToast';
 import styles from './route.module.css';

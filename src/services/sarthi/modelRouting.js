@@ -1,12 +1,12 @@
 // Task → provider routing ('slm' = Groq, 'llm' = Gemini). Decided before the call; no fallback between providers.
 import { askAgent, askAgentStream, buildInterviewerPrompt, INTERVIEWER_TEMP } from './agent';
-import { EXTRACTABLE_KEYS, FIELD_DEFS } from './memory';
+import { EXTRACTABLE_KEYS, FIELD_DEFS } from './interviewState';
 import { reconcile } from './hindiNumbers';
-import { toNumber } from './verifier';
-import { MOCKS_ON, mockExtractFacts, mockTurn } from './mocks';
-import { turnMessages } from './dsa';
+import { toNumber } from './claimVerifier';
+import { MOCKS_ON, mockExtractFacts, mockTurn } from './devMocks';
+import { turnMessages } from './dsaReview';
 
-// Measured routing rationale lives in CLAUDE.md (Sarthi → routing). Override per task via env.
+// Override the route per task via env.
 const TASK_ROUTES = {
   // SLM to save Gemini's per-day quota; numbers are reconciled in code and the facts fence backs it up.
   extract_facts: import.meta.env.VITE_SARTHI_EXTRACT_PROVIDER || 'slm',
@@ -37,7 +37,7 @@ export function taskForAction(action) {
   return 'generate_question';
 }
 
-// ---- fact extraction ----
+// Fact extraction
 
 const ENUM_GUIDE = Object.entries(FIELD_DEFS)
   .filter(([, d]) => d.options)
@@ -181,11 +181,11 @@ export async function extractFacts(answerText, { section = '', recent = [] } = {
   return reconcileNumbers(clean(readJson(retry) || {}), answerText);
 }
 
-// Knob: the longest the borrower waits on extraction before the question call goes ahead without it.
+// The longest the borrower waits on extraction before the question call goes ahead without it.
 const EXTRACT_BUDGET_MS = Number(import.meta.env.VITE_SARTHI_EXTRACT_MS) || 2500;
 const withBudget = (p, ms) => Promise.race([p, new Promise((_, fail) => { setTimeout(() => fail(new Error(`over ${ms}ms`)), ms); })]);
 
-// ---- interview turns ----
+// Interview turns
 
 // Phrases the question the controller already chose; returns Agent 1's raw reply for parseClaims.
 export async function askTurn({ caseData, action, directive, messages, turn, onChunk }) {
@@ -195,7 +195,8 @@ export async function askTurn({ caseData, action, directive, messages, turn, onC
   if (MOCKS_ON) return mockTurn(action?.section ?? 'business', turn, provider);
 
   const systemPrompt = buildInterviewerPrompt(caseData, directive);
-  // THIS TURN is repeated after their last answer: from the system prompt alone, a long call drifted to topics of its own.
+  // THIS TURN is repeated after their last answer: from the system prompt alone, a long call
+  // drifted to topics of its own.
   messages = turnMessages(messages, directive.split('\n\n')[0]);
 
   if (onChunk && provider === 'llm') {

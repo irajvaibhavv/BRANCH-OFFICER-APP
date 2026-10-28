@@ -50,7 +50,7 @@
   --s-watch-bg: rgba(245, 196, 81, 0.14);
 }
 
-/* ---------- type scale ---------- */
+/* Type scale */
 .sarthi h1, .sarthi h2, .sarthi h3 { font-family: inherit; letter-spacing: -0.02em; }
 
 .sarthi :global(.s-figure) {
@@ -72,7 +72,7 @@
   color: var(--s-ink-2);
 }
 
-/* ---------- the rule: a hairline that carries meaning, not decoration ---------- */
+/* The rule: a hairline that carries meaning, not decoration */
 .sarthi :global(.s-rule) {
   height: 1px;
   background: var(--s-line);
@@ -80,7 +80,7 @@
   margin: 18px 0;
 }
 
-/* ---------- status marks ---------- */
+/* Status marks */
 .sarthi :global(.s-mark) {
   display: inline-flex;
   align-items: center;

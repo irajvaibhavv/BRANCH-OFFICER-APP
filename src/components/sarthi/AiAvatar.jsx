@@ -1,5 +1,5 @@
 import styles from './AiAvatar.module.css';
-import { aboutSarthi } from '../../services/sarthi/voice';
+import { aboutSarthi } from '../../services/sarthi/voiceProfile';
 
 // state: idle | speaking | listening | thinking
 // Read by the applicant holding the phone, so these are in the language being spoken.

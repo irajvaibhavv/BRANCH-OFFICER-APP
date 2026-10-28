@@ -29,7 +29,7 @@ export function classifyConcern(text) {
   return 'other';
 }
 
-/* ------------------------------------------------------------------ CUSTOMER FLOW */
+// CUSTOMER FLOW
 const CUSTOMER_FLOW = {
   start: {
     say: ({ party }) => [`Namaste${party ? ` ${first(party.name)}` : ''}! I'm SAARTHI AI. ${party?.name ? 'Rajesh' : 'The officer'} has handed me over so I can understand what you need and find the right loan for you.`, 'This takes about 3 minutes. Shall we begin?'],
@@ -141,7 +141,7 @@ const CUSTOMER_FLOW = {
   },
 };
 
-/* ------------------------------------------------------------------ DSA FLOW */
+// DSA FLOW
 const DSA_FLOW = {
   start: {
     say: ({ party }) => [`Hello ${first(party?.name) ?? ''}, I'm SAARTHI AI. Rajesh has asked me to hear you out properly — anything you tell me goes straight into a note for him and the branch head.`, 'Ready?'],
@@ -258,7 +258,7 @@ export function reflect(kind, node, answer, a) {
   return null;
 }
 
-/* ------------------------------------------------------------------ REPORT */
+// REPORT
 export function buildReport(kind, party, a) {
   const fields = Object.entries(a).filter(([, v]) => v != null && v !== '');
   if (kind === 'customer') {
@@ -301,7 +301,7 @@ export function buildReport(kind, party, a) {
     };
   }
 
-  // ---- DSA report
+  // DSA report
   const topic = classifyConcern(a.topic ?? '');
   const sat = num(a.satisfaction);
   const flags = [];

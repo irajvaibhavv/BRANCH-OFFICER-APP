@@ -1,11 +1,11 @@
-// Before the call: 12-15 questions drawn from THIS applicant's file (the "hot" ones), for either the officer's own PD or
-// for Sarthi to ask. A question that also gets a standard fact names it in `covers`, and that standard question is skipped.
-// The model drafts them; with no model the file's own facts do.
+// Before the call: 12-15 questions drawn from THIS applicant's file (the "hot" ones), for either the officer's own PD
+// or for Sarthi to ask. A question that also gets a standard fact names it in `covers`, and that standard question is
+// skipped. The model drafts them; with no model the file's own facts do.
 import pdSchema from '../../data/sarthi/pdSchema.json';
 import { askAgent } from './agent';
 import { briefForCitation, bankIncome, lookupBusiness, lookupRiskPattern } from './knowledge';
-import { inWords } from './recheck';
-import { MOCKS_ON } from './mocks';
+import { inWords } from './figureRechecks';
+import { MOCKS_ON } from './devMocks';
 
 export const HOT_MIN = 12;
 export const HOT_MAX = 15;
@@ -13,7 +13,8 @@ const SECTIONS = ['personal', 'business', 'financial', 'documents', 'loan_purpos
 // Cache version in the key: questions saved before `covers` existed would skip nothing.
 const hotKey = (id) => `bo_sarthi_hotq2_${id}`;
 
-// Standard fields a file question may stand in for. Identity, the shop check and typed document numbers are never skipped.
+// Standard fields a file question may stand in for. Identity, the shop check and typed
+// document numbers are never skipped.
 const COVERABLE = Object.fromEntries(pdSchema.sections
   .filter((s) => SECTIONS.includes(s.id))
   .flatMap((s) => (s.fields ?? [])
@@ -190,7 +191,7 @@ export async function prepareHotQuestions(c, { fresh = false } = {}) {
   return result;
 }
 
-// ---- the officer's own PD: summary of their notes ----
+// The officer's own PD: summary of their notes
 
 const OFFICER_SUM_SYSTEM = `You summarise a PD (personal discussion) that a branch officer took himself with a loan applicant: the questions
 prepared from the file, and the officer's short notes of what the applicant said.

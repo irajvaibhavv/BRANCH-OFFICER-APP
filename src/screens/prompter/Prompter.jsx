@@ -5,7 +5,7 @@ import { FiX, FiChevronLeft, FiChevronRight, FiCheck, FiPhone, FiMic, FiHelpCirc
 import Avatar from '../../components/ui/Avatar';
 import { useAppState } from '../../context/AppStateContext';
 import { useMeetingQuestions } from '../../components/meeting/MeetingPrep';
-import { TOPICS } from '../../services/meeting/prep';
+import { TOPICS } from '../../services/meeting/questions';
 import styles from './prompter.module.css';
 
 // /prompter?dsa=…&mode=call|record — one question at a time. Record mode hands off to the recorder.

@@ -4,7 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useOffline } from '../../context/OfflineContext';
 import { useTheme } from '../../context/ThemeContext';
-import { START } from '../../utils/route';
+import { START } from '../../utils/routePlanning';
 import styles from './RouteMap.module.css';
 
 // Leaflet + Google road tiles (CARTO now watermarks keyless use); falls back to the SVG preview when offline.

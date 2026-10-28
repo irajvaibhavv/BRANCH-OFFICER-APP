@@ -20,8 +20,8 @@ async function appHelpers() {
   const entry = 'sarthi-training-entry.mjs';
   const outDir = '.sarthi-training-tmp';
   writeFileSync(entry, `
-    export { EXTRACTOR_SYSTEM } from './src/services/sarthi/model.js';
-    export { FIELD_DEFS, EXTRACTABLE_KEYS } from './src/services/sarthi/memory.js';
+    export { EXTRACTOR_SYSTEM } from './src/services/sarthi/modelRouting.js';
+    export { FIELD_DEFS, EXTRACTABLE_KEYS } from './src/services/sarthi/interviewState.js';
     export { readNumbers, reconcile } from './src/services/sarthi/hindiNumbers.js';
     export { default as businessKnowledge } from './src/data/sarthi/businessKnowledge.json';
   `);
@@ -40,7 +40,7 @@ const r = rng(20260926);
 const source = readFileSync(SOURCE, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
 const isExtract = (o) => /^Extract facts/.test(o.messages[0].content);
 
-/* ---------------- extraction ---------------- */
+// Extraction
 const log = [];
 const cleaned = source.filter(isExtract).map((o) => cleanExample(o, h, log)).filter(Boolean);
 const countKeys = (set) => {
@@ -69,7 +69,7 @@ for (const o of extraction) {
   }
 }
 
-/* ---------------- interviewer ---------------- */
+// Interviewer
 const FENCE = '```';
 // The source's question examples, reordered speech-first (the app speaks the fence before the caption).
 const converted = source.filter((o) => !isExtract(o)).map((o) => {
@@ -101,7 +101,7 @@ if (problems.length) {
   process.exit(1);
 }
 
-/* ---------------- write ---------------- */
+// Write
 mkdirSync(OUT, { recursive: true });
 const split = (set) => {
   const cut = Math.round(set.length * 0.9);
@@ -133,7 +133,7 @@ Extraction: ${cleaned.length} cleaned from the source, ${added.length} new (ever
 Interviewer: ${interviewer.length - converted.length} new turns, ${converted.length} converted from the source.
 
 ## Inference must send the same prompts
-- Extraction: the system prompt is \`EXTRACTOR_SYSTEM\` from \`src/services/sarthi/model.js\` and the user message is the
+- Extraction: the system prompt is \`EXTRACTOR_SYSTEM\` from \`src/services/sarthi/modelRouting.js\` and the user message is the
   one \`extractFacts()\` builds. Change either in the app → rebuild this data.
 - Interviewer: the system prompt is \`INTERVIEWER_SLM_SYSTEM\` in \`scripts/training/interviewer.mjs\` — a compact prompt
   for a small model. The app's live Claude prompt is longer; route question phrasing to the SLM only with this one.

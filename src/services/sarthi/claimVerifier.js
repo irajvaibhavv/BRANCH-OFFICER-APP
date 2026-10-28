@@ -3,7 +3,7 @@ import { emi, maxLoan, PRODUCT_RATES, FOIR } from '../../utils/loanCalc';
 import { lookupLocation, bankIncome } from './knowledge';
 import { formatINR } from '../../utils/formatters';
 
-/* Tunable thresholds — every rule below reads from here. */
+// Tunable thresholds; every rule below reads from here.
 export const THRESHOLDS = {
   incomeMatchPct: 15,      // within this % of bank credits → confirmed
   incomeOverstatePct: 40,  // more than this above bank credits → contradicted
@@ -16,7 +16,7 @@ export const THRESHOLDS = {
 
 const fmt = (n) => formatINR(n, { compact: false });
 
-/* Borrowers say numbers in words far more often than in digits — "teen lakh", "do saal". */
+// Borrowers say numbers in words more often than digits ("teen lakh", "do saal").
 const WORD_NUM = {
   ek: 1, do: 2, teen: 3, tin: 3, char: 4, chaar: 4, paanch: 5, panch: 5, chhe: 6, che: 6,
   saat: 7, aath: 8, nau: 9, das: 10, gyarah: 11, barah: 12, pandrah: 15, bees: 20,
@@ -96,8 +96,7 @@ const RULES = {
     return { status: 'unverified', detail: `${Math.round(diff)}% difference from ${label} (${fmt(base)})`, verified: fmt(base), source: src };
   },
 
-  // Sales against the bank's sales, never against income: comparing ₹9 lakh of sales with ₹76k of margin-derived income
-  // called every honest shop "1084% above".
+  // Sales are compared with the bank's sales, never with income (margin-derived income is far smaller than sales).
   turnover: (claimed, ctx) => {
     const bank = bankIncome(ctx.caseData);
     if (!bank?.marginPct) return RULES.income(claimed, ctx);

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { FiCheck, FiX, FiVolume2, FiArrowLeft } from 'react-icons/fi';
 import { speak, stopSpeaking, prefetch } from '../../services/voice';
-import { getSarthiGender, setSarthiGender, sarthiVoice, gendered, prerendered } from '../../services/sarthi/voice';
-import { prefetchLine } from '../../services/sarthi/stream';
+import { getSarthiGender, setSarthiGender, sarthiVoice, gendered, prerendered } from '../../services/sarthi/voiceProfile';
+import { prefetchLine } from '../../services/sarthi/streamedSpeech';
 import styles from './CallSetup.module.css';
 
 const VOICES = [

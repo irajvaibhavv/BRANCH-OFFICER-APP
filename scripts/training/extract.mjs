@@ -1,7 +1,7 @@
 // Fact-extraction set: the source examples cleaned to the current schema, plus examples for thin and new fields.
 import { sayNumber } from './lang.mjs';
 
-// The exact user message extractFacts() sends (services/sarthi/model.js) — train on what inference sees.
+// The exact user message extractFacts() sends (services/sarthi/modelRouting.js) — train on what inference sees.
 export const userMessage = (section, question, answer) =>
   `Interview section: ${section || 'unknown'}\n\nFor context, the last thing Sarthi asked: "${question}"\n\nBorrower's answer: "${answer}"`;
 
@@ -122,7 +122,7 @@ export const example = (h, section, question, answer, facts) => ({
   ],
 });
 
-/* ------------------------------------------------------------------ new examples */
+// New examples
 
 const round = (r, lo, hi, step) => Math.round(r.int(lo, hi) / step) * step;
 const NAMES = ['Ramesh Kumar', 'Sunita Devi', 'Mohd Salim', 'Pooja Sharma', 'Rajendra Yadav', 'Farida Begum',

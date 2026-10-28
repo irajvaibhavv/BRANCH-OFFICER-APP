@@ -1,7 +1,7 @@
-// Asserts the live face check's rules (src/services/sarthi/face.js) and how replies to "kya aap khud X ji hain?" are read
-// (idChecks.js), since only their answer — never the model's verdict — can end a call. Run: npm run check:face
+// Asserts the live face check's rules (src/services/sarthi/faceMatch.js) and how replies to "kya aap khud X ji hain?"
+// are read (idChecks.js), since only their answer — never the model's verdict — can end a call. Run: npm run check:face
 import assert from 'node:assert/strict';
-import { faceFlags, faceSummary, faceLines, matchVerdict } from '../src/services/sarthi/face.js';
+import { faceFlags, faceSummary, faceLines, matchVerdict } from '../src/services/sarthi/faceMatch.js';
 import { confirmReply, speakerIsSomeoneElse } from '../src/services/sarthi/idChecks.js';
 
 const same = { verdict: 'same', reason: 'match', people: 1 };

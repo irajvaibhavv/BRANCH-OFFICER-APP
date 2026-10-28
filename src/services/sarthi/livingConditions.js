@@ -1,5 +1,5 @@
 // Living conditions, as an officer would write them after a home visit: the facts the home photos show, then a few
-// sentences on whether they fit the income. No scores or bands (lead, 2026-10-22) — the model reads the facts and writes.
+// sentences on whether they fit the income. No scores or bands.
 import { bankIncome } from './knowledge';
 import { askAgent } from './agent';
 

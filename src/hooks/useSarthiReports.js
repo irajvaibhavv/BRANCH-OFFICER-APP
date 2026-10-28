@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocalStorage } from './useLocalStorage';
-import { readDrafts } from '../services/sarthi/repeat';
+import { readDrafts } from '../services/sarthi/repeatPd';
 import { purgeExpiredVideos } from '../services/retention';
 import pdHistory from '../data/sarthi/pdHistory.json';
 
@@ -22,7 +22,7 @@ export function useSarthiReports() {
 
 // A generated report (and a dropped call's draft) waits here until a BO or CO ticks "reviewed" on it; only then does it
 // join the saved PDs above, so history, outcomes and repeat PDs never see an unconfirmed one. Drafts are read in place
-// (repeat.js readDrafts) and removed on confirm, so a closed app loses nothing.
+// (repeatPd.js readDrafts) and removed on confirm, so a closed app loses nothing.
 export function usePendingPds() {
   const [pending, setPending] = useLocalStorage('bo_sarthi_pending', []);
   const drafts = readDrafts().filter((d) => !pending.some((p) => p.id === d.id));

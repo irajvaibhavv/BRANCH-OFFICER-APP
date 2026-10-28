@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { IoCameraReverse, IoCheckmarkCircle, IoClose, IoImages, IoRefresh, IoWarning } from 'react-icons/io5';
-import { MAX_EDGE, QUALITY, GUIDE, checkQuality, framingCheck } from '../../services/sarthi/photo';
+import { MAX_EDGE, QUALITY, GUIDE, checkQuality, framingCheck } from '../../services/sarthi/photoAnalysis';
 import { speak, stopSpeaking } from '../../services/voice';
-import { sarthiVoice, gendered } from '../../services/sarthi/voice';
+import { sarthiVoice, gendered } from '../../services/sarthi/voiceProfile';
 import styles from './PhotoCapture.module.css';
 
 // A shot that failed the check twice may still be sent — bad light must not strand the PD; the report says so.
@@ -10,7 +10,7 @@ const SEND_ANYWAY_AFTER = 2;
 const LIVE_CHECK_MS = 700;
 // Sarthi speaks a live hint only once it has held for two checks, and not more often than this — else it nags.
 const SPEAK_GAP_MS = 4500;
-// Mean grey-level change (0-1) between the two pan frames that counts as the camera having turned. Calibration knob.
+// Mean grey-level change (0-1) between the two pan frames that counts as the camera having turned. Tunable.
 const PAN_MOVED = 0.08;
 const PAN_EDGE = 480;
 

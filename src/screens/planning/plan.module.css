@@ -43,7 +43,7 @@
   padding: 12px 20px 16px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 55;
 }
 
-/* ---------- Zomato-style filter bar (DSA browse) ---------- */
+/* Filter bar (DSA browse) */
 .filterBar { position: sticky; top: 0; z-index: 20; background: var(--bg); margin: -4px -20px 12px; padding: 4px 20px 10px; }
 .search { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1.5px solid var(--hairline); border-radius: 14px; padding: 0 12px; height: 42px; color: var(--text-3); }
 .search input { flex: 1; min-width: 0; height: 100%; background: none; border: 0; font-size: 15px; color: var(--text-1); }
@@ -75,14 +75,14 @@
 .miniOn { background: color-mix(in srgb, var(--primary) 4%, var(--card)); }
 .miniName { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ---------- Customers ---------- */
+/* Customers */
 .kindSeg { display: flex; gap: 4px; background: var(--card); padding: 4px; border-radius: 14px; border: var(--card-border); box-shadow: var(--card-shadow); margin-bottom: 14px; }
 .kindBtn { flex: 1; height: 38px; border-radius: 10px; font-weight: 600; font-size: 13px; color: var(--text-2); display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .kindBtn b { font-size: 12px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--bg); color: var(--text-2); }
 .kindOn { background: var(--primary-soft); color: var(--primary); }
 .kindOn b { background: var(--primary); color: #fff; }
 
-/* ---------- Loan calculator ---------- */
+/* Loan calculator */
 .calcGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .calcOut { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
 .calcTile { background: var(--bg); border-radius: 12px; padding: 10px 12px; }
@@ -98,7 +98,7 @@
 .qInput { width: 100%; height: 42px; border-radius: 12px; border: 1.5px solid var(--hairline); background: var(--bg); padding: 0 12px; font-size: 15px; color: var(--text-1); }
 .qHint { font-size: 12px; color: var(--text-3); margin-top: 6px; }
 
-/* ---------- Branch tasks ---------- */
+/* Branch tasks */
 .task { display: flex; align-items: flex-start; gap: 12px; width: 100%; text-align: left; padding: 12px 0; border-bottom: 1px solid var(--hairline); }
 .task:last-child { border-bottom: 0; }
 .taskTick { width: 24px; height: 24px; border-radius: 8px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; margin-top: 2px; }

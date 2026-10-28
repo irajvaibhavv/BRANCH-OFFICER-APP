@@ -9,7 +9,7 @@
   border-bottom: 1px solid var(--s-line);
 }
 
-/* ---------------------------------------------------------------- the stamp */
+/* The stamp */
 .stamp {
   display: inline-flex;
   flex-direction: column;
@@ -63,7 +63,7 @@
 .tallyWatch { color: var(--s-watch); }
 .tallyTurns { color: var(--s-ink-3); font-weight: 400; margin-left: auto; }
 
-/* ---------------------------------------------------------------- the ledger */
+/* The ledger */
 .empty { font-size: 13.5px; color: var(--s-ink-3); }
 
 .ledger { display: flex; flex-direction: column; gap: 2px; }
@@ -132,7 +132,7 @@
 }
 .src { color: var(--s-ink-3); }
 
-/* ---------------------------------------------------------------- written report */
+/* Written report */
 .md { font-size: 14px; line-height: 1.6; color: var(--s-ink-2); }
 .mdH {
   font-size: 13px;
@@ -158,7 +158,7 @@
 }
 .table th { font-weight: 600; color: var(--s-ink); white-space: nowrap; }
 
-/* ---------------------------------------------------------------- audit */
+/* Audit */
 .audit {
   margin-top: 30px;
   padding: 16px 18px;
@@ -183,7 +183,7 @@
   color: var(--s-ink-3);
 }
 
-/* ---------------------------------------------------------------- actions */
+/* Actions */
 .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 26px; }
 .copy, .back {
   height: 52px;
@@ -205,18 +205,18 @@
   .stamp { transform: rotate(-3deg) !important; }
 }
 
-/* ---------------------------------------------------------------- identity */
+/* Identity */
 .idOk, .idBad { padding: 14px 16px; border-radius: 2px; border-left: 3px solid; }
 .idOk { background: var(--s-clear-bg); border-left-color: var(--s-clear); }
 .idBad { background: var(--s-stamp-bg); border-left-color: var(--s-stamp); }
 .idLine { font-size: 13.5px; line-height: 1.5; color: var(--s-ink); margin-bottom: 9px; }
 .idChecks { margin: 0; padding: 0; list-style: none; }
 .idChecks li { font-size: 12.5px; line-height: 1.45; margin-bottom: 5px; color: var(--s-ink-2); }
-/* ---------------------------------------------------------------- business understanding */
+/* Business understanding */
 .pass { color: var(--s-clear); }
 .fail { color: var(--s-stamp); font-weight: 500; }
 
-/* ---------------------------------------------------------------- photographs */
+/* Photographs */
 .shots { display: flex; flex-direction: column; gap: 14px; }
 .shot {
   display: grid;
@@ -262,7 +262,7 @@
 .faces img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; }
 .faces figcaption { font-size: 12px; color: var(--s-ink-3); text-align: center; }
 .checkerLine { font-size: 12px; color: var(--s-ink-3); text-align: center; margin: -4px 0 14px; }
-/* ---------------------------------------------------------------- call log */
+/* Call log */
 .log { margin-top: 26px; border: 1px solid var(--s-line); border-radius: 12px; padding: 12px 14px; }
 .log summary { font-size: 13px; font-weight: 600; color: var(--s-ink-2); cursor: pointer; }
 .log ol { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -272,7 +272,7 @@
 .logText { overflow-wrap: anywhere; }
 .logSys .logText { color: var(--s-ink-2); font-style: italic; }
 .logWarn .logText { color: var(--s-watch); }
-/* ---------------------------------------------------------------- maker-checker */
+/* Maker-checker */
 .review { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--s-line); border-radius: 14px; }
 .reviewNote { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--s-ink); }
 .reviewField { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600; color: var(--s-ink-3); }
@@ -284,6 +284,6 @@
 .choice, .choiceOn { font: inherit; font-size: 13px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--s-line); background: transparent; color: var(--s-ink); }
 .choiceOn { background: var(--s-accent); border-color: var(--s-accent); color: #fff; }
 
-/* ---------------------------------------------------------------- retention */
+/* Retention */
 .retention { list-style: none; margin: -6px 0 14px; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--s-ink-3); text-align: center; }
 .warnLine { color: var(--s-watch); font-weight: 600; }

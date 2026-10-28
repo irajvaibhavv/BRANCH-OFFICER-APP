@@ -1,12 +1,11 @@
 // Photos the applicant takes mid-interview. Vision returns observations, never verdicts.
 import { VISION_URL } from './agent';
-import { visionFlag } from './photoCheck';
+import { visionFlag } from './photoProvenance';
 
 export const MAX_EDGE = 900;   // enough for a model to read a signboard
 export const QUALITY = 0.62;   // keeps a photo near 60–90KB so several fit in localStorage
 
-// `tips` are shown before the first shot, the way an officer on a PD tells them where to stand: framing, what must be
-// visible, position, light.
+// `tips` are shown before the first shot: framing, what must be visible, position, light.
 export const PHOTO_ASKS = {
   shop: {
     label: 'the shop',
@@ -34,7 +33,7 @@ export const PHOTO_ASKS = {
       'Din ki roshni mein lijiye; phone seedha pakdiye',
     ],
   },
-  // At home, after the outside: the main room. What a family lives with is part of a PD (living.js) — always skippable.
+  // At home, after the outside: the main room, for living conditions (livingConditions.js). Always skippable.
   home_inside: {
     label: 'inside the home',
     ask: 'Agar theek lage toh ghar ke andar ki ek photo bhi bhejiye — jahan aap log baithte hain.',
@@ -47,7 +46,7 @@ export const PHOTO_ASKS = {
       'Light jala lijiye',
     ],
   },
-  // The bill book or register, at the shop: a book written over months does not look like one filled in last night.
+  // The bill book at the shop: one written over months does not look like one filled in last night.
   records: {
     label: 'the bill book / register',
     ask: 'Apni bill book ya hisaab ka register kholiye — aaj ka ya sabse naya page — aur uski photo bhejiye.',
@@ -61,7 +60,8 @@ export const PHOTO_ASKS = {
       'Light page pe ho, apni parchhai na pade',
     ],
   },
-  // Live challenges (challenges.js): Sarthi says the task itself, so `ask` is empty; `vision` is what the photo must show.
+  // Live challenges (liveChallenges.js): Sarthi says the task itself, so `ask` is empty; `vision`
+  // is what the photo must show.
   records_back: {
     label: 'an older page of the bill book', ask: '', speech: '', hint: 'Purana bill', frame: 'Purane bill ki tareekh aur rakam saaf dikhe',
     tips: ['Jo tareekh boli gayi, us din ke aas-paas ka page kholiye', 'Upar se seedha photo lijiye', 'Tareekh aur rakam padhi ja sake'],
@@ -106,7 +106,7 @@ export const PHOTO_ASKS = {
   extra: { label: 'an extra photo', ask: '', speech: '', hint: 'Photo', frame: 'Jo dikhana hai, uski photo lijiye', tips: [] },
 };
 
-// Quality thresholds, measured on a 160px-wide greyscale copy. Calibration knobs: tune on real phones, not in theory.
+// Quality thresholds, measured on a 160px-wide greyscale copy. Tune on real phones.
 export const QUALITY_LIMITS = { dark: 60, bright: 210, clipped: 0.3, flat: 14, blur: 4.5, backlight: 0.55 };
 
 // Every line Sarthi says in the camera, as caption (`text`) and Devanagari for the Hindi voice (`speech`).
@@ -178,7 +178,7 @@ export function checkQuality(source) {
   if (mean < L.dark) keys.push('dark');
   else if (mean > L.bright || clipped / g.length > L.clipped) keys.push('bright');
   else if (edge / edgeN > 140 && centre / centreN < (edge / edgeN) * L.backlight) keys.push('backlight');
-  // Bad light alone explains a flat frame — "camera dhaka hai?" would be the wrong advice then.
+  // Bad light alone explains a flat frame, so don't suggest the lens is covered.
   if (keys.length) { /* light first */ } else if (sd < L.flat) keys.push('flat');
   else if (lap / lapN < L.blur) keys.push('blur');
   return { ok: keys.length === 0, issues: keys.map((key) => ({ key, ...GUIDE[key] })) };
@@ -186,11 +186,8 @@ export function checkQuality(source) {
 
 const FRAMING = ['ok', 'move_closer', 'move_back', 'tilted', 'obstructed', 'missing', 'wrong'];
 
-/**
- * Framing, read by the vision model — what code cannot see: too far, too close, the counter out of frame, not a shop.
- * The model only picks a code; every word said to them is ours (GUIDE). Null when no vision service answers, and the
- * shot then stands on the code check alone.
- */
+// Framing, read by the vision model (too far, too close, counter out of frame, not a shop). The model only picks a
+// code; every word said is ours (GUIDE). Null when no vision service answers.
 const FRAMING_SUBJECT = {
   shop: { should: 'a shop photo for a loan check: the counter, goods/stock on shelves and ideally the shop board should be visible', missing: 'the counter and stock are', what: 'a shop' },
   home: { should: 'a photo of the outside of a home for a loan check: the front door and front of the house should be visible', missing: 'the door and front are', what: 'the outside of a home' },
@@ -277,14 +274,15 @@ Rules:
 - Do not say whether the loan should be approved.${kind === 'shop' ? STOCK_RULE : ''}${NAMES_RULE}`;
 }
 
-// Names read off a photo are compared across PDs (crossPd.js): two applicants whose QR, board or bill book carry the
-// same name or GSTIN were shown the same shop.
+// Names read off a photo are compared across PDs (crossPdCheck.js): two applicants whose QR, board or bill book carry
+// the same name or GSTIN were shown the same shop.
 const NAMES_RULE = `
 Then, on a separate LAST line, write "NAMES:" followed by every shop name, person name, GSTIN or UPI ID you can read in
 the image, separated by ";" — exactly as written. Not product or brand names printed on goods. Write "NAMES: none" if
 you can read none.`;
 
-// The shop photo also returns a rough value of the stock in view, compared in code with the stock they stated (stockCheck).
+// The shop photo also returns a rough value of the stock in view, compared in code with the
+// stock they stated (stockCheck).
 const STOCK_RULE = `
 Then, on its own line, write "STOCK:" followed by ONE line of JSON for the goods visible in this photo only:
 {"fullness":"empty|sparse|half|full|packed|unclear","value_low":<rupees or null>,"value_high":<rupees or null>}
@@ -301,7 +299,8 @@ export function stockCheck(stock, declared) {
   return { status, low: lo || null, high: hi, declared: said, fullness: stock.fullness ?? null };
 }
 
-// Home photos also return what the living standard is read from — only what is visible, scored in code (living.js).
+// Home photos also return what the living standard is read from — only what is visible, scored in code
+// (livingConditions.js).
 const LIVING_RULE = `
 Then, on its own line, write "LIVING:" followed by ONE line of JSON with only what you can SEE (leave a list empty, or a
 value "unclear", rather than guess):
@@ -340,7 +339,8 @@ Rules:
 - Do not say whether the loan should be approved.${LIVING_RULE}${NAMES_RULE}`;
 }
 
-// What separates a book kept for months from one written up for the PD — the officer weighs it, the model only describes.
+// What separates a book kept for months from one written up for the PD. The officer weighs
+// it; the model only describes.
 function recordsPrompt(caseData) {
   return `You are shown a photograph the applicant submitted as their bill book or account register. They say they run: ${caseData.business} (${caseData.businessName}).
 

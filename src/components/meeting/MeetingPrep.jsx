@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { FiCheck, FiChevronDown, FiHelpCircle } from 'react-icons/fi';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { useAppState } from '../../context/AppStateContext';
-import { buildQuestions, TOPICS } from '../../services/meeting/prep';
+import { buildQuestions, TOPICS } from '../../services/meeting/questions';
 import styles from './MeetingPrep.module.css';
 
 /** Builds the question set for a DSA from live app state. */

@@ -16,12 +16,12 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../hooks/useToast';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { currentPosition } from '../../hooks/useGeolocation';
-import { downscale } from '../../services/sarthi/photo';
+import { downscale } from '../../services/sarthi/photoAnalysis';
 import { typeOf, clock } from '../../components/marketing/activityTypes';
 import { AREA_COORDS } from '../../utils/areas';
-import { START, km } from '../../utils/route';
+import { START, km } from '../../utils/routePlanning';
 import { buildNewCase, CUSTOM_CASES_KEY } from '../../services/sarthi/knowledge';
-import { saveFace } from '../../services/sarthi/face';
+import { saveFace } from '../../services/sarthi/faceMatch';
 import CustomerPhotoField from '../../components/sarthi/CustomerPhotoField';
 import { PRODUCTS } from '../../utils/loanCalc';
 import { formatINR, toISODate } from '../../utils/formatters';
@@ -40,7 +40,8 @@ const templateOf = (text, l) => {
   return text.split(link).join('{link}').split(l.name.split(' ')[0]).join('{name}').split(l.product).join('{product}');
 };
 const blankLead = (area) => ({ kind: 'customer', name: '', phone: '', business: '', product: PRODUCTS[0], amount: '', area, note: '', tagged: [] });
-// A lead met at an activity is also a client, saved as a Lead in Clients: a customer (walk-in case, ready for a PD) or a DSA / connector.
+// A lead met at an activity is also a client, saved as a Lead in Clients: a customer (walk-in case, ready for
+// a PD) or a DSA / connector.
 const LEAD_KINDS = [['customer', 'Customer'], ['dsa', 'DSA'], ['connector', 'Connector']];
 const KIND_LABEL = { customer: 'Customer lead', dsa: 'DSA lead', connector: 'Connector lead' };
 

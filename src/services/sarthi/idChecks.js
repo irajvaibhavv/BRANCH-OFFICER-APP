@@ -1,5 +1,4 @@
-// Offline document checks (Aadhaar Verhoeff, PAN structure + surname initial). Not eKYC.
-/* ---------------------------------------------------------------- Name */
+// Offline document checks (Aadhaar Verhoeff, PAN structure + surname initial). Not eKYC. Name
 
 const NAME_FILLER = new Set(['ji', 'mr', 'mrs', 'shri', 'sri', 'smt', 'sir', 'bhai', 'main', 'mai', 'mera', 'meri', 'naam',
   'hai', 'hoon', 'hu', 'haan', 'ha', 'my', 'name', 'is', 'i', 'am', 'im', 'ka', 'ki', 'se', 'aur', 'and',
@@ -37,15 +36,9 @@ const skeleton = (t) => t.replace(/[aeiouy]/g, '');
 const sameToken = (x, y) => x === y || (Math.min(x.length, y.length) >= 4
   && (oneEditApart(x, y) || x.startsWith(y) || y.startsWith(x) || (Math.min(x.length, y.length) >= 5 && skeleton(x) === skeleton(y))));
 
-/**
- * How the stated name compares with the file, decided in code:
- *   'full'      — every part of the file name was said ("Mahesh Agarwal")
- *   'partial'   — only part of it, nothing contradicting ("Mahesh") → confirm the full name
- *   'conflict'  — a part matches but the next part is different ("Mahesh Sharma") → confirm; "no" ends the PD
- *   'different' — nothing matches ("Raj") → someone else is on the phone
- *   null        — cannot tell (Devanagari from speech recognition)
- * namesMatch() alone passed "Mahesh Sharma" for Mahesh Agarwal, because any shared part counted.
- */
+// How the stated name compares with the file: 'full' every part said ("Mahesh Agarwal"); 'partial' only part, nothing
+// contradicting ("Mahesh") → confirm; 'conflict' a part matches but the next differs ("Mahesh Sharma") → confirm, "no"
+// ends the PD; 'different' nothing matches → someone else; null cannot tell (Devanagari).
 export function nameVerdict(stated, onFile) {
   const a = nameTokens(stated);
   const b = nameTokens(onFile);
@@ -74,7 +67,7 @@ export function confirmReply(text, onFile) {
   return null;
 }
 
-/* ---------------------------------------------------------------- Aadhaar */
+// Aadhaar
 
 // Verhoeff dihedral group tables — the checksum printed on every Aadhaar.
 const D = [
@@ -129,7 +122,7 @@ export function validateAadhaar(input = '') {
   return { type: 'aadhaar', ok, value: digits, masked: maskAadhaar(digits), checks };
 }
 
-/* ---------------------------------------------------------------- PAN */
+// PAN
 
 const PAN_SHAPE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 export const PAN_HOLDER = {
@@ -180,7 +173,7 @@ export function validateId(kind, value, name) {
   return kind === 'aadhaar' ? validateAadhaar(value) : validatePan(value, name);
 }
 
-/* ---------------------------------------------------------------- Foreign IDs */
+// Foreign IDs
 
 // No Indian ID has 13 digits (Aadhaar 12, VID 16), so this shape is a CNIC, dashed or not.
 const CNIC = /(?:^|\D)(\d{5})[-\s]?(\d{7})[-\s]?(\d)(?!\d)/;
@@ -229,7 +222,7 @@ export function identitySummary(id) {
   return `${label} ${id.masked} failed: ${failed.map((c) => c.detail).join('; ')}.`;
 }
 
-/* ---------------------------------------------------------------- Applicant present */
+// Applicant present
 // A PD is only a PD with the applicant on the call. When someone else answers, the code (not the model) asks who they
 // are, asks them to call the applicant, and ends the call politely if the applicant is not there.
 
@@ -265,7 +258,8 @@ export function presenceLines(c) {
   const full = c.name;
   const hiFull = c.hi?.name ?? c.name;
   return {
-    // The name they gave only partly matches: ask for the full name on file, never let "Mahesh" pass for Mahesh Agarwal.
+    // The name they gave only partly matches: ask for the full name on file, never let
+    // "Mahesh" pass for Mahesh Agarwal.
     confirm: (stated, verdict) => (verdict === 'conflict'
       ? {
         text: `Aapne apna naam ${stated} bataya. Yeh application ${full} ji ke naam se hai. Kya aap ${full} ji hi hain?`,
@@ -311,13 +305,9 @@ const AWAY = '(bahar|baahar|ghar pe nahi|ghar par nahi|nahi hai|nahi hain|nhi ha
 const KIN_HI = '(बेटा|बेटी|लड़का|लड़की|लडका|लडकी|पत्नी|पति|भाई|बहन|बहू|नौकर|रिश्तेदार)';
 const ELDER_HI = '(पापा|मम्मी|माँ|मां|पिताजी|पिता जी|माता जी|पति|पत्नी)';
 
-/**
- * The person answering says they are the applicant's relative or helper — "Rekha Devi ka beta", "I am his son",
- * "main unka ladka hoon", "meri mummy ka loan", "papa bahar hai". Their own name can share a word with the file ("Raj,
- * Rekha ka beta"), and the extractor has filed "I am his son" under the father's name, so this reads the words, not the
- * name. Used only before the applicant confirms their own name: after that, "mere pati" is the applicant talking about
- * her husband. `away` = they also said the applicant is not there.
- */
+// The person answering says they are the applicant's relative or helper ("Rekha Devi ka beta", "I am his son", "papa
+// bahar hai"). Reads the words, not the name, since their own name can share a word with the file. Only used before the
+// applicant confirms their name. `away` = they also said the applicant is not there.
 export function speakerIsSomeoneElse(text = '', applicantName = '') {
   const s = String(text).toLowerCase();
   const first = applicantName.split(' ')[0]?.toLowerCase();

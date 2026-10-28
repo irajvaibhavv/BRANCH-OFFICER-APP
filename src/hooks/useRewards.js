@@ -7,7 +7,7 @@ import { incentiveRoadmap, incentiveFor, PLAN } from '../utils/incentive';
 
 /**
  * Incentive state shared by the arena, plan, what-to-do, statement and store screens.
- * Rupees come only from the month's disbursement (utils/incentive.js — the lead's rule), so progress is read from the
+ * Rupees come only from the month's disbursement (utils/incentive.js), so progress is read from the
  * loan files, never typed in. The level is the slab reached; the personal target is optional — without one, the goal
  * is the next slab. Missions pay points once — `claimed` = { [missionId]: pts }; points never turn into rupees.
  */

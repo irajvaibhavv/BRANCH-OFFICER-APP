@@ -21,7 +21,7 @@
 }
 [data-theme='dark'] .call { background: #0e1526; }
 
-/* ---------------------------------------------------------------- camera band */
+/* Camera band */
 .band {
   position: absolute;
   inset: 0;
@@ -73,7 +73,7 @@
   justify-content: center;
 }
 
-/* ---------------------------------------------------------------- the sheet */
+/* The sheet */
 .sheet {
   position: absolute;
   left: 0;
@@ -130,7 +130,7 @@
   transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ---------------------------------------------------------------- question */
+/* Question */
 .body {
   flex: 1;
   min-height: 0;
@@ -202,7 +202,7 @@
   50% { transform: scaleY(1); }
 }
 
-/* ---------------------------------------------------------------- photograph */
+/* Photograph */
 .shot {
   display: flex;
   align-items: center;
@@ -245,7 +245,7 @@
   font-weight: 600;
 }
 
-/* ---------------------------------------------------------------- message box */
+/* Message box */
 .typeRow {
   display: flex;
   align-items: center;
@@ -302,7 +302,7 @@
   background: #3a5a99;
 }
 
-/* ---------------------------------------------------------------- bottom actions */
+/* Bottom actions */
 .controls {
   display: flex;
   justify-content: center;
@@ -344,7 +344,7 @@
 }
 .endLabel { color: #c0392f; }
 
-/* ---------------------------------------------------------------- overlays */
+/* Overlays */
 .connecting {
   position: absolute;
   inset: 0;
@@ -392,7 +392,7 @@
 .sheetGhost { background: var(--accent); color: var(--text-1); }
 .sheetDanger { background: #e5342a; color: #fff; }
 
-/* ---------------------------------------------------------------- generating */
+/* Generating */
 .generating {
   position: fixed;
   inset: 0;

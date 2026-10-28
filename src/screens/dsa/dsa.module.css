@@ -40,7 +40,7 @@
   padding: 12px 20px; background: var(--bg); border-top: 1px solid var(--border); z-index: 55;
 }
 
-/* ---- Detail ---- */
+/* Detail */
 .detailHead {
   display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px;
   padding: 8px 0 20px;
@@ -92,14 +92,14 @@
 .avStack > *:first-child { margin-left: 0; }
 .trChip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--primary); background: var(--primary-soft); border-radius: 999px; padding: 4px 8px; flex-shrink: 0; white-space: nowrap; }
 
-/* ---- Compare ---- */
+/* Compare */
 .cmpTable { display: flex; flex-direction: column; gap: 8px; }
 .cmpRow { display: grid; align-items: center; gap: 8px; background: var(--card); border-radius: 12px; padding: 12px; border: var(--card-border); box-shadow: var(--card-shadow); }
 .cmpLabel { font-size: 13px; color: var(--text-2); font-weight: 500; }
 .cmpVal { text-align: center; font-weight: 700; font-size: 16px; padding: 6px 4px; border-radius: 8px; }
 .cmpWin { background: var(--success-soft); color: var(--success); }
 
-/* ---- Add DSA ---- */
+/* Add DSA */
 .steps { display: flex; gap: 6px; margin: 8px 0 24px; }
 .step { flex: 1; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
 .stepFill { height: 100%; background: var(--primary); border-radius: 3px; }

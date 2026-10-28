@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { FiVideoOff } from 'react-icons/fi';
-import { startCamera } from '../../services/sarthi/video';
+import { startCamera } from '../../services/sarthi/camera';
 import styles from './VideoFeed.module.css';
 
 // A denied or missing camera is not an error: the layer goes transparent and the interview carries on.

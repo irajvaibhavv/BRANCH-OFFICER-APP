@@ -1,13 +1,13 @@
 // Is anyone in front of the camera? On-device face detection (MediaPipe BlazeFace short-range), checked every second at
 // no API cost — the vision-model face check runs every 90s and is far too slow to notice someone walking off.
-import { liveVideo } from './video';
+import { liveVideo } from './camera';
 
 const VERSION = '1.1.0'; // must match package.json — the wasm is fetched for this exact build
 const WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}/wasm`;
 const MODEL = 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
 
-// Knob: BlazeFace still finds a face behind a hand at ~0.5-0.7; a clear face scores ~0.85+. Raise if a covered face
-// passes, lower if a dim room reads as "away" — the score is logged with every ask.
+// BlazeFace still finds a face behind a hand at ~0.5-0.7; a clear face scores ~0.85+. Raise if a covered face passes,
+// lower if a dim room reads as "away"; the score is logged with every ask.
 const MIN_SCORE = 0.75;
 
 let detector = null;

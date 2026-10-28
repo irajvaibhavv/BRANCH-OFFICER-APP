@@ -1,4 +1,4 @@
-/* ---- Ready state ---- */
+/* Ready state */
 .stage {
   display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px;
   padding: 24px 0 8px;
@@ -20,7 +20,7 @@
 .tip { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: var(--text-2); line-height: 1.45; }
 .tipIcon { width: 34px; height: 34px; border-radius: 11px; background: var(--primary-soft); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
-/* ---- Recording state ---- */
+/* Recording state */
 .live {
   display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 20px 16px 16px;
   border-radius: 16px; background: var(--card); border: var(--card-border); box-shadow: var(--card-shadow);
@@ -55,7 +55,7 @@
 .typing span:nth-child(2) { animation-delay: 0.15s; }
 .typing span:nth-child(3) { animation-delay: 0.3s; }
 
-/* ---- Processing ---- */
+/* Processing */
 .proc { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 40px 0 24px; }
 .procIcon { width: 88px; height: 88px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
 .steps { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 16px; text-align: left; }
@@ -66,7 +66,7 @@
 .stepMark.done { background: var(--success); }
 .stepMark.on { background: var(--primary); }
 
-/* ---- Result ---- */
+/* Result */
 .seg { display: flex; gap: 4px; background: var(--card); padding: 4px; border-radius: 14px; border: var(--card-border); box-shadow: var(--card-shadow); position: relative; }
 .segBtn { flex: 1; height: 40px; border-radius: 10px; font-weight: 600; font-size: 14px; color: var(--text-2); position: relative; z-index: 1; }
 .segOn { color: var(--primary); }
@@ -108,4 +108,4 @@
 .share { display: flex; gap: 10px; }
 .share > * { flex: 1; }
 
-/* ---- Recording list card ---- */
+/* Recording list card */

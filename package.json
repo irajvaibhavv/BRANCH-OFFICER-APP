@@ -12,6 +12,7 @@
     "sarthi": "node --env-file-if-exists=.env.local scripts/sarthi-proxy.mjs",
     "sarthi:voice": "node scripts/prerender-voice.mjs",
     "sarthi:training": "node scripts/build-training-data.mjs",
+    "docs:prompts": "node scripts/export-prompts.mjs",
     "check:incentive": "node scripts/check-incentive.mjs",
     "check:geo": "node scripts/check-geo.mjs",
     "check:challenges": "node scripts/check-challenges.mjs",

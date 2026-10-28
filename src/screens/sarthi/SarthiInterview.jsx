@@ -7,44 +7,44 @@ import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
 import CallSetup from '../../components/sarthi/CallSetup';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { getCase, briefForCitation, buildNewCase, CUSTOM_CASES_KEY, tradeOf } from '../../services/sarthi/knowledge';
-import { checkChallenge } from '../../services/sarthi/challenges';
+import { checkChallenge } from '../../services/sarthi/liveChallenges';
 import { parseClaims, peekSpeech, peekDisplay, writeReport, CHAT_URL, VISION_URL, COMPLETE_TAG } from '../../services/sarthi/agent';
-import { extractFacts, askTurn } from '../../services/sarthi/model';
-import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../services/sarthi/script';
-import { verifyClaims, computeEligibility, toNumber } from '../../services/sarthi/verifier';
-import { createEmptyMemory, knownFacts, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor, recordTradeAnswer, recordProfessionAnswer, recordCrossAnswer, recordHotAnswer, acceptedFacts, MAX_ASKS, isSalaried, isAssisted } from '../../services/sarthi/memory';
-import { assistedFlags } from '../../services/sarthi/assisted';
-import { readIntent, replyPrefix } from '../../services/sarthi/intent';
-import { queueRechecks, recordRecheckAnswer, driftRechecks } from '../../services/sarthi/recheck';
-import { loadHot, ruleHotQuestions } from '../../services/sarthi/prep';
+import { extractFacts, askTurn } from '../../services/sarthi/modelRouting';
+import { buildScript, buildIntakeScript, tradeFromWords, claimFromAnswer, buildFallbackReport } from '../../services/sarthi/scriptedMode';
+import { verifyClaims, computeEligibility, toNumber } from '../../services/sarthi/claimVerifier';
+import { createEmptyMemory, knownFacts, updateMemory, addFlags, recordTurn, completeness, typedFieldsFor, recordTradeAnswer, recordProfessionAnswer, recordCrossAnswer, recordHotAnswer, acceptedFacts, MAX_ASKS, isSalaried, isAssisted } from '../../services/sarthi/interviewState';
+import { assistedFlags } from '../../services/sarthi/assistedPd';
+import { readIntent, replyPrefix } from '../../services/sarthi/replyIntent';
+import { queueRechecks, recordRecheckAnswer, driftRechecks } from '../../services/sarthi/figureRechecks';
+import { loadHot, ruleHotQuestions } from '../../services/sarthi/hotQuestions';
 import { readNumbers } from '../../services/sarthi/hindiNumbers';
 import pdSchema from '../../data/sarthi/pdSchema.json';
 import { getNextAction, directiveText, checkContradictions, checkInternalConsistency, getInterviewConfig, assessIncome } from '../../services/sarthi/controller';
-import { validateReport, extractRecommendation } from '../../services/sarthi/validator';
+import { validateReport, extractRecommendation } from '../../services/sarthi/reportValidator';
 import { validateAadhaar, validatePan, detectForeignId, detectForeignResidence, pickIdentity, identitySummary, nameVerdict, confirmReply, nameFromWords, relationOf, applicantComing, presenceLines, speakerIsSomeoneElse } from '../../services/sarthi/idChecks';
 import PhotoCapture from '../../components/sarthi/PhotoCapture';
-import { startFrameCapture, stopCamera, pauseCamera, resumeCamera, getObservations, resetObservations, grabFrame } from '../../services/sarthi/video';
-import { loadFace, compareFace, faceFlags, faceSummary, faceLines, FACE_EVERY_MS, FACE_MAX, callFrameKey, LIVENESS, checkLiveness, livenessFlag } from '../../services/sarthi/face';
-import { downscale, analysePhoto, stockCheck, PHOTO_ASKS } from '../../services/sarthi/photo';
-import { checkUpload, liveProvenance } from '../../services/sarthi/photoCheck';
-import { getFix, checkPlace, inDistance, callPlace } from '../../services/sarthi/geo';
-import { MODES, priorFacts, seedResume, flagQuestions, crossSteps, DRAFT_PREFIX } from '../../services/sarthi/repeat';
-import { checkAgainstEarlierPds, crossPdFlags, fileNameCheck, nameFlags, nameRecheck } from '../../services/sarthi/crossPd';
-import { livingFacts, factLines, analyseLiving } from '../../services/sarthi/living';
+import { startFrameCapture, stopCamera, pauseCamera, resumeCamera, getObservations, resetObservations, grabFrame } from '../../services/sarthi/camera';
+import { loadFace, compareFace, faceFlags, faceSummary, faceLines, FACE_EVERY_MS, FACE_MAX, callFrameKey, LIVENESS, checkLiveness, livenessFlag } from '../../services/sarthi/faceMatch';
+import { downscale, analysePhoto, stockCheck, PHOTO_ASKS } from '../../services/sarthi/photoAnalysis';
+import { checkUpload, liveProvenance } from '../../services/sarthi/photoProvenance';
+import { getFix, checkPlace, inDistance, callPlace } from '../../services/sarthi/location';
+import { MODES, priorFacts, seedResume, flagQuestions, crossSteps, DRAFT_PREFIX } from '../../services/sarthi/repeatPd';
+import { checkAgainstEarlierPds, crossPdFlags, fileNameCheck, nameFlags, nameRecheck } from '../../services/sarthi/crossPdCheck';
+import { livingFacts, factLines, analyseLiving } from '../../services/sarthi/livingConditions';
 import { stopSpeaking, listen, canListen, canSpeak, setSilent, ANSWER_PAUSE_MS } from '../../services/voice';
-import { speakStreamed } from '../../services/sarthi/stream';
-import { loadFaceDetector, faceInFrame, faceScore, AWAY_LINES } from '../../services/sarthi/away';
+import { speakStreamed } from '../../services/sarthi/streamedSpeech';
+import { loadFaceDetector, faceInFrame, faceScore, AWAY_LINES } from '../../services/sarthi/awayDetection';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { sarthiVoice, prerendered, gendered, aboutSarthi } from '../../services/sarthi/voice';
+import { sarthiVoice, prerendered, gendered, aboutSarthi } from '../../services/sarthi/voiceProfile';
 import voiceManifest from '../../data/sarthi/voiceManifest.json';
 import { useSarthiReports, usePendingPds } from '../../hooks/useSarthiReports';
 import { OFFICER } from '../../context/AuthContext';
-import { checkTradeMath, understanding } from '../../services/sarthi/probes';
+import { checkTradeMath, understanding } from '../../services/sarthi/tradeProbes';
 import { formatINR } from '../../utils/formatters';
 import styles from './SarthiInterview.module.css';
 
-// One-way video interview. Live (Gemini via proxy) or scripted when no proxy is reachable;
-// everything after the interview is identical either way. Tab bar is hidden: the borrower holds the phone.
+// One-way video interview, live (model via proxy) or scripted when no proxy is reachable. Tab bar is hidden: the
+// borrower holds the phone.
 
 // Controller field → verifier claim type, so one finding from both sides is recognised as one.
 const CLAIM_FIELD = { monthly_income: 'income', existing_emi: 'existingEmi', monthly_rent: 'rent' };
@@ -53,18 +53,18 @@ const TRANSIENT = new Set([429, 500, 502, 503, 504]);
 const SECTION_BY_ID = Object.fromEntries(pdSchema.sections.map((sec) => [sec.id, sec]));
 
 const save = (key, value) => {
-  try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* quota — prototype */ }
+  try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* quota */ }
 };
 
 const CAPTION_FALLBACK_MS = 3000;
-// Knobs for "aap kahan chale gaye": no face this long with the mic open, asked again this often, this many times.
+// Away detection: no face for this long with the mic open, re-asked this often, at most this many times.
 const AWAY_AFTER_MS = 4000;
 const AWAY_REASK_MS = 20000;
 const AWAY_MAX_ASKS = 3;
-const GONE_MS = 1000; // misses in a row this long (~1s) start the away timer, so a lone dip below MIN_SCORE does not
-const BACK_TICKS = 3; // a face this many ticks in a row (~2s) to count as back: one 0.78 frame mid-walk reset the 4s timer
+const GONE_MS = 1000; // consecutive misses this long start the away timer, so a single low-score frame does not
+const BACK_TICKS = 3; // a face this many ticks in a row (~2s) counts as back
 const PLAIN_COUNTS = new Set(['age', 'family_size', 'dependents', 'children_count', 'elderly_count', 'children_in_school', 'earning_members', 'employees', 'customers_per_day']);
-// What a "finish last PD" needs to skip what this one already asked (repeat.js seedResume).
+// State a "finish last PD" needs to skip what was already asked (repeatPd.js seedResume).
 const pdState = (m) => ({
   hotAsked: m.hotAsked ?? [],
   crossAsked: m.crossAsked ?? [],
@@ -86,7 +86,7 @@ export default function SarthiInterview() {
   const [reports] = useSarthiReports();
   const [, setPending] = usePendingPds();
   const [params] = useSearchParams();
-  // Every earlier PD of this person, newest first; a repeat PD runs in the mode picked on the brief (repeat.js).
+  // Every earlier PD of this person, newest first; a repeat PD runs in the mode picked on the brief (repeatPd.js).
   const past = useMemo(() => reports.filter((r) => r.caseId === id), [reports, id]);
   const mode = MODES[params.get('mode')] ? params.get('mode') : 'full';
   const basePd = past.find((r) => r.id === params.get('from')) ?? past[0] ?? null;
@@ -110,7 +110,6 @@ export default function SarthiInterview() {
   const [ready, setReady] = useState(false); // camera, mic and voice set on CallSetup
   const [phase, setPhase] = useState('connecting'); // connecting · live · generating · failed
   const [avatar, setAvatar] = useState('idle');     // idle · speaking · listening · thinking
-  // The question stays on screen while they answer; only the next question replaces it.
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const setCaption = useCallback(({ who, text }) => {
@@ -134,8 +133,8 @@ export default function SarthiInterview() {
   const assistedStart = useRef(false); // declared on CallSetup: the one who runs the business is here too
   const lastChallengePhoto = useRef(null); // the photo kind a challenge's follow-up asks about
   const endReason = useRef(null); // why a call ended before the schema did — shown in the PD audit trail
-  // The call's face against the customer photo on file, all through the call. checks: [{ verdict, reason, people, frame, at }];
-  // act: the latest check still to be acted on at the next turn; again: check on the next answer, not after the interval.
+  // Face match against the customer photo on file. checks: [{ verdict, reason, people, frame, at }]; act: latest check
+  // still to act on; again: re-check on the next answer.
   const faceWatch = useRef({ checks: [], inFlight: false, lastAt: 0, lastSection: null, act: null, again: false, reframes: 0, prev: null, retried: false });
   // Every PD has its id from the start: the draft saved after each answer and the final report share it.
   const [pdId] = useState(() => `sarthi_report_${Date.now()}`);
@@ -147,12 +146,11 @@ export default function SarthiInterview() {
   const nameAsked = useRef(false); // a photo with someone else's name is asked about once
   const [shownPhoto, setShownPhoto] = useState(null);
   const [collected, setCollected] = useState({});
-  // Schema coverage, not question count — the controller ends on coverage.
   const [covered, setCovered] = useState(null);
   const lastLine = useRef({ text: '', speech: '' });
   const photos = useRef([]);
 
-  // Mutable interview state — read inside async callbacks, so refs rather than state.
+  // Read inside async callbacks, so refs rather than state.
   const transcript = useRef([]);   // [{ role, content }] — what the report cites
   const history = useRef([]);      // what Gemini sees (includes the hidden kickoff turn)
   const claims = useRef([]);
@@ -168,7 +166,7 @@ export default function SarthiInterview() {
   const replies = useRef({}); // questions / push-backs answered, per field (at most 2)
   const refusals = useRef({}); // refusals, per field
   const takeReplyPrefix = () => { const r = replyTo.current; replyTo.current = null; return r ? replyPrefix(r) : ''; };
-  // The counter counts topics, not questions: a re-ask of the same field is not a new sawaal.
+  // Counts topics, not questions: re-asking the same field is not a new question.
   const topics = useRef(new Set());
   const countTopic = (key) => {
     if (topics.current.has(key)) return;
@@ -179,6 +177,7 @@ export default function SarthiInterview() {
   const presence = useRef(null); // null · relation · call · handover · confirm · done — someone other than the applicant answered
   const confirm = useRef(null); // { stated, verdict, handover, retried } while asking "aap X ji hi hain?"
   const stopListen = useRef(null);
+  const talkedAt = useRef(0); // last words heard; someone mid-answer is never cut off by the away check
   const cameraRef = useRef(false);
   const liveRef = useRef(false); // proxy reachable → vision frames are worth sending
 
@@ -190,7 +189,7 @@ export default function SarthiInterview() {
   useEffect(() => () => setSilent(false), []);
   useEffect(() => { if (ready) startedAt.current = Date.now(); }, [ready]);
 
-  /* ---------------------------------------------------------------- teardown */
+  // Teardown
   const teardown = useCallback(() => {
     stopSpeaking();
     stopListen.current?.();
@@ -200,21 +199,20 @@ export default function SarthiInterview() {
 
   useEffect(() => () => teardown(), [teardown]);
 
-  /* ---------------------------------------------------------------- speak → listen loop */
+  // Speak → listen loop
   const beginListening = useCallback(() => {
     if (doneRef.current) return;
     if (mutedRef.current || !canListen || typeMode) { setAvatar('idle'); return; }
     setAvatar('listening');
     setCaption({ who: 'borrower', text: '' });
-    // Laptop Chrome ends a recognition session on its own — a few seconds of silence, a network blip — often with no
-    // error, so the screen said "boliye" while the mic was off and answers were lost. A session that ends with nothing
-    // heard is restarted; only a real failure (no permission, no mic, repeated errors) falls back to typing.
+    // Chrome ends recognition sessions on its own (silence, network blip), often without an error. A session that ends
+    // with nothing heard is restarted; only a real failure falls back to typing.
     let failures = 0;
     const session = () => {
       let cancelled = false;
       let answered = false;
       const stop = listen({
-        onInterim: (t) => { setCaption({ who: 'borrower', text: t }); },
+        onInterim: (t) => { talkedAt.current = Date.now(); setCaption({ who: 'borrower', text: t }); },
         // A session stopped on purpose (Sarthi speaking, mic muted, answer typed) must not submit a half-heard line.
         onFinal: (t) => { if (t.trim() && !cancelled) { answered = true; handleAnswer(t.trim()); } },
         onError: (err) => {
@@ -237,7 +235,7 @@ export default function SarthiInterview() {
   }, [typeMode]);
 
   const say = useCallback((raw, { then, speech: rawSpeech, again, topic } = {}) => {
-    // Every line is written male; the chosen voice's gender is applied here, to the caption and the speech alike.
+    // Lines are written male; the chosen voice's gender is applied here to both caption and speech.
     const text = gendered(raw);
     const speech = gendered(rawSpeech);
     lastLine.current = { text, speech };
@@ -251,7 +249,7 @@ export default function SarthiInterview() {
     }
     const line = speech || text;
     const src = prerendered() ? voiceManifest[rawSpeech || raw] : undefined;
-    // The question appears with the voice, not seconds before it while TTS renders.
+    // Show the question with the voice, not before it while TTS renders.
     let shown = false;
     const show = () => { if (!shown) { shown = true; setCaption({ who: 'ai', text }); } };
     // If the phone blocks audio the voice never starts; the question must still appear.
@@ -266,7 +264,7 @@ export default function SarthiInterview() {
     return undefined;
   }, [beginListening]);
 
-  /** Say the last question again — the single most-asked thing in a real field interview. */
+  /** Repeat the last question. */
   const repeat = useCallback(() => {
     if (!lastLine.current.text) return;
     stopSpeaking();
@@ -296,7 +294,6 @@ export default function SarthiInterview() {
       declaredIncome: toNumber(c.monthly_income) ?? 0,
       identity,
     });
-    // Keep the id stable across rebuilds so the report, photos and case list all agree.
     if (built.current) subject.id = built.current.id;
     subject.household = c.family_size != null ? `${c.family_size} members` : null;
     subject.housing = c.residence_type ?? null;
@@ -308,7 +305,7 @@ export default function SarthiInterview() {
     return subject;
   }, []);
 
-  // A foreign national ID ends the PD: without Indian KYC there is nothing to lend against.
+  // A foreign national ID ends the PD: there is no Indian KYC to lend against.
   const stopForForeignId = (text, turn) => {
     const foreign = detectForeignId(text);
     if (!foreign) return false;
@@ -325,7 +322,7 @@ export default function SarthiInterview() {
     return true;
   };
 
-  // Living in or belonging to a country India cannot lend into ends the PD, whatever the model says next.
+  // Living in or belonging to a country India cannot lend into ends the PD.
   const stopForForeignResidence = (text, turn) => {
     const foreign = detectForeignResidence(text);
     if (!foreign) return false;
@@ -341,7 +338,7 @@ export default function SarthiInterview() {
     return true;
   };
 
-  // A fixed line, outside the model: recorded everywhere a model line would be, so a live turn after it has the context.
+  // A fixed line outside the model, recorded like a model line so later turns have the context.
   const sayFixed = (line, opts = {}) => {
     transcript.current.push({ role: 'assistant', content: line.text, at: Date.now() });
     history.current.push({ role: 'assistant', content: line.text });
@@ -349,8 +346,8 @@ export default function SarthiInterview() {
     say(line.text, { speech: line.speech, ...opts });
   };
 
-  // The customer photo the BO took, against a still from this call: at the start, then every FACE_EVERY_MS or at a new
-  // section (30s apart at least). In the background — the result is acted on at the next turn (faceTurn), never mid-line.
+  // Customer photo vs a still from the call: at the start, then every FACE_EVERY_MS or at a new section. Runs in the
+  // background; the result is acted on at the next turn (faceTurn).
   const watchFace = () => {
     const w = faceWatch.current;
     if (isIntake || doneRef.current || !cameraRef.current || w.inFlight || w.checks.length >= FACE_MAX) return;
@@ -376,8 +373,8 @@ export default function SarthiInterview() {
     });
   };
 
-  // A check that did not match takes this turn. One DIFFERENT frame is checked again first; two in a row, Sarthi asks who
-  // they are. The model's verdict only starts the question — only their answer can end the call.
+  // A failed match takes this turn: one different frame is checked again first; two failures and Sarthi asks who they
+  // are. Only their answer can end the call.
   const faceTurn = (turn) => {
     const w = faceWatch.current;
     const c = w.act;
@@ -392,9 +389,9 @@ export default function SarthiInterview() {
       sayFixed(faceLines(caseData)[w.checks.some((x) => x.verdict === 'same') ? 'changed' : 'who'], { topic: `face:${turn}` });
       return true;
     }
-    if (w.reframes >= 2) return false; // still unclear after two asks: carry on, the report says so
+    if (w.reframes >= 2) return false; // still unclear after two asks: carry on, the report notes it
     w.reframes += 1;
-    lastAction.current = { action: 'ask_question', face: true }; // no section: an "ok" to this is never read as the name answer
+    lastAction.current = { action: 'ask_question', face: true }; // no section, so an "ok" here is never read as the name answer
     sayFixed(faceLines(caseData).reframe, {
       topic: `reframe:${w.reframes}`,
       then: () => { setTimeout(() => { w.again = true; watchFace(); }, 2500); beginListening(); },
@@ -420,7 +417,6 @@ export default function SarthiInterview() {
       type: 'identity_mismatch', field: 'stated_name', severity: 'high', known: caseData.name, turn,
       detail: `The face on the call did not match the customer photo on file, and the person said they are not ${caseData.name}: "${text}"`,
     }]);
-    // Who they are, then ask for the applicant — the name flow's own steps from here.
     memory.current = updateMemory(memory.current, { speaker_relation: relationOf(text) });
     if (speakerIsSomeoneElse(text, caseData.name)?.away) {
       presence.current = 'done';
@@ -432,8 +428,8 @@ export default function SarthiInterview() {
     return true;
   };
 
-  // The applicant is not on the call: no PD, no report — back to the case list until they can talk. Mid-call (the
-  // applicant had answered, then someone else took the phone), the draft is kept so "Finish last PD" picks it up.
+  // The applicant is not on the call: no PD, no report. If they had already answered, the draft
+  // is kept for "Finish last PD".
   const leaveForLater = () => {
     doneRef.current = true;
     if (faceWatch.current.prev !== 'done') try { window.localStorage.removeItem(draftKey); } catch { /* nothing saved */ }
@@ -441,7 +437,7 @@ export default function SarthiInterview() {
     navigate('/sarthi', { replace: true });
   };
 
-  // Someone else gave their name. The code asks who they are and asks for the applicant; the model never improvises it.
+  // Someone else gave their name: the code (not the model) asks who they are and asks for the applicant.
   const startPresence = (stated, turn) => {
     const lines = presenceLines(caseData);
     if (presence.current === 'handover') { presence.current = 'done'; sayFixed(lines.later, { then: leaveForLater }); return; }
@@ -453,9 +449,8 @@ export default function SarthiInterview() {
     sayFixed(lines.relation);
   };
 
-  // They say they are the applicant's relative or helper ("Rekha ka beta", "mummy bahar hai"). Read from the words, at
-  // any turn until the applicant has confirmed their own name: "Raj, Rekha Devi ka beta" shares a word with the file and
-  // passed the name check, and the call carried on with the son.
+  // They say they are the applicant's relative or helper ("Rekha ka beta"). Checked on every turn until the applicant
+  // confirms their own name, since a relative's name can share a word with the file.
   const stopForRelative = (text, turn) => {
     if (isIntake || caseData.isNew || presence.current === 'done') return false;
     const other = speakerIsSomeoneElse(text, caseData.name);
@@ -487,9 +482,9 @@ export default function SarthiInterview() {
       return;
     }
     if (applicantComing(text)) {
-      // The applicant takes the phone and is asked their own name; that answer runs through the normal loop.
+      // The applicant takes the phone and is asked their own name through the normal loop.
       presence.current = 'handover';
-      faceWatch.current.again = true; // the face of whoever takes the phone is checked on their first answer
+      faceWatch.current.again = true; // check the face of whoever takes the phone on their first answer
       memory.current = { ...memory.current, collected: { ...memory.current.collected, stated_name: null, applicant_name: null } };
       sayFixed(lines.handover);
       return;
@@ -498,15 +493,15 @@ export default function SarthiInterview() {
     sayFixed(lines.later, { then: leaveForLater });
   };
 
-  // The name said is only part of the file's ("Mahesh"), or clashes with it ("Mahesh Sharma"): ask straight out whether
-  // they are the applicant. The code asks, never the model; "no" ends the PD without a report.
+  // The name said is partial ("Mahesh") or clashes ("Mahesh Sharma"): ask outright if they are the applicant. "No" ends
+  // the PD without a report.
   const askIfApplicant = (stated, verdict) => {
     confirm.current = { stated, verdict, handover: presence.current === 'handover', retried: false };
     presence.current = 'confirm';
     sayFixed(presenceLines(caseData).confirm(stated, verdict));
   };
 
-  // The applicant is on the line: from here "mere pati" is them talking about family, not someone else on the phone.
+  // Applicant confirmed: from here "mere pati" is family talk, not someone else on the phone.
   const applicantConfirmed = (stated, turn) => {
     const wasHandover = presence.current === 'handover' || confirm.current?.handover;
     presence.current = 'done';
@@ -536,8 +531,8 @@ export default function SarthiInterview() {
     return true;
   };
 
-  // Once per PD, at a turn picked from its seed (4-7), once the applicant is confirmed and the camera is on: one small random
-  // action, a frame before and ~2s after, compared in the background (face.js). A recorded or replayed video cannot follow it.
+  // Liveness: once per PD, at a seeded turn (4-7), one random action is asked; frames before and after are compared in
+  // the background (faceMatch.js).
   const livenessDue = () => !live.current && !isIntake && cameraRef.current && !demoRef.current
     && (presence.current === 'done' || caseData.isNew)
     && memory.current.turnCount >= 4 + Math.floor((memory.current.seed ?? 0) * 4);
@@ -562,10 +557,10 @@ export default function SarthiInterview() {
         beginListening();
       },
     });
-    logEvent('Liveness: random action asked on camera'); // never which one — the log is read on the report
+    logEvent('Liveness: random action asked on camera'); // never log which action; the log appears on the report
   };
 
-  /* ---------------------------------------------------------------- one borrower answer */
+  // One borrower answer
   const handleAnswer = useCallback(async (text) => {
     if (doneRef.current) return;
     stopListen.current?.();
@@ -581,14 +576,14 @@ export default function SarthiInterview() {
       const claim = claimFromAnswer(step ?? {}, text, borrowerTurn);
       if (claim) claims.current.push(claim);
 
-      // Scripted mode fills the same structured memory as the live agent, so the report, the
-      // consistency checks and the coverage bar behave identically with or without a proxy.
+      // Scripted mode fills the same memory as the live agent, so the report and checks behave the
+      // same with or without a proxy.
       memory.current = recordTurn(memory.current, 'user', text);
       let confirmed = false;
       if (presence.current === 'confirm') { if (handleConfirm(text, borrowerTurn)) return; confirmed = true; }
       if (presence.current === 'relation' || presence.current === 'call') { handlePresence(text); return; }
       if (stopForRelative(text, borrowerTurn)) return;
-      // Scripted mode asks the name too, so a wrong person is stopped with or without the model.
+      // Scripted mode asks the name too, so a wrong person is stopped either way.
       if (step?.collect === 'stated_name' && !isIntake && presence.current !== 'done') {
         const stated = nameFromWords(text) ?? text;
         memory.current = updateMemory(memory.current, { stated_name: stated });
@@ -597,11 +592,11 @@ export default function SarthiInterview() {
         if (verdict === 'partial' || verdict === 'conflict') { askIfApplicant(stated, verdict); return; }
         if (verdict === 'full') applicantConfirmed(stated, borrowerTurn);
       }
-      // A "haan" to "aap Mahesh Agarwal ji hi hain?" answers the name step with the file's name, not with "haan".
+      // A "haan" to "aap Mahesh Agarwal ji hi hain?" answers the name step with the file's name.
       if (step?.collect) memory.current = updateMemory(memory.current, { [step.collect]: confirmed && step.collect === 'stated_name' ? caseData.name : text, _verbatim: text });
       setCovered(completeness(memory.current));
 
-      // Intake: this answer IS the file. Store it, and check a document the moment it arrives.
+      // Intake: this answer is the file. Store it and check a document as soon as it arrives.
       if (isIntake && step?.collect) {
         intake.current[step.collect] = text;
         if (step.collect === 'aadhaar') intake.current.aadhaarCheck = validateAadhaar(text);
@@ -627,10 +622,8 @@ export default function SarthiInterview() {
 
     memory.current = recordTurn(memory.current, 'user', text);
     watchFace();
-    // What the reply MEANS is read by the model (any wording); the code decides what to do. Fact extraction starts at the
-    // same moment: awaited one after the other they added up to ~5s before the question call even began. On a turn that
-    // turns out to be a stop or a handover the extraction is simply not used.
-    // Where a turn's wait goes, logged when the voice starts: ms after their answer was submitted.
+    // The model reads what the reply means; the code decides what to do. Fact extraction runs in parallel to save
+    // latency and is discarded if the turn is a stop or handover.
     const t0 = performance.now();
     const lap = {};
     const mark = (k) => { lap[k] ??= Math.round(performance.now() - t0); };
@@ -643,22 +636,22 @@ export default function SarthiInterview() {
     const { intent, gist } = await reading;
     if (doneRef.current) return;
     const exitLine = presenceLines(caseData).unwilling;
-    // They do not want the call. Before we know it is the applicant: leave, no report. After: close kindly and report.
+    // They do not want the call: before identity is confirmed leave with no report; after, close kindly and report.
     if (intent === 'stop') {
       endReason.current = 'They asked to stop the call';
       if (presence.current === 'done' || isIntake || caseData.isNew) sayFixed(exitLine, { then: finish });
       else { presence.current = 'done'; sayFixed(exitLine, { then: leaveForLater }); }
       return;
     }
-    // Someone else on the phone, however they put it: the code's presence flow takes over.
+    // Someone else on the phone: the presence flow takes over.
     if (intent === 'someone_else' && !isIntake && !caseData.isNew && !['done', 'relation', 'call', 'face'].includes(presence.current)) {
       if (!stopForRelative(text, borrowerTurn)) startPresence(nameFromWords(text) ?? text, borrowerTurn);
       return;
     }
-    // A question, a push-back or a refusal: the next turn first responds to it (see replyPrefix). A refusal is asked
-    // softer once; the second time the field is left for the officer and noted.
+    // A question, push-back or refusal is answered first on the next turn (see replyPrefix). A refusal is re-asked
+    // softer once, then left for the officer.
     const field = lastAction.current?.missingFields?.[0] ?? lastAction.current?.section ?? 'turn';
-    // Only on turns the model speaks: the fixed identity lines ("aap X ji hi hain?") are answered by the presence flow.
+    // Only on model turns: fixed identity lines are handled by the presence flow.
     const fixedStep = ['confirm', 'relation', 'call', 'handover', 'face'].includes(presence.current);
     if (!fixedStep && (intent === 'question' || intent === 'upset')) {
       const k = `${intent}:${field}`;
@@ -677,20 +670,19 @@ export default function SarthiInterview() {
         };
       }
     }
-    // A yes carries on as the answer to the name question (stated_name is now the file's name, so the controller moves on).
+    // A yes answers the name question (stated_name is now the file's name).
     if (presence.current === 'confirm' && handleConfirm(text, borrowerTurn)) return;
     if (presence.current === 'relation' || presence.current === 'call') { handlePresence(text); return; }
     if (presence.current === 'face' && handleFaceReply(text, borrowerTurn)) return;
     if (stopForRelative(text, borrowerTurn)) return;
 
     try {
-      // Extract first, then pick the next topic, so the controller decides on THIS turn's facts.
-      // Snapshot before merging: checkContradictions and coaching detection compare against prior state.
+      // Extract first so the controller decides on this turn's facts; snapshot before merging so checks
+      // can compare with prior state.
       const before = memory.current;
-      // The question this answer replies to — lastAction moves on to the next one before the fence is read.
+      // The question this answer replies to; lastAction moves on before the fence is read.
       const answered = lastAction.current;
-      // Contradiction, hisaab and (walk-in) consistency checks on the facts so far; adds and returns only new flags.
-      // Run before the next question is picked, and again after the facts fence, so a clash is asked on the next turn.
+      // Contradiction, hisaab and walk-in consistency checks; returns only new flags so a clash is asked next turn.
       const runChecks = (prior, got, subject, ans) => {
         const math = checkTradeMath(memory.current);
         memory.current = { ...memory.current, tradeMath: math.results };
@@ -700,16 +692,16 @@ export default function SarthiInterview() {
           // A walk-in has nothing to check against, so their own numbers have to do the work.
           ...(getInterviewConfig(subject).isNewApplicant ? checkInternalConsistency(memory.current, subject) : []),
         ];
-        // Only flags we have not already raised — the same contradiction resurfaces every turn.
+        // Only flags not already raised.
         const fresh = found.filter((f) => !memory.current.flags.some((p) => p.detail === f.detail));
         memory.current = addFlags(memory.current, fresh);
         return fresh;
       };
-      // An insider trade question is answered verbatim — the words ARE the evidence.
+      // Trade insider answers are kept verbatim as evidence.
       if (lastAction.current?.tradeProbeDef) {
         memory.current = recordTradeAnswer(memory.current, lastAction.current.tradeProbeDef, text, borrowerTurn);
       }
-      // A live challenge is kept verbatim; a photo they could not send drops that challenge's follow-up question.
+      // Live challenge answers are kept verbatim; a photo they could not send drops that challenge's follow-up.
       const ch = lastAction.current?.challenge;
       if (ch && intent !== 'question' && intent !== 'upset') {
         const asked = transcript.current.filter((t) => t.role === 'assistant').at(-1)?.content ?? '';
@@ -737,7 +729,7 @@ export default function SarthiInterview() {
         memory.current = recordCrossAnswer(memory.current, lastAction.current.crossOf, asked, text, borrowerTurn);
       }
       if (lastAction.current?.hot) memory.current = recordHotAnswer(memory.current, lastAction.current.hot, text, borrowerTurn);
-      // A quick-PD question with no schema field is kept verbatim; "sau pe das" becomes the margin the recheck uses.
+      // Quick-PD questions with no schema field are kept verbatim; "sau pe das" becomes the margin used by rechecks.
       const quick = lastAction.current?.quickStep;
       if (quick) {
         memory.current = recordHotAnswer(memory.current, { id: quick.key, q: quick.ask, why: quick.why ?? quick.label }, text, borrowerTurn);
@@ -747,48 +739,49 @@ export default function SarthiInterview() {
         }
       }
 
-      // Already in flight since the answer came in (see `extracting`).
+      // Started when the answer came in (see `extracting`).
       const extracted = await extracting;
-      // Not fatal: the question call's facts fence is the backstop. Never abandon the turn.
+      // Not fatal: the question call's facts fence is the backstop.
       if (extracted.e) console.warn(`[sarthi] fact extraction failed (${extracted.e?.message}) — relying on the facts fence`);
       let facts = extracted.f ?? {};
-      // A plain count the model missed ("so saal" for age) is read from their words — money is left out: "pachees" rent is 25,000.
+      // Plain counts the model missed ("so saal") are read from the words; money is excluded
+      // ("pachees" rent means 25,000).
       const askedField = answered?.missingFields?.[0];
       const spoken = readNumbers(text);
       if (PLAIN_COUNTS.has(askedField) && facts[askedField] == null && spoken.length === 1) facts = { ...facts, [askedField]: spoken[0].value };
-      // A filled figure said differently in this answer is dropped by acceptedFacts — but asked about first.
+      // A filled figure stated differently is dropped by acceptedFacts, but asked about first.
       const drift = driftRechecks(memory.current, facts, text);
       facts = acceptedFacts(memory.current, facts, answered);
       if (Object.keys(facts).length) memory.current = updateMemory(memory.current, { ...facts, _verbatim: text });
 
-      // Checked on their own words, not the extraction — the model filed a CNIC under pan_number.
+      // Checked on their own words, not the extraction, which can misfile IDs (e.g. a CNIC as pan_number).
       const docDue = memory.current.currentSection === 'documents' || facts.aadhaar_number || facts.pan_number;
       if (docDue && stopForForeignId(text, borrowerTurn)) return;
 
-      // The name answer is checked here, before any model call, so a wrong person never gets a business question.
+      // Check the name before any model call, so a wrong person never gets a business question.
       if (!isIntake && presence.current !== 'done'
         && (answered?.section === 'greeting' || answered?.missingFields?.[0] === 'stated_name' || presence.current === 'handover')) {
         let stated = memory.current.collected.stated_name;
         if (!stated) {
-          // A bare "Mahesh" has no "mera naam" to find it by; a short answer to the name question IS the name.
+          // A short answer to the name question is the name.
           stated = nameFromWords(text) ?? (text.trim().split(/\s+/).length <= 3 ? text.trim() : null);
           if (stated) memory.current = updateMemory(memory.current, { stated_name: stated });
         }
-        // Speech can come back in Devanagari ("राज"), which nameVerdict cannot read — compare with the Hindi name on file.
+        // Speech can return Devanagari, which nameVerdict cannot read; compare with the Hindi name on file.
         const hindi = stated && /[ऀ-ॿ]/.test(stated) && caseData.hi?.firstName;
         const verdict = nameVerdict(stated, caseData.name)
           ?? (hindi ? (caseData.hi.name && String(stated).includes(caseData.hi.name) ? 'full' : String(stated).includes(caseData.hi.firstName) ? 'partial' : 'different') : null);
         if (stated && verdict === 'different') { startPresence(stated, borrowerTurn); return; }
-        // "Mahesh" or "Mahesh Sharma" for Mahesh Agarwal: ask whether they are the applicant before any PD question.
+        // Partial or different surname: ask whether they are the applicant before any PD question.
         if (stated && (verdict === 'partial' || verdict === 'conflict')) { askIfApplicant(stated, verdict); return; }
         if (stated && (verdict === 'full' || presence.current === 'handover')) applicantConfirmed(stated, borrowerTurn);
       }
 
       if (isIntake) rebuildWalkIn();
       const subject = caseRef.current ?? caseData;
-      // The hisaab is done now, on this answer, so a figure that does not add up is asked about in the very next turn.
+      // Run the hisaab now so a mismatch is asked on the very next turn.
       memory.current = queueRechecks(memory.current, subject, facts, { drift, flags: runChecks(before, facts, subject, answered) });
-      // A face that did not match, then the liveness action, take this turn; whatever is queued is asked on the next.
+      // A failed face match, then the liveness action, take this turn; anything else queued waits.
       if (faceTurn(borrowerTurn)) { setCovered(completeness(memory.current)); return; }
       if (livenessDue()) { setCovered(completeness(memory.current)); askLiveness(); return; }
 
@@ -802,8 +795,8 @@ export default function SarthiInterview() {
       // Document numbers are typed — speech recognition mangles them.
       setTypeMode(typedFieldsFor(memory.current, SECTION_BY_ID[action.section]).length > 0 || !canListen);
 
-      // Speak as soon as the speech fence closes. The follow-up (photo / end / listen) runs once,
-      // after whichever of audio or stream finishes last.
+      // Speak as soon as the speech fence closes; the follow-up (photo / end / listen) runs once
+      // both audio and stream finish.
       let spokenYet = false;
       let voiceOn = false;
       let pending = '';
@@ -848,20 +841,20 @@ export default function SarthiInterview() {
         },
       });
       const { display, speech, claims: found, facts: fenced, complete } = parseClaims(raw, borrowerTurn);
-      if (answered?.section !== 'operator') claims.current.push(...found); // the operator's figures are compared in assisted.js, not as the applicant's claims
+      if (answered?.section !== 'operator') claims.current.push(...found); // operator figures are compared in assistedPd.js, not as the applicant's claims
 
       // Gap-fill from the question call's facts fence, then run the code-only checks.
       const gapFill = acceptedFacts(memory.current, Object.fromEntries(Object.entries(fenced).filter(([k]) => !(k in facts))), answered);
       memory.current = updateMemory(memory.current, { ...gapFill, _verbatim: text });
       facts = { ...gapFill, ...facts };
-      // Recorded after the gap-fill, so a corrected figure that only reached the facts fence still counts.
+      // After the gap-fill, so a corrected figure that only reached the facts fence still counts.
       if (answered?.recheck) {
         const asked = transcript.current.filter((t) => t.role === 'assistant').at(-1)?.content ?? '';
         memory.current = recordRecheckAnswer(memory.current, answered.recheck, asked, text, borrowerTurn);
       }
       // Anything the facts fence alone revealed is asked on the next turn.
       memory.current = queueRechecks(memory.current, subject, gapFill, { flags: runChecks(before, { ...gapFill, ...facts }, subject, answered) });
-      // Check a document the moment it is given, exactly as the scripted intake does.
+      // Check a document as soon as it is given, as the scripted intake does.
       if (facts.aadhaar_number) intake.current.aadhaarCheck = validateAadhaar(String(facts.aadhaar_number));
       if (facts.pan_number) {
         intake.current.panCheck = validatePan(
@@ -887,11 +880,11 @@ export default function SarthiInterview() {
       history.current.push({ role: 'assistant', content: raw });
       transcript.current.push({ role: 'assistant', content: display, at: Date.now() });
 
-      // Only the controller ends a PD. In live runs the model said goodbye with 20 fields still open and the documents unasked.
-      // Or the borrower is leaving ("ok bye", "band karo") and the model has closed — holding them there helps nobody.
+      // Only the controller ends a PD (the model tends to say goodbye early), unless the borrower is
+      // leaving and the model has closed.
       const reallyDone = complete && (getNextAction(memory.current, subject).action === 'end_interview' || LEAVING.test(text));
       if (complete && !reallyDone) console.warn('[sarthi] model tried to end the interview early — ignored');
-      // Both photos are the controller's call (from current_place); a photo fence the model adds on its own is ignored.
+      // Photo asks are the controller's call; a photo fence the model adds on its own is ignored.
       const wantPhoto = action.photo ?? null;
       after = wantPhoto ? () => setPhotoAsk(wantPhoto) : reallyDone ? finish : null;
 
@@ -901,13 +894,13 @@ export default function SarthiInterview() {
         streamDone = true;
         advance();
       } else {
-        // No speech fence arrived mid-stream — speak the finished turn.
+        // No speech fence mid-stream: speak the finished turn.
         streamDone = true;
         audioDone = true;
         say(display, { speech, topic: topicKey(action), ...(after ? { then: after } : {}) });
       }
     } catch (e) {
-      // Borrow one scripted question and retry live next turn; only a permanent error locks to the script.
+      // Fall back to one scripted question and retry live next turn; only a permanent error locks to the script.
       lastAction.current = null; // the scripted question is not the trade probe the controller picked
       const permanent = e?.status != null && !TRANSIENT.has(e.status);
       console.warn(`[sarthi] live turn failed (${e?.message}) — ${permanent ? 'switching to scripted mode' : 'using a scripted question, will retry live next turn'}`);
@@ -917,7 +910,7 @@ export default function SarthiInterview() {
       }
       const next = scriptRef.current[stepRef.current] ?? scriptRef.current[scriptRef.current.length - 1];
       const line = next.text.replace(COMPLETE_TAG, '').trim();
-      // Advance the script cursor so a second stumble does not repeat the same question.
+      // Advance the script cursor so a second failure does not repeat the question.
       stepRef.current = Math.min(stepRef.current + 1, scriptRef.current.length - 1);
       transcript.current.push({ role: 'assistant', content: line, at: Date.now() });
       memory.current = recordTurn(memory.current, 'assistant', line);
@@ -926,16 +919,16 @@ export default function SarthiInterview() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseData, say]);
 
-  // Photos come from the live camera; a file is accepted only when the camera cannot open, and is checked.
+  // Photos come from the live camera; a file upload is accepted only when the camera cannot open, and is checked.
   const openCapture = useCallback((attached = false) => {
-    // The attach button answers a pending ask; otherwise the photo is filed under what Sarthi lacks.
+    // The attach button answers a pending ask; otherwise the photo is filed under what Sarthi still lacks.
     const volunteered = attached && !photoAsk;
     const sent = photos.current.map((p) => p.kind);
     const kind = volunteered
       ? (!sent.includes('shop') ? 'shop' : !sent.includes('home') ? 'home' : 'extra')
       : photoAsk;
     if (!kind) return;
-    // Otherwise speech during the capture would answer the question behind the camera.
+    // Otherwise speech during capture would answer the question behind the camera.
     stopListen.current?.();
     stopListen.current = null;
     setAvatar('idle');
@@ -967,11 +960,11 @@ export default function SarthiInterview() {
       setPhotoAsk(null);
       const subject = caseRef.current ?? caseData;
       const [record, fix] = await Promise.all([analysePhoto({ dataUrl, kind, caseData: subject, provenance }), getFix()]);
-      record.location = fix; // every photo: crossPd.js compares it with earlier applicants' photos
+      record.location = fix; // crossPdCheck.js compares every photo's location with earlier applicants'
       if (pan) { const { dataUrl: panDataUrl, ...turn } = pan; Object.assign(record, { pan: turn, panDataUrl }); }
       if (kind === 'shop' || kind === 'home') {
         record.placeCheck = checkPlace(fix, subject?.locations?.[kind]);
-        // Asked on the call straight away, like a figure that does not add up; they may be at a second branch.
+        // Asked on the call straight away; they may be at a second branch.
         if (record.placeCheck.status === 'far') {
           const place = kind === 'shop' ? 'dukaan' : 'ghar';
           memory.current = { ...memory.current, recheckQueue: [...memory.current.recheckQueue, {
@@ -982,7 +975,7 @@ export default function SarthiInterview() {
           }] };
         }
       }
-      // Someone else's name on the board, QR, bill book or a shop paper: asked once, straight away (crossPd.js).
+      // Someone else's name on the board, QR, bill book or shop paper is asked about once (crossPdCheck.js).
       const [named] = fileNameCheck([record], subject);
       if (named && (named.verdict === 'none' || named.gstin === 'mismatch') && !nameAsked.current) {
         nameAsked.current = true;
@@ -1001,12 +994,11 @@ export default function SarthiInterview() {
         }] };
       }
       photos.current.push(record);
-      save(`bo_sarthi_photos_${pdId}`, photos.current); // now, not at finish: a dropped call keeps its photos
+      save(`bo_sarthi_photos_${pdId}`, photos.current); // saved now so a dropped call keeps its photos
       logEvent(`Photo: ${record.label}${fix.error ? ' (location not shared)' : ` at ${fix.lat}, ${fix.lng}`}${record.placeCheck?.status === 'far' ? ' — far from the pin on file' : ''}`, record.placeCheck?.status === 'far' ? 'warn' : 'info');
       setPhotoBusy(false);
-      setTimeout(() => setShownPhoto(null), 2600); // long enough to see it landed
-      // Only an answer to a question moves the interview on. A volunteered photo is filed and
-      // Sarthi carries on waiting for the answer it actually asked for.
+      setTimeout(() => setShownPhoto(null), 2600);
+      // Only an answer to a question moves the interview on; a volunteered photo is filed and Sarthi keeps waiting.
       if (volunteered) { transcript.current.push({ role: 'user', content: `[${PHOTO_ASKS[kind].hint} bheji]`, at: Date.now() }); beginListening(); }
       else handleAnswer(`[${PHOTO_ASKS[kind].hint} bheji]`);
     } catch {
@@ -1025,14 +1017,14 @@ export default function SarthiInterview() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [photoAsk]);
 
-  /* ---------------------------------------------------------------- report */
+  // Report
   const finish = useCallback(async () => {
     if (doneRef.current) return;
     doneRef.current = true;
     teardown();
     setPhase('generating');
 
-    // The report's transcript reads as she/he said it: fixed lines are stored as written (male).
+    // Fixed lines are stored as written (male) so the transcript reads as said.
     const turns = transcript.current.map((t) => (t.role === 'assistant' ? { ...t, content: gendered(t.content) } : t));
     const captured = claims.current;
 
@@ -1074,7 +1066,6 @@ export default function SarthiInterview() {
     setProgress('Verifying claims against bureau and bank data…');
     const { evidence, flags: claimFlags } = verifyClaims(captured, subject);
 
-    // Rerun at the end, when every answer is in.
     const consistency = checkInternalConsistency(memory.current, subject);
 
     const photoFlags = photos.current.flatMap((p) => (p.provenance?.flags ?? []).map((f) => ({
@@ -1090,7 +1081,7 @@ export default function SarthiInterview() {
     const hasFace = !!loadFace(subject.id)?.dataUrl;
     const faceResult = faceSummary(faceWatch.current.checks);
     const faceChecks = hasFace ? faceFlags(faceWatch.current.checks, cameraRef.current) : [];
-    // Living conditions: the facts from the home photos, and the model's few sentences on them (no scores).
+    // Living conditions: facts from the home photos plus the model's short write-up (no scores).
     const homeFacts = livingFacts(photos.current, subject, memory.current.collected);
     if (homeFacts) setProgress('Reading the home photos…');
     const living = homeFacts ? { facts: factLines(homeFacts), vehicles: homeFacts.vehicles, items: homeFacts.items, house: homeFacts.house, analysis: demoRef.current ? null : await analyseLiving(homeFacts) } : null;
@@ -1134,7 +1125,7 @@ export default function SarthiInterview() {
     const observations = getObservations();
     const collectedFacts = memory.current.collected;
 
-    // Every PD is kept: its own id, and its own keys — a repeat PD never overwrites an earlier one.
+    // Every PD keeps its own id and keys; a repeat PD never overwrites an earlier one.
     const endedAt = new Date().toISOString();
     logEvent(`Call ended${callGeo.current.end?.lat != null ? ` at ${callGeo.current.end.lat}, ${callGeo.current.end.lng}` : ''}`);
     const pdNo = past.length + 1;
@@ -1142,7 +1133,7 @@ export default function SarthiInterview() {
     save(`bo_sarthi_transcript_${pdId}`, turns);
     save(`bo_sarthi_claims_${pdId}`, captured);
     save(`bo_sarthi_evidence_${pdId}`, { evidence, flags, eligibility, observations, collected: collectedFacts, understanding: depth, tradeMath: math.results, rechecks: memory.current.rechecks, hotAnswers: memory.current.hotAnswers });
-    // Images are kept in their own key: base64 is heavy and must not risk the report's own write.
+    // Images get their own key: base64 is heavy and must not risk the report write.
     save(`bo_sarthi_photos_${pdId}`, photos.current);
     if (faceResult?.frame) save(callFrameKey(pdId), faceResult.frame);
     if (live.current?.frames) save(`bo_sarthi_live_${pdId}`, live.current.frames);
@@ -1209,17 +1200,17 @@ export default function SarthiInterview() {
       turns: turns.length,
     };
     setPending((prev) => [entry, ...prev]); // saved as a PD only once a BO / CO confirms it on the report screen
-    try { window.localStorage.removeItem(draftKey); } catch { /* nothing saved */ }
+    try { window.localStorage.removeItem(draftKey); } catch { /* ignore */ }
     navigate(`/sarthi/report/${subject.id}?pd=${pdId}`, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseData, navigate, setPending, teardown]);
 
-  /* ---------------------------------------------------------------- start */
+  // Start
   useEffect(() => {
     if (!startCase || !ready) return undefined;
     resetObservations();
     scriptRef.current = isIntake ? buildIntakeScript() : buildScript(startCase);
-    // The file's questions, prepared on the brief screen; if the officer started before they came back, the file's own.
+    // The file's questions, prepared on the brief screen; if not ready yet, built from the file.
     const fileHot = isIntake || startCase.quickPd || mode === 'cross' ? [] : (loadHot(startCase.id)?.questions ?? ruleHotQuestions(startCase));
     const prior = priorFacts(past);
     memory.current = createEmptyMemory(startCase, { hot: fileHot, prior });
@@ -1238,22 +1229,20 @@ export default function SarthiInterview() {
     }
     caseRef.current = startCase;
 
-    // The greeting is a fixed line, so it is said at once instead of waiting ~3s on a model call for the same words.
-    // Turn two is the first live call and degrades per turn like any other (a permanent status sets demoRef there).
-    // Deferred one tick so StrictMode's throwaway mount is cancelled before it speaks.
+    // The greeting is fixed, so it is said at once without a model call. Deferred one tick so StrictMode's throwaway
+    // mount is cancelled first.
     const t = setTimeout(() => {
       setPhase('live');
       history.current = [{ role: 'user', content: '[System: the borrower has joined the call. Greet them and begin the interview.]' }];
       const opening = getNextAction(memory.current, startCase);
       if (opening.memory) memory.current = opening.memory;
-      // The name answer is checked only when the last question was the greeting — unset, "Ramesh" for Mahesh Agarwal
-      // skipped nameVerdict entirely and the model improvised its own "aapka naam sirf Ramesh hai?".
+      // Set so the name answer goes through nameVerdict.
       lastAction.current = opening;
       const first = scriptRef.current[0];
       demoRef.current = false;
       liveRef.current = true;
       stepRef.current = 1; // scripted fallback continues past the greeting
-      // Wakes a cold serverless function while the greeting plays, so the first live turn does not pay its start-up.
+      // Warm up the serverless function while the greeting plays.
       fetch(CHAT_URL, { method: 'OPTIONS' }).catch(() => {});
       if (cameraRef.current) startFrameCapture(VISION_URL, () => {});
       getFix().then((f) => {
@@ -1264,14 +1253,14 @@ export default function SarthiInterview() {
       history.current.push({ role: 'assistant', content: `\`\`\`speech\n${first.speech}\n\`\`\`\n${first.text}` });
       transcript.current.push({ role: 'assistant', content: first.text, at: Date.now() });
       say(first.text, { speech: first.speech, topic: topicKey(opening) });
-      setTimeout(watchFace, 1500); // the first face check runs while the greeting plays; its result is acted on after their reply
+      setTimeout(watchFace, 1500); // first face check runs during the greeting; acted on after their reply
     }, 0);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startCase, ready]);
 
-  // Nobody in front of the camera while the mic is open: Sarthi stops listening and asks where they went, then repeats
-  // its question when a face is back. Only from 'listening', so a line, a photo ask or a model turn is never cut off.
+  // Nobody in front of the camera while listening: Sarthi asks where they went and repeats the question when a face
+  // returns. Only from 'listening', so nothing mid-line is cut off.
   const calls = useRef(null);
   calls.current = { say, sayFixed, beginListening }; // the interval below always calls this render's versions
   useEffect(() => {
@@ -1304,28 +1293,27 @@ export default function SarthiInterview() {
         calls.current.sayFixed(AWAY_LINES.back, { topic: 'away:back', then: () => (q?.text ? calls.current.say(q.text, { speech: q.speech, again: true }) : calls.current.beginListening()) });
         return;
       }
-      // One missed frame is not "gone": a face at ~0.75 dips every second or two, and with BACK_TICKS a lone miss kept
-      // the timer running for good — Sarthi looped "dikh nahi rahe" / "aap aa gaye" at someone sitting right there.
+      // One missed frame is not "gone": face scores dip briefly, so only a run of misses starts the timer.
       if (!a.goneAt && now - a.missedAt < GONE_MS) return;
       a.goneAt ??= a.missedAt;
       if (a.waiting) {
         if (now - a.askedAt < AWAY_REASK_MS) return;
         if (a.asks < AWAY_MAX_ASKS) { ask(); return; }
-        // Bad light or a camera at the ceiling looks the same as an empty room: never hold the call hostage to it.
+        // Bad light or a badly angled camera looks like an empty room: never hold the call on it.
         Object.assign(a, { waiting: false, asks: 0, quietUntilSeen: true });
         logEvent('No face in the camera for a minute — the interview carried on', 'warn');
         const q = a.resume;
         if (q?.text) calls.current.say(q.text, { speech: q.speech, again: true }); else calls.current.beginListening();
         return;
       }
-      if (a.quietUntilSeen || avatarRef.current !== 'listening' || now - a.goneAt < AWAY_AFTER_MS) return;
+      if (a.quietUntilSeen || avatarRef.current !== 'listening' || now - a.goneAt < AWAY_AFTER_MS || now - talkedAt.current < AWAY_AFTER_MS) return;
       ask();
     }, 700);
     return () => clearInterval(tick);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, cameraOn, isIntake]);
 
-  // Saved after every answer, so a call that drops (app closed, phone or network gone) can be finished later.
+  // Saved after every answer so a dropped call can be finished later.
   useEffect(() => {
     if (phase !== 'live' || isIntake || doneRef.current || !transcript.current.length) return;
     save(`bo_sarthi_transcript_${pdId}`, transcript.current);
@@ -1377,7 +1365,7 @@ export default function SarthiInterview() {
     if (liveRef.current) startFrameCapture(VISION_URL, () => {});
   };
 
-  /* ---------------------------------------------------------------- generating screen */
+  // Generating screen
   if (phase === 'generating') {
     return (
       <div className={styles.generating}>
@@ -1420,8 +1408,8 @@ export default function SarthiInterview() {
           <AnimatePresence mode="wait">
             {question && (
               <motion.div
-                // Keyed per turn, not per text: a streamed caption changes many times a second, and
-                // remounting on each change stalls AnimatePresence "wait" on a stale question.
+                // Keyed per turn, not per text: a streamed caption changes many times a second and remounting would
+                // stall AnimatePresence.
                 key={`q:${asked}`}
                 className={styles.question}
                 initial={{ opacity: 0, y: 8 }}
@@ -1478,7 +1466,7 @@ export default function SarthiInterview() {
           </div>
         )}
 
-        {/* Always available: they can type or send a picture at any point, not only when asked. */}
+        {/* They can type or send a picture at any time, not only when asked. */}
         <div className={styles.typeRow}>
           <button className={styles.attach} title="Photo lein" aria-label="Photo lein" onClick={() => openCapture(true)}>
             <IoCamera size={13} />
@@ -1534,7 +1522,7 @@ export default function SarthiInterview() {
         </div>
       </section>
 
-      {/* connecting overlay */}
+      {/* Connecting overlay */}
       <AnimatePresence>
         {phase === 'connecting' && (
           <motion.div className={styles.connecting} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -1560,7 +1548,7 @@ export default function SarthiInterview() {
         />
       )}
 
-      {/* end confirmation */}
+      {/* End confirmation */}
       <AnimatePresence>
         {confirmEnd && (
           <motion.div className={styles.sheetWrap} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

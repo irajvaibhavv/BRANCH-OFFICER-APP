@@ -1,5 +1,5 @@
 import styles from './Badge.module.css';
-import { QUALITY } from '../../utils/qualityTags';
+import { QUALITY } from '../../utils/dsaQuality';
 import { STATUS_COLORS } from '../../utils/colors';
 import { stageOf } from '../../utils/fileStages';
 

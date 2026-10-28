@@ -45,14 +45,20 @@ src/
     meeting/               MeetingPrep question list
     sarthi/                AiAvatar, VideoFeed
   context/                 AppState (the local "database"), Auth, Offline, Theme
-  hooks/                   useLocalStorage, useToast, useGeolocation, useOfflineDetect, useSarthiReports
+  hooks/                   useLocalStorage, useToast, useGeolocation, useOfflineDetect, useSarthiReports, useRewards
   services/                Side-effecting or simulated-AI logic, no React
     voice.js               TTS (ElevenLabs / Murf / browser) + browser STT
     weather.js
     assistant/flows.js     SAARTHI AI interview flows
-    meeting/               transcript.js (meeting summaries), prep.js (meeting questions)
-    sarthi/                agent, controller, memory, model, verifier, validator, script, stream, …
-  utils/                   Pure helpers: formatters, loanCalc, commission, colors, greetings, pending, qualityTags
+    meeting/               transcript.js (meeting summaries), questions.js (meeting questions)
+    sarthi/                Sarthi AI engine, one concern per file:
+                             controller (what to ask next), agent (model prompts), modelRouting, interviewState,
+                             claimVerifier, reportValidator, figureRechecks, tradeProbes, hotQuestions, replyIntent,
+                             idChecks, faceMatch, awayDetection, photoAnalysis, photoProvenance, location,
+                             crossPdCheck, liveChallenges, livingConditions, repeatPd, assistedPd, dsaReview,
+                             scriptedMode (no-model fallback), streamedSpeech, voiceProfile, camera, devMocks
+  utils/                   Pure helpers: formatters, loanCalc, commission, colors, greetings, carryOverWork, dsaQuality,
+                           routePlanning, incentive, rewards, payouts, fileStages, opsDocs, channel, areas
   data/
     mock/                  Seed JSON; dates shifted to "today" on load
     sarthi/                Sarthi knowledge files + PD schema + voice manifest

@@ -1,12 +1,13 @@
-// Friendly rechecks: when a figure just given disagrees with their own earlier figures or the bank statement, Sarthi
-// says both numbers openly and asks again, while they are still on the call. Decided in code; the model only phrases it.
+// Friendly rechecks: when a figure just given disagrees with their own earlier figures or the bank
+// statement, Sarthi says both numbers openly and asks again, while they are still on the call. Decided in
+// code; the model only phrases it.
 import { bankIncome, tradeOf, lookupBusiness, ventureArea } from './knowledge';
-import { toNumber, toYears } from './verifier';
+import { toNumber, toYears } from './claimVerifier';
 import { readNumbers } from './hindiNumbers';
-import { FIELD_DEFS } from './memory';
+import { FIELD_DEFS } from './interviewState';
 
-// Every figure that does not add up is challenged, once per field (lead's ask, 2026-10-14) — at 7, the eighth mismatch
-// (worst-month EMI cover) went unasked. 20 is a runaway guard, not a budget; MAX_TURNS still bounds the call.
+// Every figure that does not add up is challenged once per field. 20 is a runaway guard, not a budget;
+// MAX_TURNS still bounds the call.
 export const MAX_RECHECKS = 20;
 
 // Spoken money: "3.8 lakh", "18 hazaar". The model turns these into Devanagari for the voice.
@@ -34,8 +35,8 @@ export function findRechecks(memory, caseData, facts = {}) {
   const bill = toNumber(c.avg_bill_value);
   const out = [];
 
-  // Income against their own hisaab: what they say is left on 100 rupees × their sales. Their own numbers, so it goes
-  // first — the gentlest way to show a gap.
+  // Income against their own hisaab (margin per 100 rupees × sales). Their own numbers, so it goes first as the
+  // gentlest way to show a gap.
   const margin = memory.statedMarginPct;
   if ((got('monthly_income') || got('monthly_sales')) && income && sales && margin) {
     const fromMargin = Math.round((sales * margin) / 100);
@@ -48,8 +49,8 @@ export function findRechecks(memory, caseData, facts = {}) {
     }
   }
 
-  // Income against the bank: people under-say it as often as they over-say it (profit after home expenses, one
-  // partner's share), so both directions are asked — a low figure also sinks their own eligibility.
+  // Income against the bank: people under-state as often as over-state, so both directions are asked; a low figure also
+  // hurts their own eligibility.
   if (got('monthly_income') && income && bank) {
     const diff = (income - bank.income) / bank.income;
     if (Math.abs(diff) > 0.4) {
@@ -66,7 +67,7 @@ export function findRechecks(memory, caseData, facts = {}) {
     }
   }
 
-  // Sales against the bank. Above it is usually cash that never reaches the account — worth hearing them say so.
+  // Sales against the bank. Above it is usually cash that never reaches the account.
   if (got('monthly_sales') && sales && bank?.marginPct != null) {
     const ratio = sales / bank.credits;
     if (ratio > 1.6 || ratio < 0.6) {
@@ -138,8 +139,7 @@ export function findRechecks(memory, caseData, facts = {}) {
     });
   }
 
-  // A new shop: the hisaab a branch officer does on a site visit, on the call — rent against the area, the rent against
-  // what the shop can earn, and the setup cost against the loan.
+  // A new shop: rent against the area, rent against what the shop can earn, and setup cost against the loan.
   const vRent = toNumber(c.venture_rent);
   if (got('venture_rent') && vRent) {
     const va = ventureArea(c, caseData);
@@ -192,8 +192,8 @@ export function findRechecks(memory, caseData, facts = {}) {
     }
   }
 
-  // What is left after the supplier and the running costs. An indicative residual, never profit: unsold stock, udhaar,
-  // tax and household withdrawals all move it — so it is shown to them and asked about, not concluded.
+  // What is left after supplier and running costs: an indicative residual, never profit (stock, udhaar, tax and
+  // household withdrawals all move it), so it is asked about, not concluded.
   const purchase = toNumber(c.monthly_purchase);
   const costs = toNumber(c.monthly_expenses);
   if ((got('monthly_purchase') || got('monthly_expenses') || got('monthly_sales') || got('monthly_income')) && sales && purchase != null && costs != null) {
@@ -209,7 +209,7 @@ export function findRechecks(memory, caseData, facts = {}) {
     }
   }
 
-  // A real day and a real week against the month they gave. Yesterday may have been unusual — asked, never assumed.
+  // A real day and week against the month they gave. Yesterday may have been unusual: asked, never assumed.
   const yesterday = toNumber(c.sales_yesterday);
   if ((got('sales_yesterday') || got('monthly_sales')) && sales && yesterday) {
     const ratio = (yesterday * 26) / sales;
@@ -233,8 +233,7 @@ export function findRechecks(memory, caseData, facts = {}) {
     }
   }
 
-  // Salaried: a year of in-hand pay is usually 60-90% of the CTC (PF, tax, variable pay). Above the CTC is impossible;
-  // far below it means the package or the in-hand figure is off.
+  // Salaried: a year of in-hand pay is usually 60-90% of CTC. Above CTC is impossible; far below means a figure is off.
   const ctc = toNumber(c.annual_ctc);
   if ((got('annual_ctc') || got('monthly_income')) && ctc && income) {
     const share = (income * 12) / ctc;
@@ -258,8 +257,8 @@ export function findRechecks(memory, caseData, facts = {}) {
     });
   }
 
-  // School fees and the elder's medicine are fixed outgoings: they must fit inside the house kharcha they gave, and in
-  // what comes in. Said back with their own numbers.
+  // School fees and elders' medicine are fixed outgoings: they must fit inside the household
+  // spend and income they gave.
   const fam = familyHisaab(c);
   const house = toNumber(c.household_expenses);
   if (['school_fees', 'medicine_monthly', 'household_expenses'].some(got) && fam.fixed && house && fam.fixed > house) {
@@ -294,12 +293,9 @@ export function familyHisaab(c) {
 // Counts added up from several people, and yes/no-ish numbers: a different figure there is not a changed story.
 const NO_DRIFT = new Set(['family_size', 'dependents', 'earning_members', 'children_count', 'elderly_count', 'children_in_school', 'aadhaar_number', 'pan_number']);
 
-/**
- * Their own earlier figure, said differently in a later answer ("pehle 2 lakh bikri, ab 3 lakh"). acceptedFacts keeps
- * the old value because the new one did not answer that question, so without this the clash vanished silently. The new
- * figure must be one they actually said (or it in thousands/lakhs) — never the extractor's reading alone — and within 4×
- * of the old one: 180 litres filed under monthly purchase of 1.5 lakh is a different quantity, not a changed story.
- */
+// Their own earlier figure, said differently later ("pehle 2 lakh bikri, ab 3 lakh"). acceptedFacts keeps the old
+// value, so without this the clash is lost. The new figure must be one they actually said (or it in thousands/lakhs)
+// and within 4× of the old one; anything further apart is a different quantity.
 export function driftRechecks(memory, facts = {}, text = '') {
   const heard = readNumbers(text).map((n) => n.value);
   const said = (v) => heard.some((h) => h === v || h * 1000 === v || h * 100000 === v);
@@ -318,8 +314,8 @@ export function driftRechecks(memory, facts = {}, text = '') {
   });
 }
 
-// Flags from the contradiction, hisaab and consistency checks, asked on the call instead of only landing in the report.
-// No `say`: their details are English and some name the trade's normal range, which must never be told to them.
+// Flags from the contradiction, hisaab and consistency checks, asked on the call. No `say`: their details are English
+// and some name the trade's normal range, which must never be told to them.
 const ASK_FLAGS = new Set(['contradiction', 'coaching_detected', 'trade_math', 'internal_consistency', 'repeat_pd']);
 export const flagRechecks = (flags = []) => flags
   .filter((f) => ASK_FLAGS.has(f.type) && f.severity !== 'low')
@@ -337,7 +333,7 @@ export function queueRechecks(memory, caseData, facts, { drift = [], flags: rais
     .slice(0, Math.max(0, room));
   if (!fresh.length) return memory;
   const fields = new Set(fresh.map((r) => r.field));
-  // The recheck IS the follow-up; the gentle "OPEN FLAGS" nudge would ask the same thing a second time.
+  // The recheck is the follow-up, so the "OPEN FLAGS" nudge would ask the same thing twice.
   const flags = memory.flags.map((f) => (fields.has(f.field) ? { ...f, followedUp: true } : f));
   return { ...memory, flags, recheckQueue: [...(memory.recheckQueue ?? []), ...fresh.map((r) => ({ ...r, before: memory.collected[r.field], turn: memory.turnCount }))] };
 }
@@ -346,7 +342,7 @@ export function queueRechecks(memory, caseData, facts, { drift = [], flags: rais
 export function recordRecheckAnswer(memory, recheck, question, text, turn) {
   const after = memory.collected[recheck.field];
   const entry = { field: recheck.field, detail: recheck.detail, before: recheck.before, after, changed: String(after) !== String(recheck.before), asked: question, answer: text, turn };
-  // A corrected income is not coaching: the later re-ask is compared with the corrected figure, not the forgotten one.
+  // A corrected income is not coaching: later re-asks compare with the corrected figure.
   const incomeMentions = recheck.field === 'monthly_income' && entry.changed ? memory.income_mentions.slice(-1) : memory.income_mentions;
   return { ...memory, income_mentions: incomeMentions, rechecks: [...(memory.rechecks ?? []), entry] };
 }

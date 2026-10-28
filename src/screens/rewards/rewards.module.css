@@ -156,7 +156,7 @@ button.reco { color: inherit; text-align: left; }
 .missionDone { opacity: 0.72; }
 .missionDone .mTitle { text-decoration: line-through; text-decoration-color: #94a3b8; }
 
-/* Arena (2026-10-23 redesign): slab labels, tier, wallet, you vs you, quality shield */
+/* Arena: slab labels, tier, wallet, you vs you, quality shield */
 .mile b { font-size: 14px; font-weight: 800; }
 .mile small { font-size: 10px; font-weight: 600; opacity: 0.85; }
 .mileDone::before { content: none; }

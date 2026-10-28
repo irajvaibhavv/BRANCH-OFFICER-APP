@@ -14,7 +14,7 @@ import { useToast } from '../../hooks/useToast';
 import { formatINR, toISODate } from '../../utils/formatters';
 import { withCredit } from '../../utils/fileStages';
 import { isConnector } from '../../utils/channel';
-import { km, optimise } from '../../utils/route';
+import { km, optimise } from '../../utils/routePlanning';
 import RouteMap from '../../components/charts/RouteMap';
 import { useLivePosition } from '../../hooks/useGeolocation';
 import styles from './plan.module.css';
@@ -163,10 +163,10 @@ export default function PlanDay() {
       />
 
       <AnimatePresence mode="wait">
-        {/* ---------- STEP 1: filter chips + pick DSAs ---------- */}
+        {/* STEP 1: filter chips + pick DSAs */}
         {step === 0 && (
           <motion.div key="s0" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.2 }}>
-            {/* Zomato-style filter bar (sticks under the top bar) */}
+            {/* Filter bar (sticks under the top bar) */}
             <div className={styles.filterBar}>
               <div className={styles.search}>
                 <FiSearch size={16} />
@@ -274,7 +274,7 @@ export default function PlanDay() {
           </motion.div>
         )}
 
-        {/* ---------- STEP 2: route / priority ---------- */}
+        {/* STEP 2: route / priority */}
         {step === 1 && (
           <motion.div key="s1" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.2 }}>
             <div className={styles.seg}>

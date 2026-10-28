@@ -22,7 +22,7 @@ import { useAppState } from '../../context/AppStateContext';
 import { getGreeting } from '../../utils/greetings';
 import { formatINR, formatDate, pct, toISODate, fmtTime } from '../../utils/formatters';
 import { weatherAt } from '../../services/weather';
-import { pendingItems } from '../../utils/pending';
+import { pendingItems } from '../../utils/carryOverWork';
 import WhatsNew from '../../components/home/WhatsNew';
 import styles from './Dashboard.module.css';
 

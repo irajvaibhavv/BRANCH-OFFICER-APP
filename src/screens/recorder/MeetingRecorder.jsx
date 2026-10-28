@@ -27,9 +27,7 @@ const CAPTION_EVERY = 5; // seconds between captions while recording
 const PROC_STEPS = ['Saving audio securely', 'Transcribing speech', 'Identifying speakers', 'Summarising key points'];
 
 
-/* =====================================================================================
-   /record?dsa=…  — record a DSA meeting → live captions → AI summary
-   ===================================================================================== */
+// /record?dsa=…  — record a DSA meeting → live captions → AI summary
 export default function MeetingRecorder() {
   const [params] = useSearchParams();
   const { dsas, getDsa, addRecording } = useAppState();
@@ -111,7 +109,7 @@ export default function MeetingRecorder() {
       )}
 
       <AnimatePresence mode="wait">
-        {/* ---------- READY ---------- */}
+        {/* READY */}
         {phase === 'ready' && (
           <motion.div key="ready" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
             <div className={styles.stage}>
@@ -141,7 +139,7 @@ export default function MeetingRecorder() {
           </motion.div>
         )}
 
-        {/* ---------- RECORDING ---------- */}
+        {/* RECORDING */}
         {phase === 'recording' && (
           <motion.div key="rec" className="stack" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
             <div className={`${styles.live} ${paused ? styles.paused : ''}`}>
@@ -185,7 +183,7 @@ export default function MeetingRecorder() {
           </motion.div>
         )}
 
-        {/* ---------- PROCESSING ---------- */}
+        {/* PROCESSING */}
         {phase === 'processing' && (
           <motion.div key="proc" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
             <div className={styles.proc}>
@@ -207,7 +205,7 @@ export default function MeetingRecorder() {
           </motion.div>
         )}
 
-        {/* ---------- RESULT ---------- */}
+        {/* RESULT */}
         {phase === 'result' && saved && (
           <motion.div key="res" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
             {questions.length > 0 && (
@@ -226,9 +224,7 @@ export default function MeetingRecorder() {
   );
 }
 
-/* =====================================================================================
-   /recordings/:id — view a saved recording
-   ===================================================================================== */
+// /recordings/:id — view a saved recording
 export function RecordingDetail() {
   const { id } = useParams();
   const { getRecording, getDsa } = useAppState();
@@ -243,9 +239,7 @@ export function RecordingDetail() {
   );
 }
 
-/* =====================================================================================
-   /engagements/:id — a company meeting (Branch Head / Regional Head / CEO…) with the DSA
-   ===================================================================================== */
+// /engagements/:id — a company meeting (Branch Head / Regional Head / CEO…) with the DSA
 export function EngagementDetail() {
   const { id } = useParams();
   const { engagements, getDsa } = useAppState();
@@ -279,9 +273,7 @@ export function EngagementDetail() {
   );
 }
 
-/* =====================================================================================
-   /recordings — all recordings
-   ===================================================================================== */
+// /recordings — all recordings
 export function RecordingsList() {
   const navigate = useNavigate();
   const { recordings, getDsa } = useAppState();
@@ -302,7 +294,7 @@ export function RecordingsList() {
   );
 }
 
-/* ---------- Summary + transcript view (shared by fresh result and saved detail) ---------- */
+// Summary + transcript view (shared by fresh result and saved detail)
 function RecordingResult({ rec, dsa, fresh = false, readOnly = false }) {
   const navigate = useNavigate();
   const { toast } = useToast();

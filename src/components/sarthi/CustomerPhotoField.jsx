@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FiCamera, FiCheck } from 'react-icons/fi';
 import PhotoCapture from './PhotoCapture';
-import { downscale } from '../../services/sarthi/photo';
+import { downscale } from '../../services/sarthi/photoAnalysis';
 import styles from './CustomerPhotoField.module.css';
 
 const TIPS = [
@@ -11,7 +11,7 @@ const TIPS = [
 ];
 
 // The customer's photo, taken by the BO with the live camera after the customer agrees. Sarthi compares it with the
-// person on the video call (services/sarthi/face.js). `value` is a data URL; `onChange` gets the new one.
+// person on the video call (services/sarthi/faceMatch.js). `value` is a data URL; `onChange` gets the new one.
 export default function CustomerPhotoField({ value, onChange }) {
   const [consent, setConsent] = useState(!!value);
   const [open, setOpen] = useState(false);

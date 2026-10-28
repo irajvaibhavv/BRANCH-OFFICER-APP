@@ -1,7 +1,7 @@
-// Live challenges: after a few hundred PDs a BO knows every question Sarthi asks and can brief an applicant, stock a shop
-// for the day or write up a bill book. These are picked at random DURING the call, with random details (which shelf,
-// which old date), so there is nothing to brief: a staged shop has no purchase rate for a random item, a book written last
-// night has no believable page from three weeks ago. Decided in code; the model only phrases them.
+// Live challenges: after a few hundred PDs a BO knows every question Sarthi asks and can brief an applicant, stock a
+// shop for the day or write up a bill book. These are picked at random DURING the call, with random details (which
+// shelf, which old date), so there is nothing to brief: a staged shop has no purchase rate for a random item, a book
+// written last night has no believable page from three weeks ago. Decided in code; the model only phrases them.
 import { readNumbers } from './hindiNumbers.js';
 import { namesMatch } from './idChecks.js';
 
@@ -22,7 +22,7 @@ export function pastDateWords(rand, today = new Date()) {
 }
 
 // Each challenge is a few steps: a photo (kind in PHOTO_ASKS) and/or a spoken question. `why` is for the report only.
-// `check` names the code check on a spoken answer (checkChallenge); `pan` keeps the camera open for a second, live shot.
+// `check` names the code check on a spoken answer (checkChallenge); `pan` keeps the camera open for a second live shot.
 // A follow-up asks a detail of the object just shown, which the photo's own reading can confirm.
 // `added`: add new tasks every few months — a BO can learn the task types, not the random details.
 export const POOL = [

@@ -31,7 +31,7 @@ const fieldDirective = (defs, key, nextKey) => {
 
 const SECTION_LABEL = { personal: 'Personal', business: 'Business', business_deep_dive: 'Business detail', financial: 'Financial', documents: 'Document cross-check', loan_purpose: 'Loan' };
 
-/* ------------------------------------------------------------------ phrase pools (Hinglish, Devanagari) */
+// Phrase pools (Hinglish, Devanagari)
 
 const ACK = [['Achha.', 'अच्छा।'], ['Theek hai.', 'ठीक है।'], ['Ji, samajh gaya.', 'जी, समझ गया।'], ['Hmm, achha.', 'हम्म, अच्छा।'], ['Chaliye.', 'चलिए।']];
 const ECHO = {
@@ -138,7 +138,7 @@ const GREETINGS = [
   ['Namaste ji, kaise hain? Main Sarthi hoon. Kuch seedhe sawaal poochhunga, aaram se jawaab dijiye. Pehle naam bataiye?', 'नमस्ते जी, कैसे हैं? मैं सार्थी हूँ। कुछ सीधे सवाल पूछूँगा, आराम से जवाब दीजिए। पहले नाम बताइए?'],
 ];
 
-/* ------------------------------------------------------------------ builder */
+// Builder
 
 export function interviewerExamples(defs, businessKnowledge, r) {
   const out = [];

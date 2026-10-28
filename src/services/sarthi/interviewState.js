@@ -1,7 +1,7 @@
 // Interview state (collected facts, flags, transcript). Kept out of the model's context window.
 import pdSchema from '../../data/sarthi/pdSchema.json';
 import { namesMatch } from './idChecks';
-import { purposeSignals, judgeAnswer } from './probes';
+import { purposeSignals, judgeAnswer } from './tradeProbes';
 
 export const FIELD_KEYS = pdSchema.sections.flatMap((s) => (s.fields ?? []).map((f) => f.key));
 
@@ -12,13 +12,13 @@ export const FIELD_DEFS = Object.fromEntries(
 // A salaried applicant gets the job sections instead of the business ones (schema `employment` on a section).
 export const isSalaried = (caseData) => /salaried/i.test(caseData?.employment ?? '');
 
-// Questions on the claimed job, written by the model from its own knowledge of that work — see controller.
+// Questions on the claimed job, written by the model from its own knowledge (see controller).
 export const PROFESSION_CHECKS = 4;
-// The same, for a trade with no insider pack in businessKnowledge.json (machinery dealer, cafe, ...) — see controller.
+// The same, for a trade with no insider pack in businessKnowledge.json (see controller).
 export const TRADE_CHECKS = 3;
 
-// Optional schema fields are asked only once an answer or a flag links to them (schema `links`), at most this many per
-// PD — the adaptive part of the interview (controller.adaptivePick). A re-check PD may open more.
+// Optional fields are asked only once an answer or flag links to them (schema `links`), at most this many per PD
+// (controller.adaptivePick). A re-check PD may open more.
 export const OPTIONAL_CAP = 6;
 const STRICT_OPTIONAL_CAP = 10;
 
@@ -55,17 +55,17 @@ export function createEmptyMemory(caseData, { hot = [], prior = {} } = {}) {
     flags: [],
     income_mentions: [], // every stated income, for coaching detection
     verification: { area: [], business: [] },
-    tradeAnswers: [], // insider trade questions, answered verbatim — see probes.js
+    tradeAnswers: [], // insider trade questions, answered verbatim — see tradeProbes.js
     professionAnswers: [], // salaried: questions on the job they claim, answered verbatim
     crossQueue: [], // fields just answered that earn one cross-question (schema "cross")
     crossAsked: [],
     crossAnswers: [],
     askCount: {}, // times the controller has asked each field — see MAX_ASKS
-    recheckQueue: [], // figures that disagree, to be shown to them and asked again — see recheck.js
+    recheckQueue: [], // figures that disagree, to be shown to them and asked again — see figureRechecks.js
     recheckAsked: [],
     rechecks: [],
-    hot, // questions prepared from the file before the call — see prep.js
-    prior, // answers from this person's earlier PDs — a changed one is a repeat_pd recheck (repeat.js)
+    hot, // questions prepared from the file before the call — see hotQuestions.js
+    prior, // answers from this person's earlier PDs — a changed one is a repeat_pd recheck (repeatPd.js)
     hotAsked: [],
     hotAnswers: [],
     photosAsked: [], // 'shop' / 'home' — asked by the controller, from where they are (current_place)
@@ -83,7 +83,6 @@ export function createEmptyMemory(caseData, { hot = [], prior = {} } = {}) {
 }
 
 // Only non-null values overwrite, so a vague answer never erases an earlier specific one.
-// Whether the value just given earns its field's cross-question.
 function crossDue(def, value) {
   const when = def?.cross?.when;
   if (!def?.cross) return false;
@@ -108,9 +107,8 @@ export function updateMemory(memory, facts = {}) {
     collected[key] = value;
   });
 
-  // One answer, two keys: a seeded file asks stated_name and a walk-in applicant_name, but the extractor files the
-  // greeting's name under either. Unmirrored, a walk-in's applicant_name stayed empty and the controller asked for it
-  // every turn while the model ignored it.
+  // One answer, two keys: the extractor files the greeting's name under stated_name or applicant_name, so mirror it or
+  // the controller keeps asking.
   for (const [from, to] of [['stated_name', 'applicant_name'], ['applicant_name', 'stated_name']]) {
     if (collected[to] == null && collected[from] != null) collected[to] = collected[from];
   }
@@ -126,12 +124,8 @@ export function updateMemory(memory, facts = {}) {
   return unlockLinks({ ...memory, collected, income_mentions: incomeMentions, crossQueue: queue }, answered);
 }
 
-/**
- * Facts an answer may write. A field already filled is only overwritten by an answer to ITS question: in live runs a
- * trade question's "30-40 litre doodh" replaced a monthly purchase of 1.5 lakh with 180, "is mahine abhi tak 70 hazaar"
- * (a cross-question) replaced monthly sales, and a hoped-for future income became a coaching flag. Income is also
- * taken on the income recheck, which exists to hear it a second time.
- */
+// Facts an answer may write. A filled field is only overwritten by an answer to its own question, so a side remark in
+// another answer cannot replace a figure. Income is also taken on the income recheck.
 export function acceptedFacts(memory, facts = {}, action = null) {
   const asked = new Set(action?.missingFields ?? []);
   if (action?.section === 'income_recheck') asked.add('monthly_income');
@@ -144,8 +138,8 @@ export function acceptedFacts(memory, facts = {}, action = null) {
 export const OPERATOR_KEYS = new Set(pdSchema.sections.find((s) => s.id === 'operator')?.fields.map((f) => f.key) ?? []);
 export const isAssisted = (memory) => !!memory.assisted || memory.collected.operator_present === 'yes';
 
-// Income and sales drive eligibility and most flags, so they are taken only from their own question: a son's salary,
-// given when asked about other earners, once became the applicant's income and the real figure was then refused.
+// Income and sales drive eligibility and most flags, so they are taken only from their own question (e.g. a son's
+// salary is not the applicant's income).
 const ASKED_ONLY = new Set(['monthly_income', 'monthly_sales']);
 
 export function recordHotAnswer(memory, hot, text, turn) {
@@ -219,13 +213,13 @@ export function conditionMet(field, memory) {
   return true;
 }
 
-// Asked this many times and still empty, a field is left for the officer. Without a cap one unextractable answer
-// ("2-2.5 lakh") pinned the controller to that field for 20 turns while the model improvised around it.
+// Asked this many times and still empty, a field is left for the officer, so one unextractable
+// answer cannot pin the controller.
 export const MAX_ASKS = 2;
 export const gaveUp = (memory, key) => (memory.askCount?.[key] ?? 0) >= MAX_ASKS;
 
-// Standard fields a question prepared from the file asks instead (prep.js `covers`). Skipped only while that question
-// is still to come: if its answer did not give the fact after all (income, say), the standard question is asked.
+// Standard fields a file question asks instead (hotQuestions.js `covers`). Skipped only while that question is still to
+// come; if its answer did not give the fact, the standard question is asked.
 export const coveredByHot = (memory) => {
   const asked = new Set(memory.hotAsked ?? []);
   return new Set((memory.hot ?? []).filter((h) => !asked.has(h.id)).flatMap((h) => h.covers ?? []));

@@ -104,10 +104,8 @@ export function summaryToText(summary) {
 
 export const fmtClock = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-/* ---------------------------------------------------------------------------------
-   Company engagement meetings (Branch Head / Regional Head / CEO … with the DSA).
-   Same idea: a plausible transcript + summary generated locally from the record.
-   --------------------------------------------------------------------------------- */
+// Company engagement meetings (Branch Head / Regional Head / CEO … with the DSA): a plausible transcript + summary
+// generated locally from the record.
 const ROLE_LINES = {
   leadership: (lead, dsa, f) => [
     [lead, `${f.first}, thank you for joining. You're one of our top ${dsa.disbursed >= 9000000 ? 'three' : 'ten'} partners in the region, so I wanted to hear directly what's working and what isn't.`],

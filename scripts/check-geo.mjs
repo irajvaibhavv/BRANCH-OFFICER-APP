@@ -1,6 +1,6 @@
-// Asserts the photo-location maths in src/services/sarthi/geo.js. Run: npm run check:geo
+// Asserts the photo-location maths in src/services/sarthi/location.js. Run: npm run check:geo
 import assert from 'node:assert/strict';
-import { parseLatLng, distanceM, checkPlace } from '../src/services/sarthi/geo.js';
+import { parseLatLng, distanceM, checkPlace } from '../src/services/sarthi/location.js';
 
 assert.deepEqual(parseLatLng('28.651934, 77.190870'), { lat: 28.651934, lng: 77.19087 });
 assert.deepEqual(parseLatLng('https://www.google.com/maps/@28.6519,77.1908,17z'), { lat: 28.6519, lng: 77.1908 });

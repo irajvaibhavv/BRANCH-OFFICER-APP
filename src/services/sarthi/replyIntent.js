@@ -20,7 +20,7 @@ intent — exactly one of:
 gist — under 12 words, in English: what they said or asked, for the next line to respond to.
 Judge the meaning, not keywords: "nahi, koi sub-agent nahi hai" is "answered"; "baad mein bataunga" is "refused".`;
 
-// ---- fallback patterns, used only when the model call fails or is late ----
+// Fallback patterns, used only when the model call fails or is late
 // "Nahi bataunga", "kyun bataun", "private hai" — a refusal of this question.
 const REFUSE = /nahi\s+(bataunga|bataungi|batayenge|batana|bata\s*(sakta|sakti|sakte|paunga|paungi))|nahi\s+batana|kyu[nm]?\s+bata(u|un|oon|en|yen)|aapko\s+kya|aap\s+kyu[nm]?\s+pooch|private|personal\s+(hai|baat)|not\s+(telling|going\s+to\s+tell)|won'?t\s+tell|no\s+comment|skip|chhod\s*(o|do|iye|dijiye)|next\s+(question|sawal|pucho)|नहीं\s*बता|क्यों\s*बता|प्राइवेट/i;
 // "Mujhe baat nahi karni", "abhi nahi", "busy hoon" — no call at all.
@@ -41,7 +41,7 @@ export function guessIntent(text, name = '') {
   return 'answered';
 }
 
-// Knob: the longest an answer waits on the reading before the code goes on with the fallback guess.
+// The longest an answer waits on the reading before the code goes on with the fallback guess.
 const BUDGET_MS = Number(import.meta.env.VITE_SARTHI_INTENT_MS) || 2500;
 
 /** { intent, gist, source: 'model' | 'guess' } for one reply to `question`. Never throws. */

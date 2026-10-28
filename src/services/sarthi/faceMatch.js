@@ -1,6 +1,7 @@
-// The customer's photo, taken by the BO when the customer is added, against a frame from the video call: is the person
-// on the call the person the officer met? On-device face recognition for the officer to look at — not certified biometrics.
-import { visionCompare } from './crossPd.js'; // extension so check:face runs in plain node
+// The customer's photo, taken by the BO when the customer is added, against a frame from the video call: is
+// the person on the call the person the officer met? On-device face recognition for the officer to look at
+// — not certified biometrics.
+import { visionCompare } from './crossPdCheck.js'; // extension so check:face runs in plain node
 
 export const faceKey = (caseId) => `bo_sarthi_face_${caseId}`;
 export const callFrameKey = (pdId) => `bo_sarthi_face_call_${pdId}`;
@@ -19,17 +20,16 @@ export function saveFace(caseId, dataUrl) {
   }
 }
 
-// Checked all through the call: at the start, then every FACE_EVERY_MS or at a new section, capped per PD. On the phone
-// and free, so far more often than the old vision-model check. Always in the background — never holds up a turn.
+// Checked throughout the call: at the start, then every FACE_EVERY_MS or at a new section, capped per PD. Runs
+// on-device in the background and never holds up a turn.
 export const FACE_EVERY_MS = Math.max(15000, Number(import.meta.env?.VITE_SARTHI_FACE_MS) || 30000);
 export const FACE_MAX = Math.max(1, Number(import.meta.env?.VITE_SARTHI_FACE_MAX) || 20);
 
-// Face recognition, not a chat model's opinion: face-api (tiny face detector, 68 landmarks, the dlib ResNet 128-number
-// face descriptor) runs on the phone, and the code decides on the distance between the two descriptors. A chat model
-// called the officer himself "different" over a hand on the face and another angle; the descriptor barely moves for those.
+// On-device face recognition, not a chat model's opinion: face-api (tiny face detector, 68 landmarks, dlib ResNet 128-d
+// descriptor), with the code deciding on descriptor distance. The descriptor is robust to angle and partial cover.
 const FACE_API = '1.7.15'; // must match package.json — the weights are fetched for this exact build
 const MODELS = `https://cdn.jsdelivr.net/npm/@vladmandic/face-api@${FACE_API}/model`;
-// Knobs: dlib's own cut-off is 0.6; webcam shots of one person sit around 0.3-0.5. Between the two is unsure.
+// dlib's own cut-off is 0.6; webcam shots of one person sit around 0.3-0.5. Between the two is unsure.
 export const SAME_BELOW = 0.55;
 export const DIFFERENT_ABOVE = 0.65;
 
@@ -109,7 +109,7 @@ export function faceFlags(checks, cameraOn) {
   const diff = checks.filter((c) => c.verdict === 'different');
   const same = checks.filter((c) => c.verdict === 'same').length;
   const flags = [];
-  // One noisy "different" among matches is the model, not an impostor: high needs most checks, and at least two.
+  // One noisy "different" among matches is noise, not an impostor: high needs most checks, and at least two.
   if (diff.length > same) {
     flags.push({ type: 'face_check', field: 'face', severity: diff.length >= 2 ? 'high' : 'medium', detail: `The person on the video call did not look like the customer photo taken when the file was opened (${of(diff.length)})${diff[0].reason ? ` — ${diff[0].reason}` : ''}` });
   } else if (diff.length) {
@@ -132,8 +132,9 @@ export function faceSummary(checks) {
     ?? checks.findLast((c) => c.verdict === 'same') ?? checks.at(-1) ?? null;
 }
 
-// Liveness: once per PD, at a random turn, Sarthi asks for one small action on camera. A frame before and one after go
-// to the vision model side by side; a replayed or pre-recorded video, or a photo held up, cannot follow a random request.
+// Liveness: once per PD, at a random turn, Sarthi asks for one small action on camera. A frame before and
+// one after go to the vision model side by side; a replayed or pre-recorded video, or a photo held up,
+// cannot follow a random request.
 export const LIVENESS = [
   { id: 'hand', text: "Ek chhota sa kaam — apna ek haath uthaakar camera ko dikhaiye, phir 'ho gaya' boliye.", speech: 'एक छोटा सा काम। अपना एक हाथ उठाकर कैमरे को दिखाइए, फिर हो गया बोलिए।', check: 'raising one open hand so the palm faces the camera' },
   { id: 'fingers', text: "Ek chhota sa kaam — camera ko teen ungliyaan dikhaiye, phir 'ho gaya' boliye.", speech: 'एक छोटा सा काम। कैमरे को तीन उँगलियाँ दिखाइए, फिर हो गया बोलिए।', check: 'holding up three fingers' },

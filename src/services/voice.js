@@ -49,7 +49,7 @@ const DEFAULT_PROFILE = voiceProfile();
 
 const clean = (text) => text.replace(/₹/g, 'rupees ').replace(/[*_`]/g, '');
 
-/* ---------- Cloud TTS: fetch → cache → play, one line at a time ---------- */
+// Cloud TTS: fetch → cache → play, one line at a time
 const cache = new Map();          // profile+text → Promise<audio url>
 
 function ttsError(name, status, body) {
@@ -92,7 +92,7 @@ function audioUrl(text, p) {
   const key = `${p.engine}|${p.voiceId}|${p.style}|${p.speed}|${p.model}|${clean_}`;
   if (!cache.has(key)) {
     const get = () => (p.engine === 'elevenlabs' ? fetchEleven(clean_, p) : fetchMurf(clean_, p));
-    // One retry for a busy engine (429 concurrency, 5xx, network): waiting 400ms beats switching to the browser voice.
+    // One retry for a busy engine (429, 5xx, network) before falling back to the browser voice.
     const req = get().catch((e) => (e?.permanent || (e?.status && e.status < 500 && e.status !== 429)
       ? Promise.reject(e)
       : new Promise((r) => { setTimeout(r, 400); }).then(get)));
@@ -114,9 +114,8 @@ let playing = false;
 let gen = 0;        // bumped by stopSpeaking() so stale fetches never play
 let silent = false;
 
-// Safari (iPhone and Mac) plays a media element only if a tap once started THAT element, and a line starts after a TTS
-// fetch, long after the tap. So every line plays through one shared element, unlocked on the first tap anywhere in the
-// app; the browser voice is unlocked the same way. A fresh `new Audio()` per line was silent on every Safari.
+// Safari plays a media element only if a tap once started that element, and lines start long after the tap. So all
+// lines play through one shared element, unlocked on the first tap; the browser voice is unlocked the same way.
 const SILENT_WAV = 'data:audio/wav;base64,UklGRnQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
 let player = null;
 let unlocked = false;
@@ -165,7 +164,7 @@ async function drain() {
     if (myGen !== gen) return;
     const failed = item.profile.engine;
     if (e?.permanent) brokenEngines.add(failed);
-    // This line only: the other cloud engine if it has a key (Sarthi's Murf voice is the same male Hindi speaker), else the browser.
+    // This line only: the other cloud engine if it has a key, else the browser.
     const next = item.src ? item.profile : voiceProfile({ ...item.profile.voice, engine: failed === 'murf' ? 'elevenlabs' : 'murf' });
     console.warn(`[voice] ${failed} failed (${e?.name === 'NotAllowedError' ? 'autoplay blocked' : e?.message})${e?.permanent ? ' — off for this session' : ''}; this line → ${next.engine === failed || item.src ? 'browser' : next.engine}`);
     if (!item.src && next.engine !== 'browser' && next.engine !== failed) { queue.unshift({ ...item, profile: next }); drain(); return; }
@@ -175,7 +174,7 @@ async function drain() {
   }
 }
 
-/* ---------- Browser fallback ---------- */
+// Browser fallback
 let voice = null;
 function pickVoice() {
   if (!synth) return null;
@@ -199,15 +198,15 @@ function hindiVoice(gender) {
 function browserSpeak(text, { rate = 1, onEnd, onStart, profile } = {}) {
   if (!synth) { onStart?.(); onEnd?.(); return; }
   voice = voice || pickVoice();
-  // A Hindi profile (Sarthi) keeps ONE Hindi voice for every line — picking by script switched speakers mid-call.
+  // A Hindi profile (Sarthi) keeps one Hindi voice for every line so the speaker never changes mid-call.
   const hindi = profile?.lang === 'hi' || DEVANAGARI.test(text);
   const v = hindi ? hindiVoice(profile?.gender) : voice;
   const u = new SpeechSynthesisUtterance(clean(text));
   if (v) u.voice = v;
   u.lang = v?.lang || (hindi ? 'hi-IN' : 'en-IN');
   u.rate = rate; u.pitch = 1; u.volume = silent ? 0 : 1;
-  // Safari drops an utterance it will not play (no tap yet, no voice) without any event — the call would wait on
-  // onEnd forever with the mic never opening. If nothing is speaking 3s on, give up on this line and carry on.
+  // Safari silently drops an utterance it will not play, so the call would wait on onEnd forever. If nothing is
+  // speaking after 3s, skip the line.
   let started = false; let ended = false;
   const end = () => { if (ended) return; ended = true; clearTimeout(watchdog); onEnd?.(); };
   const watchdog = setTimeout(() => { if (!started && !synth.speaking) { synth.cancel(); end(); } }, 3000);
@@ -248,9 +247,8 @@ export function stopSpeaking() {
  * Listen once. onInterim(text) streams partial words, onFinal(text) fires with the whole answer.
  * Returns a stop() function.
  *
- * With `endAfterMs`, the turn ends only after that much silence — never when the browser decides. Chrome ends a
- * recognition session on its own at a short pause (and on network blips); submitting there cut people off mid-answer,
- * dropping it lost their words. So a session the browser ends is restarted at once, with what was said kept as a prefix.
+ // With `endAfterMs`, the turn ends only after that much silence, never when the browser decides. Chrome ends sessions
+ // on short pauses and network blips, so a browser-ended session is restarted with what was said kept as a prefix.
  */
 export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN', endAfterMs = 0 }) {
   if (!SR) { onError?.('unsupported'); return () => {}; }
@@ -264,8 +262,8 @@ export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN', end
   let restarts = 0;
   let allFinal = false; // the current session's results are all isFinal
   const all =() => `${prefix} ${heard}`.replace(/\s+/g, ' ').trim();
-  // Chrome sometimes never fires onend after stop() (the speech service stalls). Whichever comes first — onend or the
-  // watchdog — settles the turn, once.
+  // Chrome sometimes never fires onend after stop(); whichever of onend or the watchdog comes
+  // first settles the turn, once.
   const settle = () => {
     if (settled) return;
     settled = true;
@@ -276,8 +274,8 @@ export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN', end
   };
   const stopNow = () => {
     stopping = true;
-    // Every word is already final: waiting on onend added 0.3-1.5s to each turn for no new text. abort(), not stop():
-    // a stop() Chrome never finishes keeps the speech service, and the next answer's session hears nothing.
+    // Every word is already final, so don't wait on onend. abort(), not stop(): a stop() Chrome never finishes leaves
+    // the next session deaf.
     if (allFinal) { try { r?.abort(); } catch { /* ignore */ } settle(); return; }
     try { r?.stop(); } catch { /* ignore */ }
     watchdog = setTimeout(() => { try { r?.abort(); } catch { /* ignore */ } settle(); }, 1500);
@@ -287,8 +285,7 @@ export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN', end
     r.lang = lang; r.interimResults = true; r.continuous = !!endAfterMs; r.maxAlternatives = 1;
     heard = '';
     r.onresult = (e) => {
-      // Rebuilt from every result each time, and a result that only extends the one before replaces it: Android Chrome
-      // in continuous mode repeats the phrase so far as a new result ("main", "main Raj", "main Raj hoon").
+      // Rebuilt from every result: Android Chrome in continuous mode repeats the phrase so far as a new result.
       const parts = [];
       allFinal = true;
       for (let i = 0; i < e.results.length; i++) {
@@ -324,9 +321,10 @@ export function listen({ onInterim, onFinal, onError, onEnd, lang = 'en-IN', end
     try { r.start(); } catch (err) { onError?.(String(err)); }
   };
   begin();
-  return () => { clearTimeout(quiet); stopping = true; try { r?.stop(); } catch { /* ignore */ } };
+  // abort(), as in stopNow: an unfinished stop() leaves the next session deaf.
+  return () => { clearTimeout(quiet); stopping = true; try { r?.abort(); } catch { /* ignore */ } };
 }
 
-// How long a pause ends a spoken answer in a Sarthi interview. 1.2s cut people off while they thought — Hindi speakers
-// pause mid-sentence ("haan… woh… pandrah hazaar"). Knob: VITE_SARTHI_PAUSE_MS.
+// How long a pause ends a spoken answer in a Sarthi interview; long enough for Hindi speakers' mid-sentence pauses.
+// Override: VITE_SARTHI_PAUSE_MS.
 export const ANSWER_PAUSE_MS = Number(import.meta.env.VITE_SARTHI_PAUSE_MS) || 2000;

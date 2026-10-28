@@ -1,7 +1,7 @@
-// Sarthi's DSA review call. Same split as the PD: code picks the topic and does the hisaab against the DSA's own
-// numbers, Claude only phrases the question. Numbers are read in code (hindiNumbers), so there is no extraction call.
+// Sarthi's DSA review call. Same split as the PD: code picks the topic and does the hisaab against the DSA's numbers;
+// the model only phrases the question. Numbers are read in code (hindiNumbers).
 import { askAgent } from './agent';
-import { genderRule, SPOKEN_STYLE } from './voice';
+import { genderRule, SPOKEN_STYLE } from './voiceProfile';
 import { readNumber, readNumbers } from './hindiNumbers';
 import { commissionFor, productMix } from '../../utils/commission';
 import dsaIntel from '../../data/sarthi/dsaIntel.json';
@@ -65,15 +65,13 @@ const FRAME = /\b(sau|100|hundred)\s+(mein|me|main|men)\s+se\b|\b(ek|do|teen|cha
 /** The figure that answers a `num` topic. */
 export const readFigure = (text) => readNumber(String(text).replace(FRAME, ' ').replace(/(\d+)\s*(?:-|se|to)\s*\d+/gi, '$1'));
 
-/**
- * The figure that answers a `num` topic, from a long spoken answer ("ek-do NBFC… 25 files" — the parser alone takes 1).
- * Haiku picks which number answers the question; code accepts it only if it is one the DSA actually said
- * (or that figure in thousands/lakhs), so a model misread can never become a recheck. No model → `readFigure`.
- */
+// The figure that answers a `num` topic, from a long spoken answer where the parser alone would take the first number.
+// The model picks which number answers; code accepts it only if the DSA actually said it (or it in thousands/lakhs). No
+// model → `readFigure`.
 export async function figureFrom(topic, text) {
   const said = readNumbers(String(text).replace(/(\d+)\s*(?:-|se|to)\s*\d+/gi, '$1')).map((n) => n.value);
   if (!said.length) return null;
-  if (said.length === 1) return said[0]; // nothing to choose between — no model call, no wait
+  if (said.length === 1) return said[0]; // one number: no model call needed
   try {
     const raw = await askAgent({
       systemPrompt: 'A loan agent answered a question on a call. Reply with ONLY the number that answers the question, as digits (rupees in full, e.g. 50000; a range → its lower end), or "none" if their answer gives no such number.',
@@ -92,7 +90,7 @@ const VAGUE = /^(haan|ha|nahi|no|yes|ok|theek|thik|normal|pata nahi|yaad nahi|sa
 /** One follow-up per topic when the answer gives nothing to hold on to. */
 export function needsProbe(topic, text, figure) {
   if (topic.noProbe) return false;
-  // Any number said counts as an answer — a follow-up asking "rough number?" after one is just irritating.
+  // Any number said counts as an answer.
   if (topic.num) return figure == null && readFigure(text) == null;
   const words = text.trim().split(/\s+/).length;
   // "Haan haan, Hadapsar mein office hai…" is an answer; only a short one that opens vague is not.
@@ -160,7 +158,7 @@ export function rechecksFor(topic, text, file, nums) {
   return [...out, ...intelRechecks(topic, text, file)];
 }
 
-// ---- what the branch knows beyond its own files (dsaIntel.json) ----
+// What the branch knows beyond its own files (dsaIntel.json)
 
 const LENDERS = {
   'HDFC Bank': /hdfc|एचडीएफसी/i, 'ICICI Bank': /icici|आईसीआईसीआई/i, 'Axis Bank': /axis|एक्सिस/i, SBI: /\bsbi\b|state bank|एसबीआई|स्टेट बैंक/i,
@@ -299,15 +297,14 @@ You are speaking with ${file.name}${file.firm ? ` of ${file.firm}` : ''}.
 ${directive}`;
 }
 
-/** History for Claude with THIS TURN repeated at the end of the DSA's last message — from the system prompt alone, a pushy DSA
- * pulled Haiku off the topic (it started asking for their phone number and said goodbye mid-review). */
+// History with THIS TURN repeated at the end of the DSA's last message, so a pushy DSA cannot pull the model off topic.
 export function turnMessages(history, directive) {
   const last = history.at(-1);
   if (last?.role !== 'user') return history;
   return [...history.slice(0, -1), { role: 'user', content: `${last.content}\n\n[Program → Sarthi, THIS TURN: ${directive.replace(/\n/g, ' ')}]` }];
 }
 
-/** The goodbye is fixed text: asked to close, the model kept adding one more question. */
+/** The goodbye is fixed text so the model cannot add one more question. */
 export function closingLine(file) {
   const first = file.name.split(' ')[0];
   return {
@@ -316,10 +313,8 @@ export function closingLine(file) {
   };
 }
 
-/**
- * The model left out the Devanagari speech fence: one small call turns the caption into Devanagari, because the Hindi
- * voice reads romanized Hindi in an English accent. null when that fails too — the caller then says the topic's own line.
- */
+// Fallback when the model omits the Devanagari speech fence: one small call converts the caption, since the Hindi voice
+// misreads romanized Hindi. null on failure; the caller then says the topic's own line.
 export async function toDevanagari(text) {
   try {
     const raw = await askAgent({
@@ -407,7 +402,7 @@ React to what they said first, in a few warm words, then say this in your own wo
   return `${ack}Ask about exactly this, and nothing else: ${t.goal}\nPlain example: "${t.ask}"${stuck}`;
 }
 
-// ---- the officer takes the review themselves ----
+// The officer takes the review themselves
 
 const rs = (n) => (n >= 100000 ? `Rs ${+(n / 100000).toFixed(1)} lakh` : `Rs ${Math.round(n).toLocaleString('en-IN')}`);
 
@@ -436,7 +431,7 @@ function recordFor(id, file) {
 /** The DSA review as the officer's checklist: the same topics Sarthi walks, each with the branch's record beside it. */
 export const dsaOfficerQuestions = (file) => DSA_TOPICS.map((t) => ({ id: t.id, section: t.section, q: t.ask, why: t.goal, record: recordFor(t.id, file) }));
 
-// ---- report ----
+// Report
 
 const REPORT_SYSTEM = `You write a DSA review report for a branch officer from a call Sarthi (an AI) had with the DSA.
 You get the DSA's record from the branch, the question-by-question answers, and the rechecks where their figures did not match the record.

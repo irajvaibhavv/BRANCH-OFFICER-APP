@@ -7,8 +7,7 @@ import { hasOpsDocs, opsChecklist } from './opsDocs';
 export const QUICK_TARGETS = [25000, 50000, 100000, 200000];
 export const BASE_POINTS = 2450; // opening balance for the demo; missions add their points
 
-// The level IS the slab reached (research, 2026-10-23: progress toward a real, reachable step is the one mechanic with
-// strong evidence) — so the game and the pay grid can never disagree. Tier 0 = below the minimum.
+// The level is the slab reached, so the game and the pay grid can never disagree. Tier 0 = below the minimum.
 export const TIERS = ['Starter', 'Bronze', 'Silver', 'Gold', 'Platinum'];
 export const tierOf = (disbursed, plan = PLAN) => {
   const n = slabFor(disbursed, plan) ? plan.slabs.indexOf(slabFor(disbursed, plan)) + 1 : 0;
@@ -18,8 +17,8 @@ export const tierOf = (disbursed, plan = PLAN) => {
 // Last five months' disbursement, oldest first; this month is live. Demo figures. Incentive follows from the grid.
 export const PAST_DISBURSED = [5200000, 6500000, 4800000, 7200000, 6800000];
 export const PAST_EARNINGS = PAST_DISBURSED.map((d) => incentiveFor(d));
-// Middle officer of the branch, a month. Shown as a private reference line only — never a ranked list (research:
-// public rank cut output in bottom teams; RBI's 2026 sales-practice directions name sales competitions).
+// Branch median officer for a month. Shown as a private reference line only, never a ranked list (RBI 2026
+// sales-practice directions).
 export const BRANCH_MEDIAN_DISBURSED = 6000000;
 
 /** A quarter more than the best of the last 3 months, to the next Rs 5,000 — ambitious, not out of reach. */
@@ -37,11 +36,9 @@ export function pace(done, today) {
 const DAY = 86400000;
 const monthsSince = (iso, today) => (new Date(today) - new Date(iso)) / (30.4 * DAY);
 
-/**
- * The money, honestly: what this month's files earn at the slab reached, what is held (the plan holds the WHOLE payout
- * while any OTC/PDD doc is overdue — so it is shown as money to lose, with the fix), and the files still inside the
- * clawback window (first 3 EMIs). `emiBounced` on a file marks a bounce; seed files have none.
- */
+// This month's earnings at the slab reached, what is held (the whole payout is held while any OTC/PDD doc is overdue,
+// so it is shown as money at risk with the fix), and files still inside the clawback window (first 3 EMIs).
+// `emiBounced` marks a bounce.
 export function wallet(r, files, today, plan = PLAN) {
   const rate = (r.slab?.rate ?? 0) / 100;
   const rows = r.doneFiles.map((f) => ({ ...f, pays: Math.round(f.amount * rate) }));
@@ -80,11 +77,8 @@ export const CATALOGUE = [
 
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-/**
- * Missions are the incentive plan turned into a game: each one is a step to disbursement, read from the loan files, so
- * finishing one is real money (the lead's rule — only disbursement pays). Points are a bonus on top, for the store.
- * `cash` = the rupees the mission is worth; `pts` = paid once when it completes.
- */
+// Missions are steps to disbursement, read from the loan files, so finishing one is real money. Points are a store
+// bonus. `cash` = rupees the mission is worth; `pts` = paid once on completion.
 export function disbursalMissions(r, files, today, visits = []) {
   const rate = (r.rate ?? r.slab?.rate ?? 0.3) / 100;
   const week = new Set(thisWeek(today).map(iso));
@@ -96,13 +90,12 @@ export function disbursalMissions(r, files, today, visits = []) {
     ...r.doneFiles.slice(0, 3).map((f) => ({ id: `disb_${f.id}`, kind: 'disburse', title: `${f.borrower} disbursed`, sub: 'This month', done: 1, goal: 1, cash: Math.round(f.amount * rate), pts: 500, to: '/files' })),
   ];
   if (r.nextSlab) out.push({ id: `slab_${r.nextSlab.from}`, kind: 'boss', title: `Next slab: ₹${r.nextSlab.from / 1e7 >= 1 ? `${r.nextSlab.from / 1e7} Cr` : `${r.nextSlab.from / 1e5} L`} — ${r.nextSlab.rate}% on the whole month`, sub: 'Clean files only — a bounce in the first 3 EMIs is clawed back', done: r.done, goal: r.nextSlab.from, cash: r.nextSlab.pays, pts: 1000, to: '/rewards/plan' });
-  // Inputs the BO controls — they help the officers at the bottom more than any rank would (research, 2026-10-23).
+  // Inputs the BO controls.
   const visitsThisWeek = visits.filter((v) => v.status === 'completed' && week.has(v.date)).length;
   out.push({ id: `visits_${iso(new Date(thisWeek(today)[0]))}`, kind: 'weekly', title: 'Meet 6 DSAs or connectors this week', sub: 'Weekly · visits logged in the app', done: Math.min(visitsThisWeek, 6), goal: 6, pts: 300, to: '/visits/new' });
   out.push({ id: `logins_${iso(new Date(thisWeek(today)[0]))}`, kind: 'weekly', title: `Log in ${perWeek} new files this week`, sub: 'Weekly', done: Math.min(loggedThisWeek, perWeek), goal: perWeek, pts: 300, to: '/plan' });
   out.push({ id: `moves_${today}`, kind: 'daily', title: 'Move 2 files a stage today', sub: 'Daily · chase docs, credit queries, ops', done: Math.min(stepsToday, 2), goal: 2, pts: 200, to: '/files' });
   r.held.forEach((b) => out.push({ id: `pdd_${b}`, kind: 'unlock', title: `Clear OTC/PDD on ${b}`, sub: 'Releases your held payout', done: 0, goal: 1, pts: 300, to: '/files' }));
-  // Open ones first, finished at the bottom.
   return out.map((m) => ({ ...m, complete: m.done >= m.goal })).sort((a, b) => a.complete - b.complete);
 }
 

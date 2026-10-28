@@ -25,7 +25,7 @@ import styles from './assistant.module.css';
 
 const useReports = () => useLocalStorage('bo_ai_reports', []);
 
-/* ============================================================ HOME: who is talking? */
+// HOME: who is talking?
 export default function AIHome() {
   const navigate = useNavigate();
   const { dsas, customers } = useAppState();
@@ -88,7 +88,7 @@ export function ReportCard({ r, onClick }) {
   );
 }
 
-/* ============================================================ SESSION: handover → chat → report */
+// SESSION: handover → chat → report
 export function AISession() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -191,7 +191,7 @@ export function AISession() {
 
   const current = node ? flow[node] : null;
 
-  /* ---------- handover screen (officer → customer/DSA) ---------- */
+  // Handover screen (officer → customer/DSA)
   if (phase === 'handover') {
     return (
       <Page mode="slide">
@@ -219,7 +219,7 @@ export function AISession() {
     );
   }
 
-  /* ---------- generating ---------- */
+  // Generating
   if (phase === 'generating') {
     return (
       <Page mode="fade">
@@ -232,7 +232,7 @@ export function AISession() {
     );
   }
 
-  /* ---------- interview (immersive, voice-first) ---------- */
+  // Interview (immersive, voice-first)
   const lastUser = msgs.map((m) => m.from).lastIndexOf('user');
   const nowLines = msgs.slice(lastUser + 1).filter((m) => m.from === 'ai').map((m) => m.text);
   const answered = msgs.filter((m) => m.from === 'user').length;
@@ -312,7 +312,7 @@ export function AISession() {
   );
 }
 
-/* ============================================================ REPORT (for the officer) */
+// REPORT (for the officer)
 export function AIReport() {
   const { id } = useParams();
   const navigate = useNavigate();

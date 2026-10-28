@@ -1,11 +1,11 @@
 // Scripted mode for when no proxy is reachable. Same grounded data and verifier; only the wording is fixed.
 import { lookupLocation, lookupBusiness, lookupRiskPattern } from './knowledge';
 import { identitySummary } from './idChecks';
-import { toNumber } from './verifier';
+import { toNumber } from './claimVerifier';
 import { formatINR } from '../../utils/formatters';
-import { PHOTO_ASKS } from './photo';
-import { isSalaried } from './memory';
-import { genuineOperator } from './assisted';
+import { PHOTO_ASKS } from './photoAnalysis';
+import { isSalaried } from './interviewState';
+import { genuineOperator } from './assistedPd';
 
 const fmt = (n) => formatINR(n, { compact: false });
 
@@ -23,7 +23,8 @@ export function buildScript(c) {
       speech: 'नमस्ते जी। मैं सारथी हूँ, बैंक से। कुछ आसान सवाल पूछूँगा, बस पाँच मिनट। पहले अपना पूरा नाम बताइए?',
       collect: 'stated_name',
     },
-    // No model in scripted mode, so a salaried applicant gets fixed job questions; the role-specific ones need live mode.
+    // No model in scripted mode, so a salaried applicant gets fixed job questions; the
+    // role-specific ones need live mode.
     ...(isSalaried(c) ? [
       { text: 'Aap kis company mein kaam karte hain, aur wahan aapka kya role hai?', speech: 'आप किस कंपनी में काम करते हैं, और वहाँ आपका क्या रोल है?' },
       { text: 'Kal office mein aapne kya-kya kaam kiya? Thoda detail mein bataiye.', speech: 'कल ऑफिस में आपने क्या-क्या काम किया? थोड़ा डिटेल में बताइए।' },
@@ -194,7 +195,7 @@ export function claimFromAnswer(step, answer, turn) {
   };
 }
 
-// ---- offline report writer (same sections as Agent 2, built only from evidence) ----
+// Offline report writer: same sections as Agent 2, built only from evidence
 
 const inr = (n) => (typeof n === 'number' ? n.toLocaleString('en-IN') : n);
 

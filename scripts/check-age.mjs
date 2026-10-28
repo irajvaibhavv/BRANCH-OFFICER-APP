@@ -4,7 +4,7 @@ import { createServer } from 'vite';
 
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
 const { ageOnFile, checkContradictions } = await vite.ssrLoadModule('/src/services/sarthi/controller.js');
-const { createEmptyMemory } = await vite.ssrLoadModule('/src/services/sarthi/memory.js');
+const { createEmptyMemory } = await vite.ssrLoadModule('/src/services/sarthi/interviewState.js');
 
 const c = { name: 'Mahesh Agarwal', age: 44, brief: { kyc: { dob: '1982-03-14' } } };
 assert.deepEqual(ageOnFile(c, new Date('2026-10-26')), { age: 44, source: 'KYC date of birth' });

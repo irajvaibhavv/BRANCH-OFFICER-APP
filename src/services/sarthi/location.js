@@ -1,7 +1,7 @@
 // Where a shop / home photo was taken, against the location on the file. Real GPS only — never the demo's Pune
 // fallback in useGeolocation, which would make every photo "match" a made-up point.
 
-export const NEAR_M = 200; // lead's call (2026-10-22): beyond this the place on the photo is not the one on file
+export const NEAR_M = 200; // beyond this the place on the photo is not the one on file
 
 /** The phone's position now: { lat, lng, accuracy } or { error }. Never rejects. */
 export function getFix(timeout = 8000) {

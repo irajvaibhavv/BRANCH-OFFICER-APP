@@ -12,9 +12,9 @@ import { useToast } from '../../hooks/useToast';
 import { formatDate, formatINR } from '../../utils/formatters';
 import { getCase } from '../../services/sarthi/knowledge';
 import { identitySummary } from '../../services/sarthi/idChecks';
-import { mapLink, inDistance } from '../../services/sarthi/geo';
-import { MODES, OUTCOMES, REVIEW_DECISIONS, pdOutcome, aiOutcome, makeReview, removeDraft } from '../../services/sarthi/repeat';
-import { loadFace, callFrameKey } from '../../services/sarthi/face';
+import { mapLink, inDistance } from '../../services/sarthi/location';
+import { MODES, OUTCOMES, REVIEW_DECISIONS, pdOutcome, aiOutcome, makeReview, removeDraft } from '../../services/sarthi/repeatPd';
+import { loadFace, callFrameKey } from '../../services/sarthi/faceMatch';
 import { useSarthiReports, usePendingPds } from '../../hooks/useSarthiReports';
 import ConfirmPd from '../../components/sarthi/ConfirmPd';
 import { readRetention, expiry, VIDEO_PREFIX } from '../../services/retention';
@@ -48,7 +48,7 @@ export default function SarthiReport() {
   // Images live outside the report record so their weight can never break its write.
   const photos = useMemo(() => {
     const read = (key) => { try { return JSON.parse(window.localStorage.getItem(key)); } catch { return null; } };
-    return read(`bo_sarthi_photos_${r?.id}`) ?? read(`bo_sarthi_photos_${id}`) ?? []; // per PD; per case before repeat PDs
+    return read(`bo_sarthi_photos_${r?.id}`) ?? read(`bo_sarthi_photos_${id}`) ?? []; // per PD; older data is keyed per case
   }, [id, r?.id]);
   const callFrame = useMemo(() => readJson(callFrameKey(r?.id)), [r?.id]);
   const liveFrames = useMemo(() => readJson(`bo_sarthi_live_${r?.id}`), [r?.id]);
@@ -99,7 +99,7 @@ export default function SarthiReport() {
         </p>
       )}
 
-      {/* the one loud moment: the verdict lands like a stamp */}
+      {/* The verdict stamp */}
       <motion.div
         className={`${styles.stamp} ${styles[key]}`}
         initial={{ scale: 1.5, opacity: 0, rotate: -12 }}
@@ -120,7 +120,7 @@ export default function SarthiReport() {
               ? `Checked by ${r.review.by} (${r.review.role}) — Sarthi said ${aiOutcome(r).label}`
               : 'Sarthi\'s proposal — awaiting a checker (see the end of the report)'}
           </p>
-          {/* a new PD that follows up THIS one — its flags, or the topics it did not reach */}
+          {/* A new PD that follows up this one: its flags, or the topics it did not reach */}
           <button className={styles.newPd} onClick={() => setSheet(true)}><IoSparkles size={16} /> Sarthi AI — new PD after this one</button>
           <NewPdSheet open={sheet} onClose={() => setSheet(false)} caseId={id} pd={r} />
         </>
@@ -134,7 +134,7 @@ export default function SarthiReport() {
         <span className={styles.tallyTurns}>{r.turns} exchanges</span>
       </div>
 
-      {/* the same person, an earlier PD: answers that changed */}
+      {/* Same person, earlier PD: answers that changed */}
       {r.flags?.some((f) => f.type === 'repeat_pd') && (
         <>
           <h2 className={styles.head}>Changed since the earlier PD</h2>
@@ -144,7 +144,7 @@ export default function SarthiReport() {
         </>
       )}
 
-      {/* the ledger */}
+      {/* Ledger */}
       <h2 className={styles.head}>What they said, against what we hold</h2>
       {r.evidence.length === 0 ? (
         <p className={styles.empty}>No checkable figures came up in this interview.</p>
@@ -172,7 +172,7 @@ export default function SarthiReport() {
         </div>
       )}
 
-      {/* insider knowledge — the score only, never the questions */}
+      {/* Insider knowledge: the score only, never the questions */}
       {r.understanding && (
         <>
           <h2 className={styles.head}>How well they know their business</h2>
@@ -186,7 +186,7 @@ export default function SarthiReport() {
         </>
       )}
 
-      {/* the trade's arithmetic, computed in code */}
+      {/* The trade's arithmetic, computed in code */}
       {r.tradeMath && (
         <>
           <h2 className={styles.head}>Does the hisaab add up</h2>
@@ -198,7 +198,7 @@ export default function SarthiReport() {
         </>
       )}
 
-      {/* identity — what was checked, and plainly what was not */}
+      {/* Identity: what was checked, and what was not */}
       {r.identity && (
         <>
           <h2 className={styles.head}>Identity</h2>
@@ -215,7 +215,7 @@ export default function SarthiReport() {
         </>
       )}
 
-      {/* the customer photo on file against a still from the call — on-device face recognition, shown so the officer can look */}
+      {/* Customer photo on file vs a still from the call (on-device face recognition, for the officer to review) */}
       {r.face && (
         <>
           <h2 className={styles.head}>Face check</h2>
@@ -238,7 +238,7 @@ export default function SarthiReport() {
         </>
       )}
 
-      {/* one random action on camera, the frame before and after it — a replayed or recorded video cannot follow it */}
+      {/* Liveness: one random action on camera, frames before and after */}
       {r.liveness && (
         <>
           <h2 className={styles.head}>Liveness</h2>
@@ -261,7 +261,7 @@ export default function SarthiReport() {
         </>
       )}
 
-      {/* where the phone was when the call started and ended, against the pins on file */}
+      {/* Where the phone was at call start and end, against the pins on file */}
       {r.callGeo && (
         <>
           <h2 className={styles.head}>Where the call was taken</h2>
@@ -273,7 +273,7 @@ export default function SarthiReport() {
         </>
       )}
 
-      {/* names read off their photos (board, QR, bill book, shop papers, bills) against their own file */}
+      {/* Names read off their photos (board, QR, bill book, shop papers) against their own file */}
       {r.nameChecks?.length > 0 && (
         <>
           <h2 className={styles.head}>Names on the photos vs the file</h2>
@@ -293,7 +293,7 @@ export default function SarthiReport() {
         </>
       )}
 
-      {/* living conditions: the facts the home photos show, then Sarthi's few sentences on them — no scores */}
+      {/* Living conditions: facts from the home photos and Sarthi's short write-up, no scores */}
       {r.living && (
         <>
           <h2 className={styles.head}>Living conditions</h2>
@@ -306,7 +306,7 @@ export default function SarthiReport() {
         </>
       )}
 
-      {/* photographs the applicant took during the interview */}
+      {/* Photos the applicant took during the interview */}
       {photos.length > 0 && (
         <>
           <h2 className={styles.head}>What they photographed</h2>
@@ -350,14 +350,14 @@ export default function SarthiReport() {
         </>
       )}
 
-      {/* past satellite / street photos of the pins on file, against the claimed vintage */}
+      {/* Past satellite / street photos of the pins on file, against the claimed vintage */}
       <PastPhotos caseId={id} locations={caseData?.locations} claimedVintage={caseData?.businessVintage} />
 
-      {/* the written report */}
+      {/* Written report */}
       <h2 className={styles.head}>The full report</h2>
       <div className={styles.md}>{blocks}</div>
 
-      {/* every exchange and system event with its time — the audit trail of this call */}
+      {/* Every exchange and system event with its time: the call's audit trail */}
       {log.length > 0 && (
         <details className={styles.log}>
           <summary>Call log — {log.length} events, each with its time</summary>
@@ -373,7 +373,7 @@ export default function SarthiReport() {
         </details>
       )}
 
-      {/* citation audit */}
+      {/* Citation audit */}
       {!r.dropped && <section className={`${styles.audit} ${r.validation?.isClean ? styles.auditClean : styles.auditFlag}`}>
         <h2 className={styles.auditHead}>Every claim traced to its source</h2>
         {r.validation?.isClean ? (
@@ -408,7 +408,7 @@ export default function SarthiReport() {
   );
 }
 
-/* ---------------------------------------------------------------- tiny markdown renderer */
+// Minimal markdown renderer
 
 const inline = (text, key) => String(text)
   .split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g)
@@ -506,7 +506,8 @@ function placeWords(place) {
   return `Not at the shop or home on file — the nearest pin (${place.nearest.kind}) is ${inDistance(place.nearest.distance)} away.`;
 }
 
-// The org's retention policy on this PD: until when the report can back a credit decision, and the call video's deletion date.
+// The org's retention policy on this PD: until when the report can back a credit decision, and the
+// call video's deletion date.
 function Retention({ r }) {
   const policy = readRetention();
   const valid = expiry(r.createdAt, policy.pdValidityDays);

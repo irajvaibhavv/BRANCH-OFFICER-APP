@@ -7,7 +7,7 @@ const LATENCY = { slm: 300, llm: 2000 };
 
 const wait = (ms) => new Promise((r) => { setTimeout(r, ms); });
 
-// ---- fact extraction ----
+// Fact extraction
 
 // Keyed by a word in the answer; first match wins.
 const EXTRACT_BY_KEYWORD = [
@@ -28,7 +28,7 @@ export async function mockExtractFacts(answerText) {
   return hit ? { ...hit[1] } : {};
 }
 
-// ---- interview turns ----
+// Interview turns
 
 const TURNS = {
   greeting: {
@@ -87,7 +87,7 @@ export async function mockTurn(section, turn, provider = 'slm') {
   return `${t.display}${claim}\n\n${FENCE}speech\n${t.speech}\n${FENCE}`;
 }
 
-/* ============================================================ report */
+// Report
 
 export async function mockReport() {
   await wait(LATENCY.llm);

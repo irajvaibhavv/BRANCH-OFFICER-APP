@@ -16,7 +16,8 @@ import styles from './rewards.module.css';
 
 const art = (name) => `${import.meta.env.BASE_URL}rewards/${name}.webp`;
 const inr = (n) => formatINR(n, { compact: false });
-// Where each slab label and the "you are here" bubble sit on path.webp (% of the image) — they cover the mock's own labels.
+// Where each slab label and the "you are here" bubble sit on path.webp (% of the image) — they
+// cover the mock's own labels.
 const MILE_POS = [
   { left: 69.5, top: 61, width: 21, height: 6.2 },
   { left: 60.5, top: 46.6, width: 25, height: 7 },
@@ -29,7 +30,7 @@ const MISSION_LOOK = { disburse: [FiFolder, '#10b981'], boss: [FiAward, '#f59e0b
 // Non-cash perks per tier — recognition, never more rupees than the grid pays.
 const PERKS = [null, ['🎁', '₹500 Gift voucher'], ['⭐', 'Priority lead access'], ['⚡', 'Double points weekend'], ['🏆', 'Branch Head shout-out']];
 const pct = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, `${v}%`]));
-// Crores to two places: "₹3.33 Cr" — one place ("₹3.3Cr") hid Rs 3 lakh of work.
+// Crores to two places ("₹3.33 Cr"); one place hides lakhs of work.
 const amt = (n) => (n >= 1e7 ? `₹${+(n / 1e7).toFixed(2)} Cr` : n >= 1e5 ? `₹${+(n / 1e5).toFixed(1)} L` : inr(n));
 
 function Logo() {
@@ -50,12 +51,9 @@ function useCelebrate() {
   useEffect(() => { if (newTier) navigate('/rewards/level-up'); }, [newTier, navigate]);
 }
 
-/**
- * /rewards — the arena (research, 2026-10-23: SalesScreen + Kennect + the evidence). The level IS the slab; the money is
- * shown as earned / held / under clawback watch; comparison is private (you vs you, the branch middle) — no ranked
- * leaderboard and no volume contests, which backfire on the bottom half and are what RBI's 2026 sales-practice
- * directions name. Quality badges sit next to the money so "how" is as visible as "how much".
- */
+// /rewards: the arena. The level is the slab; money is shown as earned / held / under clawback watch; comparison is
+// private (you vs your past and the branch median), with no ranked leaderboard or volume contests (RBI 2026
+// sales-practice directions). Quality badges sit next to the money.
 export default function RewardsHome() {
   const navigate = useNavigate();
   const { target, goal, roadmap: r, tier, purse: w, badges, pace: p, slabs } = useRewards();
@@ -392,7 +390,7 @@ export function RewardsLevelUp() {
   );
 }
 
-/** 4b · The statement (Kennect's idea): every file, the slab, the holds and the watch — and a way to question it. */
+/** 4b · The statement: every file, the slab, the holds and the watch, and a way to question it. */
 export function RewardsStatement() {
   const navigate = useNavigate();
   const { toast } = useToast();

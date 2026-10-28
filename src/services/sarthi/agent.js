@@ -1,8 +1,8 @@
 // Agent 1 interviews, Agent 2 writes the report. Keys live server-side (api/, scripts/sarthi-proxy.mjs).
 import { lookupLocation, lookupBusiness, lookupRiskPattern, briefForCitation } from './knowledge';
-import { KEY_GUIDE, isSalaried } from './memory';
-import { familyHisaab, inWords } from './recheck';
-import { genderRule, SPOKEN_STYLE } from './voice';
+import { KEY_GUIDE, isSalaried } from './interviewState';
+import { familyHisaab, inWords } from './figureRechecks';
+import { genderRule, SPOKEN_STYLE } from './voiceProfile';
 
 const BASE = import.meta.env.VITE_SARTHI_PROXY || '';
 export const CHAT_URL = `${BASE}/api/sarthi-chat`;
@@ -124,7 +124,7 @@ export async function askAgentStream({ systemPrompt, messages, temperature = INT
   throw lastError;
 }
 
-// ---- Agent 1: interviewer ----
+// Agent 1: interviewer
 
 export function buildInterviewerPrompt(c, directive = '') {
   const area = lookupLocation(c.areaKey || c.area);
@@ -204,7 +204,7 @@ the job they claim: an answer that does not fit the role (an "SDE" who cannot sa
    whether any instalment was ever missed
 6. Ask about the loan purpose and how they plan to use the money
 7. Ask 2-3 trap/verification questions naturally based on their claimed area and business
-8. Close warmly and say the officer will follow up
+8. Close warmly — never say an officer will call, contact or follow up
 
 ## Live cross-checking rules
 After each answer, silently evaluate:
@@ -347,7 +347,7 @@ ${directive ? `\n## ${directive}` : ''}`;
 
 export const COMPLETE_TAG = '[INTERVIEW_COMPLETE]';
 
-// Also accepts loose `key: value` lines — a dropped facts block makes the controller re-ask forever.
+// Also accepts loose `key: value` lines; a dropped facts block would make the controller re-ask forever.
 function parseFacts(body) {
   try {
     const parsed = JSON.parse(body);
@@ -409,13 +409,13 @@ export function parseClaims(raw, fallbackTurn) {
     })
     .replace(/\[INTERVIEW_COMPLETE\]/g, '')
     .replace(/\n{3,}/g, '\n\n')
-    // Haiku now and then spells a Roman word with Cyrillic letters ("grahakон").
+    // The model occasionally spells a Roman word with Cyrillic letters.
     .replace(/[а-яё]/gi, (ch) => CYRILLIC[ch.toLowerCase()] ?? '')
     .trim();
   return { display, speech: speech || display, claims, facts, photo, complete: raw.includes(COMPLETE_TAG) };
 }
 
-// ---- Agent 2: report writer ----
+// Agent 2: report writer
 
 export const REPORTER_SYSTEM = `You are a senior credit analyst writing a PD (Personal Discussion) report for a branch officer. You will receive:
 1. The Borrower Brief (existing data)

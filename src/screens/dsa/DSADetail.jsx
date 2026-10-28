@@ -20,7 +20,7 @@ import { formatINR, formatDate, fmtTime } from '../../utils/formatters';
 import RecordingCard from '../../components/meeting/RecordingCard';
 import BottomSheet from '../../components/ui/BottomSheet';
 import QuestionList, { useMeetingQuestions } from '../../components/meeting/MeetingPrep';
-import { TOPICS } from '../../services/meeting/prep';
+import { TOPICS } from '../../services/meeting/questions';
 import { isConnector, partnerStage } from '../../utils/channel';
 import { hasOpsDocs, opsChecklist } from '../../utils/opsDocs';
 import styles from './dsa.module.css';
@@ -259,7 +259,7 @@ export default function DSADetail() {
 
           {tab === 'Meetings' && (
             <div className="stack">
-              {/* ---- Company-wide meeting history ---- */}
+              {/* Company-wide meeting history */}
               <div className={styles.engStrip}>
                 <div><div className="big-number">{eng.length}</div><div className="hint">Total with us</div></div>
                 <div><div className="big-number" style={{ color: 'var(--primary)' }}>{senior.length}</div><div className="hint">Leadership</div></div>
@@ -293,7 +293,7 @@ export default function DSADetail() {
                 );
               })}
 
-              {/* ---- The officer's own logged visits ---- */}
+              {/* The officer's own logged visits */}
               <div className="section-head" style={{ margin: '12px 0 0' }}>
                 <h2 className="section-title" style={{ fontSize: 16 }}>Your visits</h2>
                 <button className="link" onClick={() => navigate(`/visits/new?dsa=${dsa.id}`)}>Log visit</button>

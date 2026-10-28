@@ -12,7 +12,7 @@ import TopBar from '../../components/layout/TopBar';
 import EmptyState from '../../components/ui/EmptyState';
 import NewPdSheet from '../../components/sarthi/NewPdSheet';
 import CustomerPhotoField from '../../components/sarthi/CustomerPhotoField';
-import { loadFace, saveFace } from '../../services/sarthi/face';
+import { loadFace, saveFace } from '../../services/sarthi/faceMatch';
 import Card, { MetricCard } from '../../components/ui/Card';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
@@ -22,11 +22,11 @@ import { pdCaseStage } from '../../utils/fileStages';
 import { useToast } from '../../hooks/useToast';
 import { useSarthiReports, usePendingPds } from '../../hooks/useSarthiReports';
 import { formatINR } from '../../utils/formatters';
-import { pdEvents, pdOutcome } from '../../services/sarthi/repeat';
+import { pdEvents, pdOutcome } from '../../services/sarthi/repeatPd';
 import { getCase, lookupRiskPattern, bankIncome } from '../../services/sarthi/knowledge';
-import { computeEligibility } from '../../services/sarthi/verifier';
+import { computeEligibility } from '../../services/sarthi/claimVerifier';
 import { validatePan, maskPan } from '../../services/sarthi/idChecks';
-import { loadHot, prepareHotQuestions } from '../../services/sarthi/prep';
+import { loadHot, prepareHotQuestions } from '../../services/sarthi/hotQuestions';
 import customersRaw from '../../data/mock/customers.json';
 import styles from './SarthiBrief.module.css';
 
@@ -115,7 +115,8 @@ export default function SarthiBrief() {
     ...(b.bank ? [{ icon: FiTrendingDown, term: 'Bounces', value: b.bank.bounces, note: `${b.bank.cashCreditPct}% cash · ${b.bank.upiCreditPct}% UPI`, tone: b.bank.bounces ? 'stamp' : 'clear' }] : []),
   ];
 
-  // Every PD of this person, newest first. The first starts at once; after that the BO / CO picks why another is needed.
+  // Every PD of this person, newest first. The first starts at once; after that the BO / CO
+  // picks why another is needed.
   const pds = reports.filter((r) => r.caseId === c.id);
   const report = pds[0];
   const unsaved = pending.find((r) => r.caseId === c.id);

@@ -1,8 +1,8 @@
-// Asserts the live-challenge planner in src/services/sarthi/challenges.js. Run: npm run check:challenges
+// Asserts the live-challenge planner in src/services/sarthi/liveChallenges.js. Run: npm run check:challenges
 import assert from 'node:assert/strict';
 import {
   planChallenges, pastDateWords, challengeCount, checkChallenge, CHALLENGES_PER_PD, MAX_CHALLENGES, POOL, STALE_DAYS,
-} from '../src/services/sarthi/challenges.js';
+} from '../src/services/sarthi/liveChallenges.js';
 
 const ids = (plan) => [...new Set(plan.map((s) => s.id))];
 
@@ -55,6 +55,6 @@ assert.equal(pastDateWords(() => 0.99, new Date(2026, 9, 10)), 'pichhle mahine k
 // A pool with nothing new for months is one a BO has learned.
 const newest = Math.max(...POOL.map((ch) => Date.parse(ch.added)));
 const age = Math.floor((Date.now() - newest) / 86400000);
-if (age > STALE_DAYS) console.warn(`! no new surprise check in ${age} days — add tasks to POOL in challenges.js`);
+if (age > STALE_DAYS) console.warn(`! no new surprise check in ${age} days — add tasks to POOL in liveChallenges.js`);
 
 console.log('challenge checks pass');

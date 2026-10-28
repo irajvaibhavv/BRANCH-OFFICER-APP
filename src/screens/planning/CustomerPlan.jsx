@@ -20,7 +20,7 @@ import { getCase } from '../../services/sarthi/knowledge';
 import { pdCaseStage } from '../../utils/fileStages';
 import { formatINR, formatDate } from '../../utils/formatters';
 import { PRODUCT_RATES, PRODUCTS, emi, maxLoan, BASIC_QUESTIONS, FOIR } from '../../utils/loanCalc';
-import { START, km, optimise } from '../../utils/route';
+import { START, km, optimise } from '../../utils/routePlanning';
 import styles from './plan.module.css';
 
 // Walk-ins, leads and existing borrowers; each opens a prep screen with questions + loan calculator.
@@ -106,7 +106,7 @@ export default function CustomerPlan() {
   );
 }
 
-/* ---------------- Customer prep: basic questions + loan calculator ---------------- */
+// Customer prep: basic questions + loan calculator
 export function CustomerDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -138,7 +138,8 @@ export function CustomerDetail() {
   const dsa = c.sourceDsa ? getDsa(c.sourceDsa) : null;
   const file = c.loanFileId ? loanFiles.find((f) => f.id === c.loanFileId) : null;
   const k = kindOf(c.kind);
-  // An existing customer back for a new loan is a Sarthi PD case; a lead carries its file's stage; a new customer has none yet.
+  // An existing customer back for a new loan is a Sarthi PD case; a lead carries its file's stage;
+  // a new customer has none yet.
   const stage = c.sarthiCase ? pdCaseStage(getCase(c.sarthiCase), reports.some((r) => r.caseId === c.sarthiCase))
     : c.kind === 'existing' ? 'disbursed' : c.stage ?? null;
 

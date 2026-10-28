@@ -55,7 +55,7 @@ async function callGroq({ systemPrompt, messages, temperature, maxTokens }) {
       ],
       temperature,
       max_tokens: maxTokens,
-      // Qwen3 thinks by default; the <think> text ate the 300-token budget and no JSON ever arrived.
+      // Qwen3 thinks by default, which would spend the whole token budget before any JSON.
       ...(/qwen3/i.test(SLM_MODEL) ? { reasoning_effort: 'none' } : {}),
     }),
   });

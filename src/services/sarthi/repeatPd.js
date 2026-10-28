@@ -1,7 +1,8 @@
-// Repeat PDs. Every PD is kept (bo_sarthi_reports, one entry each); a new one starts in a mode the BO / CO picks, and
-// every answer is compared with what the same person said in earlier PDs — a changed answer is shown to them on the call.
-import { FIELD_DEFS, isSalaried } from './memory';
-import { toNumber, toYears } from './verifier';
+// Repeat PDs. Every PD is kept (bo_sarthi_reports, one entry each); a new one starts in a mode the BO /
+// CO picks, and every answer is compared with what the same person said in earlier PDs — a changed answer
+// is shown to them on the call.
+import { FIELD_DEFS, isSalaried } from './interviewState';
+import { toNumber, toYears } from './claimVerifier';
 
 export const MODES = {
   full: { label: 'Full PD', note: 'Every topic again; any answer that changed from an earlier PD is caught' },
@@ -30,8 +31,9 @@ export const OUTCOMES = {
   red: { label: 'Red flags', tone: 'bad', badge: 'danger', line: 'The interview contradicted the file. Visit before this goes further.' },
 };
 
-// Maker-checker: Sarthi and the officer who ran the PD (the maker) only propose an outcome; a second person (the checker)
-// agrees, changes it, or sends it back for another PD. The checker's outcome is final, and both are kept in the trail.
+// Maker-checker: Sarthi and the officer who ran the PD (the maker) only propose an outcome; a second
+// person (the checker) agrees, changes it, or sends it back for another PD. The checker's outcome is
+// final; both are kept in the trail.
 export const REVIEW_DECISIONS = {
   agree: 'Agreed with Sarthi',
   change: 'Changed the outcome',
@@ -183,8 +185,9 @@ export function crossSteps(prior, caseData, flagged = [], rand = Math.random) {
   }));
 }
 
-// A call that never reached finish (app closed, phone died, network gone) leaves the draft the interview saves after every
-// answer. It shows as an incomplete PD awaiting confirmation; once a BO / CO saves it, "Finish last PD" can carry on.
+// A call that never reached finish (app closed, phone died, network gone) leaves the draft the interview
+// saves after every answer. It shows as an incomplete PD awaiting confirmation; once a BO / CO saves it,
+// "Finish last PD" can carry on.
 export const DRAFT_PREFIX = 'bo_sarthi_draft_';
 
 export function readDrafts() {

@@ -7,19 +7,19 @@ import VideoFeed, { LiveBadge } from '../../components/sarthi/VideoFeed';
 import CallSetup from '../../components/sarthi/CallSetup';
 import AiAvatar from '../../components/sarthi/AiAvatar';
 import { askAgentStream, parseClaims, peekSpeech } from '../../services/sarthi/agent';
-import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, openingLine, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport, deepFor, deepRechecks, fallbackLine, toDevanagari, presenceLines, nameOnly, dsaAway, DEVANAGARI } from '../../services/sarthi/dsa';
+import { DSA_TOPICS, dsaFile, needsProbe, figureFrom, openingLine, closingLine, turnMessages, rechecksFor, interviewerPrompt, directiveFor, writeDsaReport, fallbackDsaReport, deepFor, deepRechecks, fallbackLine, toDevanagari, presenceLines, nameOnly, dsaAway, DEVANAGARI } from '../../services/sarthi/dsaReview';
 import { nameVerdict, confirmReply, speakerIsSomeoneElse, applicantComing, relationOf } from '../../services/sarthi/idChecks';
-import { readIntent } from '../../services/sarthi/intent';
+import { readIntent } from '../../services/sarthi/replyIntent';
 import { stopSpeaking, listen, canListen, canSpeak, setSilent, ANSWER_PAUSE_MS } from '../../services/voice';
-import { speakStreamed } from '../../services/sarthi/stream';
-import { stopCamera } from '../../services/sarthi/video';
-import { sarthiVoice, gendered, aboutSarthi } from '../../services/sarthi/voice';
+import { speakStreamed } from '../../services/sarthi/streamedSpeech';
+import { stopCamera } from '../../services/sarthi/camera';
+import { sarthiVoice, gendered, aboutSarthi } from '../../services/sarthi/voiceProfile';
 import { useAppState } from '../../context/AppStateContext';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import styles from './SarthiInterview.module.css';
 
-// Sarthi's DSA review on the same video call as the PD. Claude only; if it is unreachable a turn falls back to the
-// topic's plain question, so the call never dies. The report lands in SAARTHI AI's report list (/ai/reports/:id).
+// Sarthi's DSA review on the same video call as the PD. If the model is unreachable a turn falls back to the topic's
+// plain question. The report lands in SAARTHI AI's report list (/ai/reports/:id).
 // Only a goodbye to the call itself — "questions band karo" is a complaint, not a hang-up.
 const LEAVING = /\b(bye|alvida)\b|(call|phone)\s+(band|cut|kaat|rakh)|mujhe jaana hai|अलविदा/i;
 const CAPTION_FALLBACK_MS = 3000;
@@ -45,7 +45,7 @@ export default function SarthiDsaInterview() {
   const [cameraOn, setCameraOn] = useState(false);
   const [step, setStep] = useState(0);
 
-  const history = useRef([]);    // what Claude sees
+  const history = useRef([]); // what the model sees
   const transcript = useRef([]); // [{ from: 'ai' | 'user', text }]
   const qa = useRef([]);         // [{ section, q, a }] for the report
   const rechecks = useRef([]);   // [{ detail, answer }]
@@ -143,8 +143,8 @@ export default function SarthiDsaInterview() {
       say(text, speech, finish);
       return;
     }
-    // Streamed: the voice starts the moment the Devanagari speech fence closes, not when the whole reply has arrived.
-    // The caption appears once both the voice has started and the Hinglish line is in.
+    // Streamed: the voice starts when the Devanagari speech fence closes; the caption appears once the voice has
+    // started and the Hinglish line is in.
     let early = null; let voiceOn = false; let caption = ''; let audioDone = false; let streamDone = false;
     const showCaption = () => { if (voiceOn && caption) { setQuestion(caption); setAnswer(''); } };
     const advance = () => { if (audioDone && streamDone && !doneRef.current) { setAvatar('idle'); beginListening(); } };
@@ -267,8 +267,8 @@ export default function SarthiDsaInterview() {
     // An answer after our reply to their question belongs to the question asked before it.
     const cur = current.current.kind === 'reply' ? current.current.of : current.current;
     const topic = cur.topic;
-    // What the answer means is read by the model (any wording); the code decides what to do with it. The figure is read
-    // at the same time, so the reading costs no extra wait on number topics.
+    // The model reads what the answer means; the code decides what to do. The figure is read in parallel, so number
+    // topics cost no extra wait.
     setAvatar('thinking');
     const wantsFigure = topic?.num && ['topic', 'probe', 'refusal'].includes(cur.kind);
     const [{ intent, gist }, n] = await Promise.all([
@@ -330,8 +330,8 @@ export default function SarthiDsaInterview() {
   const handleAnswerRef = useRef(handleAnswer);
   useEffect(() => { handleAnswerRef.current = handleAnswer; }, [handleAnswer]);
 
-  // Greet and ask the first topic at once — a fixed line, no model call. Deferred a tick so StrictMode's throwaway
-  // mount (whose cleanup stops speech) is cancelled before it speaks.
+  // Greet and ask the first topic at once with a fixed line. Deferred a tick so StrictMode's
+  // throwaway mount is cancelled first.
   const started = useRef(false);
   useEffect(() => {
     if (!file || !ready || started.current) return undefined;

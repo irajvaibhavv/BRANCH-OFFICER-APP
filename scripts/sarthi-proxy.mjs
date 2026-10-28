@@ -33,12 +33,12 @@ const groq = ({ systemPrompt, messages, temperature, maxTokens }) =>
       ],
       temperature,
       max_tokens: maxTokens,
-      // Qwen3 thinks by default; the <think> text ate the 300-token budget and no JSON ever arrived.
+      // Qwen3 thinks by default, which would spend the whole token budget before any JSON.
       ...(/qwen3/i.test(SLM_MODEL) ? { reasoning_effort: 'none' } : {}),
     }),
   }).then(async (r) => {
     const data = await r.json();
-    // Keep the status: a Groq 429 sent on as a 500 was never recognised as rate limiting by the client.
+    // Keep the upstream status so the client can recognise rate limiting (429).
     if (!r.ok) throw Object.assign(new Error(data?.error?.message || `Groq ${r.status}`), { status: r.status });
     return (data.choices?.[0]?.message?.content || '').replace(/<think>[\s\S]*?(<\/think>|$)/g, '').trim();
   });
@@ -90,7 +90,7 @@ http.createServer(async (req, res) => {
 
       const { messages = [], systemPrompt = '', temperature = 0.5, maxTokens = 1024, thinkingBudget = 0, provider = 'llm', stream = false } = payload;
 
-      // The client routes every task (services/sarthi/model.js); never re-route a failed call.
+      // The client routes every task (services/sarthi/modelRouting.js); never re-route a failed call.
       // With no GROQ_API_KEY, 'slm' is simply served by Gemini — configuration, not fallback.
       if (provider === 'slm' && GROQ_KEY) {
         const text = await groq({ systemPrompt, messages, temperature, maxTokens });

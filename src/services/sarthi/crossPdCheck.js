@@ -1,8 +1,8 @@
-// Same place, different applicant: a BO staging PDs in one friend's shop leaves the same spot behind every time, even
-// though each live photo is new. Found in three steps — GPS within a few metres, the same name / GSTIN / UPI read off the
-// photos, then the vision model shown both photos side by side. On this device every earlier PD is this BO's; in
-// production the same comparison runs server-side per BO and against peers in the same area.
-import { distanceM, inDistance } from './geo.js'; // extension so check:crosspd runs in plain node
+// Same place, different applicant: a BO staging PDs in one friend's shop leaves the same spot behind each time. Found
+// in three steps: GPS within a few metres, the same name / GSTIN / UPI on the photos, then the vision model comparing
+// both photos. Here every earlier PD on the device is this BO's; in production this runs server-side per BO and against
+// peers in the same area.
+import { distanceM, inDistance } from './location.js'; // extension so check:crosspd runs in plain node
 
 export const SAME_PLACE_M = 40; // neighbouring shops in a market can be this close: a candidate, never a verdict alone
 const MAX_ACCURACY_M = 60; // a rougher fix cannot tell two shops apart
@@ -135,8 +135,8 @@ export function crossPdFlags(links) {
   });
 }
 
-// ---- Names on THIS applicant's photos against their own file: a friend's shop carries the friend's name on the board,
-// the QR, the bill book and the shop's papers. Words on every board that say nothing about whose it is are skipped.
+// Names on this applicant's photos against their own file: a friend's shop carries the friend's name on the board, QR,
+// bill book and papers. Generic board words are skipped.
 const TRADE_WORDS = new Set(['store', 'stores', 'shop', 'general', 'kirana', 'traders', 'trading', 'enterprises', 'enterprise',
   'electricals', 'electrical', 'electronics', 'mart', 'centre', 'center', 'and', 'sons', 'company', 'pvt', 'ltd', 'the', 'new',
   'shri', 'sri', 'mobile', 'mobiles', 'garments', 'cafe', 'restaurant', 'hardware', 'medical', 'bhandar', 'agency', 'agencies']);

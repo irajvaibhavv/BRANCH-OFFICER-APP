@@ -11,7 +11,7 @@ const BASE = {
   speed: Number(ENV.VITE_SARTHI_TTS_SPEED) || 1,
   model: ENV.VITE_SARTHI_ELEVEN_MODEL || 'eleven_flash_v2_5', // ~75ms model latency vs ~1s+ for multilingual_v2
   lang: 'hi',
-  // Lower stability = more rise and fall; 0.6 read every clause on one pitch and stopped dead at each comma. Knob.
+  // Lower stability = more rise and fall in the voice. Tunable.
   settings: { stability: Number(ENV.VITE_SARTHI_STABILITY) || 0.35, similarity_boost: 0.75, style: 0.3, use_speaker_boost: true },
 };
 

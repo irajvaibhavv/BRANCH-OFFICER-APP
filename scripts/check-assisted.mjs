@@ -1,12 +1,12 @@
-// Asserts the assisted-PD rules: answers kept apart per speaker (memory.js), owner vs operator compared (assisted.js).
-// Run: npm run check:assisted
+// Asserts the assisted-PD rules: answers kept apart per speaker (interviewState.js), owner vs operator compared
+// (assistedPd.js). Run: npm run check:assisted
 import assert from 'node:assert/strict';
 import { createServer } from 'vite';
 
 // The app's modules import without extensions, so they are loaded the way the app loads them.
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
-const { assistedFlags, genuineOperator } = await vite.ssrLoadModule('/src/services/sarthi/assisted.js');
-const { acceptedFacts, createEmptyMemory, getMissingFields, isAssisted } = await vite.ssrLoadModule('/src/services/sarthi/memory.js');
+const { assistedFlags, genuineOperator } = await vite.ssrLoadModule('/src/services/sarthi/assistedPd.js');
+const { acceptedFacts, createEmptyMemory, getMissingFields, isAssisted } = await vite.ssrLoadModule('/src/services/sarthi/interviewState.js');
 const { default: pdSchema } = await vite.ssrLoadModule('/src/data/sarthi/pdSchema.json');
 
 // Speaker guard: the operator's answer never fills the applicant's fields, and the other way round.

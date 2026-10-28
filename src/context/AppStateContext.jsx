@@ -7,7 +7,7 @@ import marketingSeed from '../data/mock/marketing.json';
 import payoutsSeed from '../data/mock/payouts.json';
 import teamSeed from '../data/mock/team.json';
 import { AREA_COORDS } from '../utils/areas';
-import { START, km } from '../utils/route';
+import { START, km } from '../utils/routePlanning';
 import loanFilesSeed from '../data/mock/loanFiles.json';
 import notificationsSeed from '../data/mock/notifications.json';
 import engagementsSeed from '../data/mock/engagements.json';
@@ -40,7 +40,8 @@ const seedFiles = loanFilesSeed.map((f) => ({ ...f, updatedAt: shiftDate(f.updat
 const seedPayouts = payoutsSeed.map((p) => ({ ...p, disbursedOn: shiftDate(p.disbursedOn), paidOn: shiftDate(p.paidOn) })); // paid history, read-only
 const seedMarketing = marketingSeed.map((m) => ({ ...m, date: shiftDate(m.date) }));
 const seedNotifs = notificationsSeed.map((n) => ({ ...n, at: shiftDate(n.at) }));
-// Meetings anyone from the company (BO, Branch Head, Regional Head, CEO…) has had with each DSA — read-only reference data
+// Meetings anyone from the company (BO, Branch Head, Regional Head, CEO…) has had with each
+// DSA — read-only reference data
 const engagements = engagementsSeed.map((m) => ({ ...m, date: shiftDate(m.date) }));
 const seedMeetings = [
   { id: 'm1', dsaId: 'dsa3', date: '2026-09-17', time: '15:00', agenda: 'Review Sai Enterprises LAP file', priority: 'Important' },
@@ -95,7 +96,7 @@ export function AppStateProvider({ children }) {
   useEffect(() => {
     const stamp = `${toISODate()}:14`; // bump the suffix whenever the seed shape changes
     if (seedDay !== stamp) {
-      resetDemo(); // also migrates any stale, hard-dated data from before this change
+      resetDemo(); // also migrates stale, hard-dated data
       setSeedDay(stamp);
     }
   }, [seedDay, setSeedDay, resetDemo]);
@@ -219,7 +220,7 @@ export function AppStateProvider({ children }) {
     setVisits((v) => v.map((x) => (x.id === id ? { ...x, date: toISODate(t), movedFrom: x.date } : x)));
   }, [setVisits]);
 
-  /** Meeting recording → transcript + AI summary (generated locally for the POC). */
+  /** Meeting recording → transcript + AI summary (generated locally). */
   const addRecording = useCallback(
     (r) => {
       const rec = { id: `rec${Date.now()}`, date: toISODate(), time: new Date().toTimeString().slice(0, 5), ...r };
@@ -306,7 +307,7 @@ export function AppStateProvider({ children }) {
     return {
       filesSubmitted: loanFiles.length,
       disbursed: disbursedTotal,
-      quarterDisbursed: 15500000, // ₹1.55Cr — 45K short of Silver in incentive terms
+      quarterDisbursed: 15500000, // ₹1.55Cr, 45K short of Silver
       dailyTarget,
       todayDone,
     };

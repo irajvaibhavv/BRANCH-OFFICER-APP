@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import BottomSheet from '../ui/BottomSheet';
-import { MODES, pdOptions } from '../../services/sarthi/repeat';
+import { MODES, pdOptions } from '../../services/sarthi/repeatPd';
 import styles from './NewPdSheet.module.css';
 
 // "Why another PD?" — opened from the PD history, the Sarthi AI button and a PD's report. `pd` is the PD it follows up.

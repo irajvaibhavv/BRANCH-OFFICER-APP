@@ -9,7 +9,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
 - Agent 1 interviews on a video-call screen and emits ```claim``` blocks; Agent 2 writes the officer's report.
 - **The controller decides what to ask; the model only decides how to say it.** `controller.js`
   walks `pdSchema.json` in code and injects a "THIS TURN" directive into Agent 1's prompt each turn;
-  `memory.js` holds the extracted facts (Agent 1 returns them in a ```facts``` fence). Coverage
+  `interviewState.js` holds the extracted facts (Agent 1 returns them in a ```facts``` fence). Coverage
   is therefore a property of the program, not something the model has to remember on a long call, and
   the interview ends when the schema is satisfied — not when the model decides it is done.
 - **Applicants are mostly tier 2/3 small traders**, so every schema field carries an `ask` — a
@@ -17,12 +17,12 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   passes to the model, and the interviewer prompt bans banking jargon (kisht, not EMI; bikri, not
   turnover). Add a field = add its `ask`. The allowed-key lists in both prompts are generated from the
   schema (`KEY_GUIDE`, `ENUM_GUIDE`), so never hand-type keys into a prompt. Conditions stay literal:
-  `"key === 'value'"` or `"key > n"`, parsed in `memory.js`, never evaluated.
+  `"key === 'value'"` or `"key > n"`, parsed in `interviewState.js`, never evaluated.
 - **`monthly_rent` is house rent; `shop_rent` is the premises.** Only shop rent is checked against the
   area's `avgShopRent` — comparing a room's rent with shop ranges produced false contradictions.
   Every field is roughly one more turn, and turns are Gemini requests against a per-day quota, so
   weigh a new field against that.
-- **A turn is two model calls, in a fixed order** (`model.js`). First `extractFacts` pulls
+- **A turn is two model calls, in a fixed order** (`modelRouting.js`). First `extractFacts` pulls
   named fields out of the answer; only then does the controller pick the next topic, so it decides
   on *this* turn's facts. The question call still emits a ```facts``` fence as a backstop — a
   dropped fact is uniquely expensive, because the controller would re-ask that question forever —
@@ -30,7 +30,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   `checkContradictions` compares new facts against the prior state, and coaching detection compares
   an income figure against `income_mentions`, which would already contain it otherwise.
 - **Routing happens before the call and there is no fallback between providers.** `TASK_ROUTES` in
-  `model.js` sends fact extraction to the SLM (Groq, default `qwen/qwen3.8-27b`, ~0.2–0.4s) and
+  `modelRouting.js` sends fact extraction to the SLM (Groq, default `qwen/qwen3.8-27b`, ~0.2–0.4s) and
   everything else — question phrasing, report, area and hyper-local questions — to the LLM (Gemini,
   ~2.7s). Trying the SLM and escalating on failure would cost SLM time *plus* LLM time, so bad
   extraction JSON retries the **same** provider with a stricter, colder prompt. `GROQ_API_KEY` is
@@ -59,7 +59,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   `DIFFERENT_ABOVE` 0.65 different, between unsure. Free, so every 30s, up to 20 per PD. The report flags high only when
   most checks, and at least two, were different; one among matches is a low "mixed, look yourself". Not certified
   liveness or Aadhaar face match — that needs a KYC vendor.
-- **"Aap kahan chale gaye?"** (2026-10-26, `away.js`): on-device face detection (MediaPipe BlazeFace short-range, wasm
+- **"Aap kahan chale gaye?"** (2026-10-26, `awayDetection.js`): on-device face detection (MediaPipe BlazeFace short-range, wasm
   and model fetched at call start, a 45 kB lazy chunk) checks the camera every 0.7s — no API cost, unlike the 90s
   vision face check. A face counts only at score ≥ 0.75 (`MIN_SCORE`): BlazeFace still found a face behind a hand at
   0.5, so a covered face never triggered the ask; the score is logged with each ask for tuning. With no face for 4s, Sarthi stops listening,
@@ -92,7 +92,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   conversion of the spoken one (implied thousands, daily/yearly → monthly) or a zero ("koi nahi") is kept. Summed
   counts (family_size, dependents, earning_members) are never reconciled. It now overrides 1 label of 592, and
   that label is wrong.
-- **`VITE_SARTHI_MOCKS=true`** (DEV only) serves canned replies from `mocks.js` with no
+- **`VITE_SARTHI_MOCKS=true`** (DEV only) serves canned replies from `devMocks.js` with no
   network call, so work on the loop or the UI does not burn the free tiers the demo needs. The
   fixtures are raw fenced text run through the real parser, so they prove the plumbing — not that
   the model follows the prompt.
@@ -111,7 +111,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   numbers against each other and against `typicalMarginPct` in `businessKnowledge.json`, and
   `assessIncome` rebuilds income from footfall × bill × margin, taking the LOWER of that and what
   they declared. `computeEligibility(caseData, assessed)` then reports it as rebuilt, never as verified.
-- Findings with no single turn behind them cite `(Flag: field)` or `(Fact: key)`; `validator.js`
+- Findings with no single turn behind them cite `(Flag: field)` or `(Fact: key)`; `reportValidator.js`
   checks those against the flags and collected facts the system actually produced.
 - `vercel.json`'s SPA rewrite must exclude `/api/` (`/((?!api/).*)`), or the Sarthi endpoints return
   index.html instead of JSON and every interview silently drops to scripted mode. The file cannot
@@ -135,24 +135,24 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   clears a daily quota. A turn that still fails borrows one scripted question and tries live again next
   turn; only a permanent status sets `demoRef`. The opening turn behaves the same way — a 429 at hello
   used to lock the whole interview to the script, which is the worst trade available in a demo. **No reachable proxy at all → the whole
-  interview runs `script.js` scripted mode** and still produces a full report, so a demo never dies
+  interview runs `scriptedMode.js` scripted mode** and still produces a full report, so a demo never dies
   on a missing key. Engines are never mixed mid-interview by design — the voice and phrasing would shift
   audibly halfway through.
 - **The free tier's binding limit is requests per DAY, so count requests, not tokens.** A turn is one
   Gemini call (the question); extraction goes to the SLM, and the ```facts``` fence on the question call
   covers whatever it drops, which costs nothing extra. There is no reachability probe and no model call for the
-  greeting: it is the fixed `script.js` line (DSA review: `openingLine`), said the moment the call opens — waiting
+  greeting: it is the fixed `scriptedMode.js` line (DSA review: `openingLine`), said the moment the call opens — waiting
   ~3s of LLM + TTS for the same words was the "call starts with a lag". Turn two is the first live call. Vision bills
   wall-clock time whether or not anyone is speaking: one frame per 60s, hard cap 6 per interview
   (`VITE_SARTHI_VISION_MS` / `_MAX`, `0`/`off` disables). Observations are a bonus layer the report cites
   when present — never let them be the reason the interview itself runs out of quota.
 - Anti-hallucination is the point of the file split: the model may only use the JSON knowledge files
   (`borrowers`, `businessKnowledge`, `locationKnowledge`, `riskPatterns`, `pdSchema`),
-  `verifier.js` (plain rules) decides confirmed/contradicted/unverified, `loanCalc.js` computes every
-  eligibility number, and `validator.js` strips any finding whose citation does not resolve.
+  `claimVerifier.js` (plain rules) decides confirmed/contradicted/unverified, `loanCalc.js` computes every
+  eligibility number, and `reportValidator.js` strips any finding whose citation does not resolve.
   Keep new facts in the JSON files, new fields in `pdSchema.json`, new verdicts in the verifier — never
   in a prompt.
-- **Voice**: Sarthi has its own voice (`services/sarthi/voice.js` — ElevenLabs Flash v2.5 with `language_code: 'hi'`, Murf
+- **Voice**: Sarthi has its own voice (`services/sarthi/voiceProfile.js` — ElevenLabs Flash v2.5 with `language_code: 'hi'`, Murf
   `hi-IN-kabir` when only a Murf key exists), passed per `speak()` call so
   SAARTHI AI keeps the app-default voice from `.env`. Captions are Hinglish but the TTS is fed Devanagari
   (`speech` on each script step, a ```speech``` block from Agent 1): a Hindi voice reads romanized Hindi with
@@ -162,7 +162,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   covers scripted lines: **live mode writes novel text every turn, so it always pays the TTS round trip.**
   The question text appears when the voice starts (`onStart` from `speak()`), not while TTS renders —
   showing it seconds early made the audio feel laggy. Live replies put the ```speech``` fence first for the same reason.
-- **Live speech is streamed sentence by sentence** (`stream.js`). Murf renders a whole line
+- **Live speech is streamed sentence by sentence** (`streamedSpeech.js`). Murf renders a whole line
   before a word is audible, so a 3-sentence question is ~1.5s of silence. `speakStreamed` splits the
   Devanagari at `.!?।`, `prefetch`es every chunk at once and plays the first as soon as ITS audio
   lands (~0.8s); later chunks always finish rendering before the one ahead stops playing. Same
@@ -196,7 +196,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   'calculated_from_answers'`, which both report writers must present as rebuilt and explicitly unverified.
   Without those answers it stays `assessable: false` and the report says "not assessable" rather than
   printing a figure. A declared income alone is never enough to produce a number.
-- **Depth, not a form** (`probes.js`). A trade with a `depth[]` pack in `businessKnowledge.json` (kirana,
+- **Depth, not a form** (`tradeProbes.js`). A trade with a `depth[]` pack in `businessKnowledge.json` (kirana,
   mobile, electrical shop / dealer / contractor, building contractor, garage, garment, chai) gets a `trade_depth` section of insider questions — margin by category, distributor
   cycle, licence class, retention — whose answers are stored verbatim in `memory.tradeAnswers` (no extraction) and
   judged in the report against each probe's `expect` / `redFlag`. Such a trade skips the single
@@ -237,7 +237,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   (6) turnover claims are checked against bank turnover (`bank.credits`), not the margin-derived income, and drift is
   grouped by unit, with a four-digit vintage read as a start year. Number fields given as text are parsed in `clean()`
   (a range is its lower figure).
-- **Friendly rechecks** (`recheck.js`, 2026-09-27): the arithmetic runs on every answer, and a figure that disagrees with
+- **Friendly rechecks** (`figureRechecks.js`, 2026-09-27): the arithmetic runs on every answer, and a figure that disagrees with
   the bank or with their own figures is shown to them straight away — both numbers, said kindly ("aapne 18 hazaar
   bataya, bank mein 3.8 lakh mahina aata hai… kuch chhoot toh nahi gaya?"). People under-state as often as they
   over-state, so income is rechecked both ways. Checks: income vs bank-supported income (±40%), sales vs bank credits,
@@ -258,11 +258,11 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   Yes → that photo too ("pahunch kar kholiye, main intezaar karunga"); no → the next turn opens with "Koi baat nahi"
   (`placeNoAck`) and the PD carries on. Both photos are the controller's (`memory.photosAsked`); a photo fence the model adds
   on its own is ignored. Replaced `at_business_place` / `reached_business_place`, whose "pahunch kar bataiye" held
-  the call hostage to a walk to the shop. Inside the camera Sarthi also **speaks** the guidance (`GUIDE` in photo.js, Devanagari
+  the call hostage to a walk to the shop. Inside the camera Sarthi also **speaks** the guidance (`GUIDE` in photoAnalysis.js, Devanagari
   for the voice): tips, "frame ke andar rakhiye", a live light/blur hint once it holds for two checks (≥4.5s apart), and the
   verdict. A shot that passes the code check gets `framingCheck` — the vision model picks ONE code (move_closer,
   move_back, tilted, obstructed, missing, wrong) and every word said is ours; no vision service → the code check stands.
-- **Photo location** (`geo.js`, 2026-10-22): a shop / home photo also takes a real GPS fix (never `useGeolocation`'s Pune
+- **Photo location** (`location.js`, 2026-10-22): a shop / home photo also takes a real GPS fix (never `useGeolocation`'s Pune
   mock) and compares it with `caseData.locations[kind]` — seeded in `borrowers.json` (Mahesh shop, Imran both), or pasted
   as "lat, lng" / a Maps link on the walk-in form. Beyond `NEAR_M` (200 m, after subtracting the fix's own accuracy) it is
   a high `photo_location` flag and a FRIENDLY RECHECK on the call ("kya yeh aapki hi dukaan hai?"; live mode only — the
@@ -289,7 +289,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   over and step away" — and the call screen shows "Dukaan chalane wale se". Its fields are separate keys (`operator_*`,
   `op_*`), so extraction and prompts need no per-person split; `acceptedFacts` is the one guard that keeps the two apart
   (the operator's answers fill only op_* keys, the applicant's never do), the operator's claims are not checked as the
-  applicant's, and in that section the model sees only the operator's own facts and no open flags. `assisted.js`
+  applicant's, and in that section the model sees only the operator's own facts and no open flags. `assistedPd.js`
   compares the two in code: sales a third apart (high), premises / rent / years that disagree (medium), and a likely
   name-lender — applicant never (or only sometimes, and weak on the trade's insider questions) at the shop with the
   day's cash going to the operator (high). Someone else runs it but was not on the call → a medium `who_runs` flag. No
@@ -303,7 +303,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   5. Recommendation**. Topics and results only ("Insider trade knowledge: 2 of 5 vague", "Surprise checks: 3 of 4 held
   up"); figures are fine, quotes are not. Citations stay — `(Turn X)` is unreadable without the transcript, which the
   report screen no longer shows (call log = system events only; liveness logs "a random action", never which). The
-  validator finds the eligibility section by its heading, not its number. The DSA review (`dsa.js`) follows the same rule
+  validator finds the eligibility section by its heading, not its number. The DSA review (`dsaReview.js`) follows the same rule
   and hides "Show full conversation" for `r.sarthi` reports; the scripted SAARTHI AI handover flows are fixed and keep it.
 - **Past photos** (`pastPhotos.js` + `components/sarthi/PastPhotos.jsx`, 2026-10-23): the report shows each pin on file
   through the years — Esri Wayback satellite (no key; one release per year, dated by the metadata layer's `SRC_DATE2`
@@ -315,14 +315,14 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   Offline → a note, no fetches. Only cases with a pin show the card (Mahesh, Imran, or a walk-in with a location).
   `npm run check:pastphotos` asserts the vintage maths.
 - **Salaried applicants** (2026-10-22): the walk-in form's Self-employed | Salaried toggle sets `employment`; `isSalaried`
-  (memory.js) gates schema sections by their `employment` key — `employment` (employer, role, years, CTC, bonus,
+  (interviewState.js) gates schema sections by their `employment` key — `employment` (employer, role, years, CTC, bonus,
   increment, slips) and `profession_depth` replace business / trade_depth / business_deep_dive; `askSalaried` rewords
   shared fields; only the home is photographed. `profession_depth` is the one place the model writes the question:
   `PROFESSION_CHECKS` (4) questions from its own knowledge of the claimed job (an SDE gets CS questions), answers kept
   verbatim in `memory.professionAnswers` and judged by the report writer as its judgement, not a verification. Rechecks:
   in-hand × 12 vs CTC outside 45-105%, years in job > total experience. Scripted mode asks fixed job questions instead.
 - **Bill book + live challenges** (2026-10-22): `billing_method` (business section) and, at the shop, a `records` photo of
-  today's page. Then `planChallenges` (challenges.js) picks `CHALLENGES_PER_PD` (2) random tasks for where they are —
+  today's page. Then `planChallenges` (liveChallenges.js) picks `CHALLENGES_PER_PD` (2) random tasks for where they are —
   old bill page at a random date, an item from a random rack + its purchase rate and supplier, the last supplier bill +
   "when, how much", the payment QR, today's opening; at home a utility bill. The point is the lead's worry: after 200-300
   PDs a BO knows every fixed question and can brief the applicant, stock the shop for the day or write up a bill book —
@@ -341,9 +341,9 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   paper / gas book, the neighbour's shop; `check: 'names'` compares the answer with the names the photo's vision read.
   (6) **keep adding** — each task has an `added` date; `check:challenges` warns after `STALE_DAYS` (90) with nothing new.
   Added now: `street_view` (shop), `gas_book`, `home_landmark` (home, which had one task, so it was always the same).
-- **Same place, different applicant** (`crossPd.js`, 2026-10-22): live photos are never byte-identical, so a BO staging
+- **Same place, different applicant** (`crossPdCheck.js`, 2026-10-22): live photos are never byte-identical, so a BO staging
   several PDs in one shop is found by place, not pixels. Every photo now stores its GPS fix, and the vision prompts end
-  with a `NAMES:` line (board, QR name, GSTIN, UPI — `splitNames` in photo.js; prompted vision calls get 300 tokens).
+  with a `NAMES:` line (board, QR name, GSTIN, UPI — `splitNames` in photoAnalysis.js; prompted vision calls get 300 tokens).
   At finish, `checkAgainstEarlierPds` links this PD to earlier ones on the device (= this BO) by GPS within `SAME_PLACE_M`
   (40 m, both fixes ≤60 m accurate) or a shared non-generic name, then shows the vision model both photos side by side
   (one stitched image — the endpoint takes one) for at most 3 links: SAME / DIFFERENT / UNSURE. Shared name or SAME →
@@ -361,7 +361,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   household withdrawals, third-party money, guarantor, the 25%-drop plan; monthly_purchase, payment mix and seasonality
   moved from walk-in-only to everyone. Rechecks: the indicative residual (sales − purchases − costs vs income, shown
   as "not verified profit"), yesterday × 26 and last week × 4.3 against the month.
-- **Customer photo + face check** (`face.js`, 2026-10-22): the BO takes the customer's photo with the live camera
+- **Customer photo + face check** (`faceMatch.js`, 2026-10-22): the BO takes the customer's photo with the live camera
   (`CustomerPhotoField`: consent tick first, then `PhotoCapture` with `quiet` so Sarthi's voice stays silent) on the walk-in
   form, the Marketing "Customer" lead, or the brief's KYC tab (any customer, seeded ones too). Stored under
   `bo_sarthi_face_<case>`, shown as the avatar. On the call, `watchFace` grabs a still (`grabFrame`) while the greeting
@@ -381,13 +381,13 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
 - **Gaps from the PD review meeting** (2026-10-22), all decided in code, the model only reads pictures:
   (1) **Dropped calls**: the PD id is fixed at mount; after every answer the interview saves a draft
   (`bo_sarthi_draft_<pd>`, plus its transcript and photos under the PD id). `useSarthiReports` turns any leftover draft into
-  an incomplete PD (`takeDrafts` in repeat.js, `dropped: true`) on the next PD screen, so "Finish last PD" resumes it.
-  (2) **Names vs the applicant's own file** (`fileNameCheck` / `nameFlags` in crossPd.js): names and GSTINs read off the
+  an incomplete PD (`takeDrafts` in repeatPd.js, `dropped: true`) on the next PD screen, so "Finish last PD" resumes it.
+  (2) **Names vs the applicant's own file** (`fileNameCheck` / `nameFlags` in crossPdCheck.js): names and GSTINs read off the
   board, QR, bill book, shop papers and bills are matched to the file's name, business name and name on PAN; a GSTIN to
   `brief.gstin`, else to the PAN inside it (proprietor). Someone else's name is asked about once on the call (`nameRecheck`)
   — the friend's-shop question; a `shop_document` live challenge (rent agreement / licence / Udyam / shop bill) feeds it.
-  A supplier's bill is never matched. (3) **Call GPS** at start and end (`callPlace` in geo.js): a medium `call_location`
-  flag only when they said shop/home and that pin is far. (4) **Liveness** (`LIVENESS` in face.js): once per PD at turn
+  A supplier's bill is never matched. (3) **Call GPS** at start and end (`callPlace` in location.js): a medium `call_location`
+  flag only when they said shop/home and that pin is far. (4) **Liveness** (`LIVENESS` in faceMatch.js): once per PD at turn
   4-7 (seed), camera on and applicant confirmed, one random action; frames before and ~2s after go to `visionCompare` with
   YES/NO/UNSURE; identical frames = frozen feed. (5) **Stock vs shop photo**: the shop vision prompt adds a `STOCK:` JSON
   (fullness + a wide retail range); `stockCheck` flags only beyond 3× either way and asks kindly about a godown.
@@ -399,18 +399,18 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   BUSINESS UNDERSTANDING as the writer's judgement, not a verification.
 - **Children and elders** (2026-10-23): dependents > 0 unlocks `children_count` / `elderly_count` (summed counts, never
   reconciled or drift-checked); children → how many go to school, then (only if any) class + school name and monthly fees; elders → health, on treatment, and if yes
-  where and the monthly medicine cost. `familyHisaab` (recheck.js) is the household month in code — the house kharcha is
+  where and the monthly medicine cost. `familyHisaab` (figureRechecks.js) is the household month in code — the house kharcha is
   the larger of what they said and fees + medicine, never the sum — and rechecks fees + medicine above the house kharcha
   or above 30% of income. The report's FAMILY block carries it; the writer judges the school's standard from its own
   knowledge, labelled as judgement. Live mode only — the script has no family follow-ups.
-- **Living conditions** (`living.js`, 2026-10-22): at home, after the outside photo, Sarthi asks (skippably) for
+- **Living conditions** (`livingConditions.js`, 2026-10-22): at home, after the outside photo, Sarthi asks (skippably) for
   `home_inside`. Home photos use `livingPrompt`, which ends with a `LIVING:` JSON line — house kachha / semi_pucca / pucca,
   floors, vehicles, items — parsed by `splitNames`. **No scores or bands** (lead, 2026-10-22: "just write facts and what
   you think"): `livingFacts` gathers what was seen next to the bank-supported and claimed income, the assets they
   mentioned and the bureau's loans; `factLines` writes them plainly; `analyseLiving` (one LLM call at finish, skipped in
   scripted mode) writes 3-4 officer-style sentences from those facts only — a gap is a question to ask, never a verdict,
   nothing on caste, religion, people or taste. Report: "Living conditions" = the facts, then the analysis. No flags.
-- **Repeat PDs** (`repeat.js`, 2026-10-22): every PD is kept — `bo_sarthi_reports` gets one entry per PD (`pdNo`, `mode`,
+- **Repeat PDs** (`repeatPd.js`, 2026-10-22): every PD is kept — `bo_sarthi_reports` gets one entry per PD (`pdNo`, `mode`,
   `complete`, `coverage`, `collected`, `state`), and transcript / claims / evidence / photos are keyed by the PD id, never
   the case (old reports fall back to the case key). Readers that `find` by `caseId` get the latest, since entries are
   prepended. The brief lists "PDs done" and, once one exists, "New PD" asks why: **resume** (`seedResume` carries the
@@ -428,7 +428,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   outcome label. "New PD from here" on any PD, the Sarthi AI button and the report's button all open `NewPdSheet`, whose options come
   from `pdOptions(pd)`. Mahesh Agarwal is seeded with 3 PDs (`data/sarthi/pdHistory.json`, `daysAgo` → dates) as the
   default of `useSarthiReports`; the Sarthi reset stamp was bumped so returning users get them.
-- **Questions for this file** (`prep.js`): the brief screen drafts 12-15 file-specific questions with the LLM (cached in
+- **Questions for this file** (`hotQuestions.js`): the brief screen drafts 12-15 file-specific questions with the LLM (cached in
   `bo_sarthi_hotq_<case>`), each with a `why` for the officer and a `section`; with no model, `ruleHotQuestions` builds
   them from the file's own figures (cash share, running loans, enquiries, ITR, GST threshold, deposits, purpose).
   Two buttons on the brief, no chooser: **Sarthi AI** asks them at the end of their section (`nextHot`, `memory.hotAnswers`,
@@ -451,7 +451,7 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   das") is parsed into `statedMarginPct`, and income above sales × that margin is shown back to them. A step with a
   `field` is extracted like any field (re-asked once if empty); one with a `key` is kept verbatim in `hotAnswers`.
 - **New shop = a site visit on the call** (every interview except the quick PD): a purpose that opens a shop or
-  business (`NEW_VENTURE` in probes.js — kholna, open, nayi/doosri dukaan, outlet) unlocks `venture_location`,
+  business (`NEW_VENTURE` in tradeProbes.js — kholna, open, nayi/doosri dukaan, outlet) unlocks `venture_location`,
   `venture_rent`, `venture_sales_estimate`, `venture_competition`, `venture_setup_cost`. `ventureArea` resolves the
   place (the place alone, then with the applicant's city). Rechecks do the officer's hisaab live: rent vs the area range
   (quoted only for surveyed areas — tier ranges give a direction, not numbers), rent vs expected sales × the trade's margin,
@@ -483,32 +483,32 @@ File names below are in `src/services/sarthi/` unless a path is given (`knowledg
   **Photos come from the live camera, not a file picker** (`components/sarthi/PhotoCapture.jsx`), so a
   gallery, downloaded or AI-generated image cannot simply be handed in. The interview's selfie stream is
   paused while it is open (`pauseCamera`/`resumeCamera` — many phones cannot run two cameras). A gallery
-  upload is offered only when the camera cannot open, and `photoCheck.js` checks it in code: file date
+  upload is offered only when the camera cannot open, and `photoProvenance.js` checks it in code: file date
   and EXIF capture time vs interview start, missing camera make/model, PNG/WebP, editor software in
   EXIF. Each doubt becomes a `photo_provenance` flag (`Flag: photo_<kind>`) in the report — never a
   rejection. A vision description that mentions a screen, print or generated image adds a soft flag too.
   None of this catches someone photographing a real house that is not theirs; that stays the officer's job.
   **Guided like a real PD photo** (2026-09-29): `PhotoCapture` shows the kind's `tips` first (framing, what must be
-  visible, where to stand, light), a framing guide and a live hint while aiming, then a review. `checkQuality` (photo.js)
+  visible, where to stand, light), a framing guide and a live hint while aiming, then a review. `checkQuality` (photoAnalysis.js)
   measures a 160px greyscale copy in code — dark, blown out, backlit (centre much darker than a bright edge), flat (lens
   covered), blurred (mean |Laplacian|); bad light suppresses "flat". A failing shot offers only "Dobara lijiye"; from the
   2nd try "Phir bhi bhejiye" appears too, so bad light never strands a PD, and that photo carries a low `photo_provenance`
   flag with the tries. `QUALITY_LIMITS` are calibration knobs — tuned on synthetic frames only, retune on real phones.
 - **Where it lives**: the Clients tab (`/dsas`) has a DSA | Customers toggle; Customers (`/dsas?tab=customers`, `screens/dsa/CustomerList.jsx`) is Sarthi's PD queue in the DSA card layout. `/sarthi` redirects there, so every "back to the queue" link still works.
-- **DSA review** (`/sarthi/dsa/:id`, `services/sarthi/dsa.js`, the Sarthi AI button on a DSA): the same video call, Claude only (`provider: 'llm'`). `DSA_TOPICS` (20, identity → sourcing → file quality → numbers → working with us → plan → conduct) are walked in order; a vague answer gets one follow-up (`needsProbe`); `rechecksFor` compares stated files/month, share given to us, approval %, main product, pending commission, the 3-month forecast and named customers against `dsaFile()` (monthly, productMix, commissionFor, loan files) and queues a FRIENDLY RECHECK. Stuck files are named on the rejections topic. The report (Sonnet via thinkingBudget, ~35s, else `fallbackDsaReport`) is saved to `bo_ai_reports` and shown on `/ai/reports/:id`. If Claude is unreachable a turn says the topic's plain `ask`.
+- **DSA review** (`/sarthi/dsa/:id`, `services/sarthi/dsaReview.js`, the Sarthi AI button on a DSA): the same video call, Claude only (`provider: 'llm'`). `DSA_TOPICS` (20, identity → sourcing → file quality → numbers → working with us → plan → conduct) are walked in order; a vague answer gets one follow-up (`needsProbe`); `rechecksFor` compares stated files/month, share given to us, approval %, main product, pending commission, the 3-month forecast and named customers against `dsaFile()` (monthly, productMix, commissionFor, loan files) and queues a FRIENDLY RECHECK. Stuck files are named on the rejections topic. The report (Sonnet via thinkingBudget, ~35s, else `fallbackDsaReport`) is saved to `bo_ai_reports` and shown on `/ai/reports/:id`. If Claude is unreachable a turn says the topic's plain `ask`.
   Found in live runs (2026-09-28, a second Haiku playing honest / inflating / pushy DSAs): (1) the DSA file is **not** in the interviewer prompt — with it Haiku read figures out unprompted; a recheck directive carries the only two numbers it may say. (2) THIS TURN is repeated at the end of the DSA's last message (`turnMessages`) — from the system prompt alone a pushy DSA pulled it off topic (asking for their phone number, saying goodbye mid-review). (3) The goodbye is fixed text (`closingLine`); asked to close, the model kept adding a question. (4) Figures come from `figureFrom`: Haiku picks which number answers, and code accepts it only if the DSA said it (or it in thousands/lakhs) — the parser alone read "ek-do NBFC" as 1 file and "sau mein se assi" as 100, and each became a false recheck. (5) `LEAVING` matches a goodbye to the call only; "questions band karo" had hung up on a complaint.
   (6) Every topic carries a Devanagari `speech`; a reply with no Devanagari speech fence gets one `toDevanagari` call, else the
   topic's own line — Roman Hinglish fed to the Hindi voice was the "English accent after the first line". (7) The name is
   checked in code like the PD (`nameVerdict` on `nameOnly`, firm words stripped): partial → "aap X ji hi hain?", someone
   else → "aap unke kya lagte hain, X ji kahan hain?" → call them → handover, or a goodbye with no report. Firm and office
   are rechecked against the record (`rechecksFor` name / office).
-  (9) **What a reply means is read by the model, not by patterns** (`services/sarthi/intent.js`, both interviews): each
+  (9) **What a reply means is read by the model, not by patterns** (`services/sarthi/replyIntent.js`, both interviews): each
   answer gets a tiny Claude call (`readIntent`, 60 tokens, 2.5s budget `VITE_SARTHI_INTENT_MS`, run alongside the figure
   read / residence check — and, in the PD, alongside `extractFacts`: awaited one after the other they cost ~5s a turn) → answered | vague | refused | stop | question | upset | someone_else. The CODE decides what to
   do: stop → leave kindly (no report before identity is confirmed, report after); question / upset → the next turn first
   answers it (DSA: a `reply` turn, then the same question again; PD: `replyPrefix` in front of THIS TURN), twice at most
   per question; refused → asked softer once, then accepted, noted as a flag and (PD) the field given up; vague → one
-  follow-up; someone_else → the presence flow. The regexes in intent.js are only `guessIntent`, the fallback when the model
+  follow-up; someone_else → the presence flow. The regexes in replyIntent.js are only `guessIntent`, the fallback when the model
   is late or down — do not grow them per phrase; that is the design this replaced. A turn the model cannot phrase says
   `fallbackLine(action)` and the DSA call shows "AI not reachable" (`aiDown`, reason in its title).
   (8) **What the branch knows** beyond its files is `src/data/sarthi/dsaIntel.json` (years in trade, sub-agents seen on

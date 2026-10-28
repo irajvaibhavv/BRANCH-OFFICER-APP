@@ -1,6 +1,6 @@
 // Where the interview must dig instead of moving on: trade insider questions and loan-purpose signals.
 import { lookupBusiness, bankIncome, tradeOf } from './knowledge';
-import { toNumber, pickProduct } from './verifier';
+import { toNumber, pickProduct } from './claimVerifier';
 import { emi, PRODUCT_RATES } from '../../utils/loanCalc';
 import { readNumbers } from './hindiNumbers';
 
@@ -71,7 +71,7 @@ export function understanding(memory) {
   return { total: items.length, clear: count('clear'), vague: count('vague'), redFlag: count('redFlag'), items };
 }
 
-/* ------------------------------------------------------------------ hisaab: does the trade's arithmetic hold? */
+// Hisaab: does the trade's arithmetic hold?
 
 const inr = (n) => `₹${Math.round(n).toLocaleString('en-IN')}`;
 
@@ -171,7 +171,8 @@ function toFlags(results) {
   }));
 }
 
-// The EMI has to be paid in the weakest month too. Cap: all EMIs within 60% of that month's income (profit/DSCR method).
+// The EMI has to be paid in the weakest month too. Cap: all EMIs within 60% of that month's
+// income (profit/DSCR method).
 const WORST_MONTH_EMI_SHARE = 0.6;
 
 function worstMonth(memory, sales, add) {

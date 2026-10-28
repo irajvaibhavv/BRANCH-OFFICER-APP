@@ -9,7 +9,7 @@ import { pathToFileURL } from 'url';
 const OUT_DIR = 'public/sarthi-audio';
 const MANIFEST = 'src/data/sarthi/voiceManifest.json';
 
-/* --- env (.env.local is not loaded for us — read it directly) --- */
+// Env (.env.local is not loaded for us — read it directly)
 const env = Object.fromEntries(
   (existsSync('.env.local') ? readFileSync('.env.local', 'utf8') : '')
     .split('\n')
@@ -22,8 +22,8 @@ if (!KEY) {
   process.exit(1);
 }
 
-/* --- the voice Sarthi uses, read from its own config --- */
-const voiceSrc = readFileSync('src/services/sarthi/voice.js', 'utf8');
+// The voice Sarthi uses, read from its own config
+const voiceSrc = readFileSync('src/services/sarthi/voiceProfile.js', 'utf8');
 const pick = (name, fallback) => voiceSrc.match(new RegExp(`${name}\\s*\\|\\|\\s*'([^']+)'`))?.[1] ?? fallback;
 const VOICE = pick('VITE_SARTHI_VOICE', 'hi-IN-kabir');
 const STYLE = pick('VITE_SARTHI_VOICE_STYLE', 'Conversational');
@@ -35,7 +35,7 @@ async function collectLines() {
   const outDir = '.sarthi-voice-tmp';
   writeFileSync(entry, `
     import { CASES } from './src/services/sarthi/knowledge.js';
-    import { buildScript, buildIntakeScript } from './src/services/sarthi/script.js';
+    import { buildScript, buildIntakeScript } from './src/services/sarthi/scriptedMode.js';
     const fromCases = CASES.flatMap((c) => buildScript(c).map((s) => s.speech));
     const fromIntake = buildIntakeScript().map((s) => s.speech);
     export const lines = [...new Set([...fromCases, ...fromIntake].filter(Boolean))];

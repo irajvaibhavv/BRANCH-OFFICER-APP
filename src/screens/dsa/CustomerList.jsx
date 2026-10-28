@@ -14,8 +14,8 @@ import { MiniMetricRow } from '../../components/charts/MiniMetric';
 import { useToast } from '../../hooks/useToast';
 import { formatINR, timeAgo } from '../../utils/formatters';
 import { bankIncome } from '../../services/sarthi/knowledge';
-import { pdOutcome } from '../../services/sarthi/repeat';
-import { loadFace } from '../../services/sarthi/face';
+import { pdOutcome } from '../../services/sarthi/repeatPd';
+import { loadFace } from '../../services/sarthi/faceMatch';
 import styles from './dsa.module.css';
 
 const RISK = { high: ['High risk', 'danger'], medium: ['Medium risk', 'warning'], low: ['Low risk', 'success'] };

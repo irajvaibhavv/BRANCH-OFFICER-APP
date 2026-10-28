@@ -8,7 +8,7 @@ import { useAppState } from '../../context/AppStateContext';
 import { useToast } from '../../hooks/useToast';
 import { isConnector, CHANNELS } from '../../utils/channel';
 import { AREAS, AREA_COORDS } from '../../utils/areas';
-import { START, km } from '../../utils/route';
+import { START, km } from '../../utils/routePlanning';
 import { toISODate } from '../../utils/formatters';
 import styles from './AddStopSheet.module.css';
 

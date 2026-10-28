@@ -1,6 +1,6 @@
-// Asserts the cross-PD matching in src/services/sarthi/crossPd.js. Run: npm run check:crosspd
+// Asserts the cross-PD matching in src/services/sarthi/crossPdCheck.js. Run: npm run check:crosspd
 import assert from 'node:assert/strict';
-import { sharedNames, findLinks, crossPdFlags, fileNameCheck, nameFlags } from '../src/services/sarthi/crossPd.js';
+import { sharedNames, findLinks, crossPdFlags, fileNameCheck, nameFlags } from '../src/services/sarthi/crossPdCheck.js';
 
 assert.deepEqual(sharedNames(['Gupta Traders', 'Paytm'], ['GUPTA TRADERS', 'paytm']), ['Gupta Traders']);
 assert.deepEqual(sharedNames(['PhonePe'], ['phone pe']), []);

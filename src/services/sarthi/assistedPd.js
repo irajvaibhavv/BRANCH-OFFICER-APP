@@ -1,6 +1,6 @@
 // Assisted PD: the applicant owns the business, someone else runs it, and both talk on one phone. The applicant's
 // answers and the operator's (op_* keys) are compared here, in code — the model only reports what this decides.
-import { toNumber, toYears } from './verifier';
+import { toNumber, toYears } from './claimVerifier';
 import { formatINR } from '../../utils/formatters';
 
 export const SALES_GAP = 0.3; // owner and operator a third apart on monthly sales
@@ -38,7 +38,8 @@ export function assistedFlags(c, depth = null, applicant = 'the applicant') {
     flags.push({ type: 'assisted', field: 'op_years', severity: 'medium', detail: `${who} says they have run it ${years[1]} years — longer than the ${years[0]} years ${applicant} gave for the business` });
   }
 
-  // A name-lender: the applicant is rarely there, the money goes to the operator, and the applicant does not know the trade.
+  // A name-lender: the applicant is rarely there, the money goes to the operator, and the
+  // applicant does not know the trade.
   const weak = depth?.total ? depth.vague + depth.redFlag >= 2 : false;
   const away = c.op_owner_role === 'never' || (c.op_owner_role === 'sometimes' && weak);
   if (away && c.op_cash_holder === 'me') {

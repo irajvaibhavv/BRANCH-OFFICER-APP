@@ -1,0 +1,5 @@
+[
+  { "id": "full", "label": "Full PD", "description": "All sections — family, business, money, loan purpose, documents.", "kind": "full", "minutes": 15 },
+  { "id": "flagged_only", "label": "Red-flag follow-up", "description": "Only the questions tied to flags from the file's last PD. Shorter, more pointed.", "kind": "flagged_only", "minutes": 6 },
+  { "id": "collections_light", "label": "Post-disbursal check-in", "description": "Short monitoring PD after disbursal — business running, cash flow, EMI comfort.", "kind": "custom", "minutes": 5 }
+]

@@ -1,0 +1,12 @@
+{
+  "pan": [
+    { "idValue": "ABCPK1234D", "name": "Rohit Kumar", "age": "36" },
+    { "idValue": "XYZPS5678N", "name": "Priya Sharma", "age": "34" },
+    { "idValue": "LMNPM9012Q", "name": "Imran Malik", "age": "41" }
+  ],
+  "aadhaar": [
+    { "idValue": "234567890124", "name": "Rohit Kumar", "age": "36", "area": "Kothrud, Pune" },
+    { "idValue": "345678901238", "name": "Priya Sharma", "age": "34", "area": "Baner, Pune" },
+    { "idValue": "456789012341", "name": "Imran Malik", "age": "41", "area": "Camp, Pune" }
+  ]
+}

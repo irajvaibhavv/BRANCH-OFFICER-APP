@@ -11,6 +11,7 @@ import Page, { listContainer, listItem } from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import EmptyState from '../../components/ui/EmptyState';
 import NewPdSheet from '../../components/sarthi/NewPdSheet';
+import RemotePdPanel from '../../components/sarthi/RemotePdPanel';
 import CustomerPhotoField from '../../components/sarthi/CustomerPhotoField';
 import { loadFace, saveFace } from '../../services/sarthi/faceMatch';
 import Card, { MetricCard } from '../../components/ui/Card';
@@ -165,6 +166,11 @@ export default function SarthiBrief() {
       <CustomerPayout amount={c.loanAmountRequested} product={c.product} stage={pdCaseStage(c, !!report)}
         dsaId={c.sourceDsa ?? customersRaw.find((x) => x.sarthiCase === c.id)?.sourceDsa}
         paidOn={c.disbursedOn} feePaidOn={c.payoutPaidOn} feeUtr={c.payoutUtr} style={{ marginBottom: 14 }} />
+
+      {(() => {
+        const linked = customersRaw.find((x) => x.sarthiCase === c.id);
+        return linked ? <RemotePdPanel customer={linked} style={{ marginBottom: 14 }} /> : null;
+      })()}
 
       <div className={styles.tabs}>
         {tabs.map((t) => (

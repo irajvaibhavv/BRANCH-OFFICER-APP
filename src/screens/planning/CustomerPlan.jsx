@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiCheck, FiPlus, FiPhone, FiMapPin, FiFileText, FiHelpCircle, FiUsers, FiChevronRight } from 'react-icons/fi';
 import { IoCalculator, IoSparkles } from 'react-icons/io5';
+import RemotePdPanel from '../../components/sarthi/RemotePdPanel';
 import Page, { listContainer, listItem } from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import Card from '../../components/ui/Card';
@@ -176,6 +177,8 @@ export function CustomerDetail() {
         <FileLifecycle status={stage} timeline={file?.timeline} />
       </Card>
       <CustomerPayout amount={c.amount} product={c.product} stage={stage} dsaId={c.sourceDsa} paidOn={c.disbursedOn} />
+
+      <RemotePdPanel customer={c} style={{ marginTop: 12 }} />
 
       <div className={styles.seg} style={{ margin: '14px 0 12px' }}>
         <button className={`${styles.segBtn} ${view === 'questions' ? styles.segOn : ''}`} onClick={() => setView('questions')}><FiHelpCircle size={14} /> Basic questions · {answered}/{BASIC_QUESTIONS.length}</button>

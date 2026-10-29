@@ -14,6 +14,7 @@ import { getCase } from '../../services/sarthi/knowledge';
 import { identitySummary } from '../../services/sarthi/idChecks';
 import { mapLink, inDistance } from '../../services/sarthi/location';
 import { MODES, OUTCOMES, REVIEW_DECISIONS, pdOutcome, aiOutcome, makeReview, removeDraft } from '../../services/sarthi/repeatPd';
+import { templateById } from '../../utils/pdTemplates';
 import { loadFace, callFrameKey } from '../../services/sarthi/faceMatch';
 import { useSarthiReports, usePendingPds } from '../../hooks/useSarthiReports';
 import ConfirmPd from '../../components/sarthi/ConfirmPd';
@@ -93,6 +94,11 @@ export default function SarthiReport() {
   return (
     <Page mode="slide" className={`sarthi ${styles.page}`}>
       <TopBar back title={r.name} subtitle={`${all.length > 1 ? `PD ${r.pdNo ?? 1} of ${all.length} · ${MODES[r.mode]?.label ?? 'Full PD'} · ` : ''}Interviewed ${formatDate(r.createdAt)}`} hideBell />
+      {r.remote && (
+        <p className={styles.incomplete} style={{ color: 'var(--primary)', borderLeftColor: 'var(--primary)' }}>
+          SURPRISE · {templateById(r.remote.templateId)?.label ?? 'Surprise PD'} — customer answered this on their borrower app, no BO on site.
+        </p>
+      )}
       {r.complete === false && (
         <p className={styles.incomplete}>
           {r.dropped ? 'Call dropped before the PD ended — saved at the last answer' : 'Ended early'}, {r.coverage ?? 0}% of the topics covered. Start &quot;Finish last PD&quot; from the customer page to ask only what is left.

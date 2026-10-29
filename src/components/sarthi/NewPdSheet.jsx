@@ -15,7 +15,6 @@ export default function NewPdSheet({ open, onClose, caseId, pd }) {
           onClick={() => { onClose(); navigate(`/sarthi/interview/${caseId}?mode=${o.mode}&from=${pd.id}`); }}
         >
           <strong>{MODES[o.mode].label}</strong>
-          <span>{o.why}</span>
         </button>
       ))}
     </BottomSheet>

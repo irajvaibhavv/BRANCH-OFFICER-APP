@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowRight, FiCheck, FiX } from 'react-icons/fi';
+import { FiArrowRight, FiCamera, FiCheck, FiX } from 'react-icons/fi';
 import Page from '../../components/layout/Page';
 import TopBar from '../../components/layout/TopBar';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
@@ -9,6 +9,8 @@ import { validateId, PAN_HOLDER } from '../../services/sarthi/idChecks';
 import { parseLatLng, NEAR_M } from '../../services/sarthi/location';
 import { saveFace } from '../../services/sarthi/faceMatch';
 import CustomerPhotoField from '../../components/sarthi/CustomerPhotoField';
+import IdScanModal from '../../components/sarthi/IdScanModal';
+import { useToast } from '../../hooks/useToast';
 import businessKnowledge from '../../data/sarthi/businessKnowledge.json';
 import locationKnowledge from '../../data/sarthi/locationKnowledge.json';
 import styles from './SarthiNewCase.module.css';
@@ -32,6 +34,20 @@ export default function SarthiNewCase() {
   const [face, setFace] = useState(null);
   const [idKind, setIdKind] = useState('pan');
   const [idValue, setIdValue] = useState('');
+  const [scan, setScan] = useState(false);
+  const { toast } = useToast();
+
+  const applyScan = (data) => {
+    if (!data) return;
+    setIdValue(data.idValue);
+    setF((prev) => ({
+      ...prev,
+      name: data.name ?? prev.name,
+      age: data.age ?? prev.age,
+      area: data.area ?? prev.area,
+    }));
+    toast(`${idKind === 'pan' ? 'PAN' : 'Aadhaar'} scanned — ${data.name}`, 'success');
+  };
 
   const set = (k) => (e) => setF((prev) => ({ ...prev, [k]: e.target.value }));
 
@@ -146,6 +162,9 @@ export default function SarthiNewCase() {
           <button className={idKind === 'pan' ? styles.toggleOn : styles.toggleOff} onClick={() => { setIdKind('pan'); setIdValue(''); }}>PAN</button>
           <button className={idKind === 'aadhaar' ? styles.toggleOn : styles.toggleOff} onClick={() => { setIdKind('aadhaar'); setIdValue(''); }}>Aadhaar</button>
         </div>
+        <button type="button" className={styles.scanBtn} onClick={() => setScan(true)}>
+          <FiCamera size={16} /> Scan {idKind === 'pan' ? 'PAN' : 'Aadhaar'} with camera — autofills name, age{idKind === 'aadhaar' ? ', area' : ''} and number
+        </button>
         <Field
           label={idKind === 'pan' ? 'PAN number' : 'Aadhaar number'}
           value={idValue}
@@ -185,6 +204,8 @@ export default function SarthiNewCase() {
           Name, area, {salaried ? 'employer and designation' : 'business'}, amount and a document that passes its checks are needed before the interview.
         </p>
       )}
+
+      <IdScanModal open={scan} kind={idKind} onClose={() => setScan(false)} onScanned={applyScan} />
     </Page>
   );
 }

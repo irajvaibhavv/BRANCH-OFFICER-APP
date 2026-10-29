@@ -80,6 +80,8 @@ export function AppStateProvider({ children }) {
   const [seedDay, setSeedDay] = useLocalStorage('bo_seed_day', null);
   const [marketing, setMarketing] = useLocalStorage('bo_marketing', seedMarketing);
   const [dayPlan, setDayPlan] = useLocalStorage('bo_day_plan', null); // { date, mode:'dsa'|'customer'|'branch', criteria, stops:[id] }
+  // Remote-triggered PDs: BO fires an invite, borrower app runs it, outcome lands back here.
+  const [remotePds, setRemotePds] = useLocalStorage('bo_remote_pds', []);
 
   const resetDemo = useCallback(() => {
     setDsas(seedDsas);
@@ -90,11 +92,12 @@ export function AppStateProvider({ children }) {
     setRecordings(seedRecordings);
     setMarketing(seedMarketing);
     setDayPlan(null);
-  }, [setMarketing, setDayPlan, setDsas, setVisits, setLoanFiles, setNotifications, setMeetings, setRecordings]);
+    setRemotePds([]);
+  }, [setMarketing, setDayPlan, setDsas, setVisits, setLoanFiles, setNotifications, setMeetings, setRecordings, setRemotePds]);
 
   // Re-seed when the calendar day changes so "today" always has demo data.
   useEffect(() => {
-    const stamp = `${toISODate()}:14`; // bump the suffix whenever the seed shape changes
+    const stamp = `${toISODate()}:15`; // bump the suffix whenever the seed shape changes
     if (seedDay !== stamp) {
       resetDemo(); // also migrates stale, hard-dated data
       setSeedDay(stamp);
@@ -279,6 +282,39 @@ export function AppStateProvider({ children }) {
 
   const markRead = useCallback((id) => setNotifications((n) => n.map((x) => (x.id === id ? { ...x, read: true } : x))), [setNotifications]);
   const markAllRead = useCallback(() => setNotifications((n) => n.map((x) => ({ ...x, read: true }))), [setNotifications]);
+  const addNotification = useCallback(
+    ({ type = 'announcement', title, message, link }) => {
+      const rec = { id: `n${Date.now()}`, type, title, message, link, at: new Date().toISOString(), read: false };
+      setNotifications((n) => [rec, ...n]);
+      return rec;
+    },
+    [setNotifications],
+  );
+
+  /** Remote PD: BO fires an invite to the borrower app for a given customer and template. */
+  const triggerRemotePd = useCallback(
+    (customerId, templateId) => {
+      const rec = {
+        id: `rpd${Date.now()}`,
+        customerId,
+        templateId,
+        triggeredAt: new Date().toISOString(),
+        status: 'pending',
+      };
+      setRemotePds((xs) => [rec, ...xs]);
+      track('TRIGGER_REMOTE_PD', { customerId, templateId });
+      return rec;
+    },
+    [setRemotePds, track],
+  );
+  const cancelRemotePd = useCallback(
+    (id) => setRemotePds((xs) => xs.filter((x) => x.id !== id)),
+    [setRemotePds],
+  );
+  const remotePdsFor = useCallback(
+    (customerId) => remotePds.filter((x) => x.customerId === customerId),
+    [remotePds],
+  );
 
   // Derived numbers used on the dashboard
   const today = toISODate();
@@ -323,7 +359,8 @@ export function AppStateProvider({ children }) {
     engagements,
     dayPlan, planDay,
     customers, getCustomer,
-    notifications, unreadCount, markRead, markAllRead, attention,
+    notifications, unreadCount, markRead, markAllRead, addNotification, attention,
+    remotePds, setRemotePds, triggerRemotePd, cancelRemotePd, remotePdsFor,
     stats, resetDemo,
   };
 

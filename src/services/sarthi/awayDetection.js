@@ -8,7 +8,8 @@ const MODEL = 'https://storage.googleapis.com/mediapipe-models/face_detector/bla
 
 // BlazeFace still finds a face behind a hand at ~0.5-0.7; a clear face scores ~0.85+. Raise if a covered face passes,
 // lower if a dim room reads as "away"; the score is logged with every ask.
-const MIN_SCORE = 0.75;
+// ponytail: effectively off for demo — flaky scores on laptop webcams caused "kahan chale gaye" loops.
+const MIN_SCORE = 0;
 
 let detector = null;
 let lastScore = 0; // best face score in the latest frame, logged when Sarthi asks
